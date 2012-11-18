@@ -1,12 +1,11 @@
 /* dwarf2dbg.h - DWARF2 debug support
-   Copyright 1999, 2000, 2002, 2003, 2005, 2006, 2007, 2009
-   Free Software Foundation, Inc.
+   Copyright 1999, 2000, 2002, 2003 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,26 +15,22 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #ifndef AS_DWARF2DBG_H
 #define AS_DWARF2DBG_H
 
 #include "as.h"
 
-#define DWARF2_FLAG_IS_STMT		(1 << 0)
-#define DWARF2_FLAG_BASIC_BLOCK		(1 << 1)
-#define DWARF2_FLAG_PROLOGUE_END	(1 << 2)
-#define DWARF2_FLAG_EPILOGUE_BEGIN	(1 << 3)
+#define DWARF2_FLAG_BEGIN_STMT	(1 << 0)	/* beginning of statement */
+#define DWARF2_FLAG_BEGIN_BLOCK	(1 << 1)	/* beginning of basic block */
 
 struct dwarf2_line_info {
   unsigned int filenum;
   unsigned int line;
   unsigned int column;
-  unsigned int isa;
   unsigned int flags;
-  unsigned int discriminator;
 };
 
 /* Implements the .file FILENO "FILENAME" directive.  FILENO can be 0
@@ -51,18 +46,11 @@ extern char *dwarf2_directive_file (int dummy);
    used.  */
 extern void dwarf2_directive_loc (int dummy);
 
-/* Implements the .loc_mark_labels {0,1} directive.  */
-extern void dwarf2_directive_loc_mark_labels (int dummy);
-
 /* Returns the current source information.  If .file directives have
    been encountered, the info for the corresponding source file is
    returned.  Otherwise, the info for the assembly source file is
    returned.  */
 extern void dwarf2_where (struct dwarf2_line_info *l);
-
-/* A hook to allow the target backend to inform the line number state 
-   machine of isa changes when assembler debug info is enabled.  */
-extern void dwarf2_set_isa (unsigned int isa);
 
 /* This function generates .debug_line info based on the address and
    source information passed in the arguments.  ADDR should be the
@@ -73,24 +61,6 @@ extern void dwarf2_gen_line_info (addressT addr, struct dwarf2_line_info *l);
 
 /* Must be called for each generated instruction.  */
 extern void dwarf2_emit_insn (int);
-
-/* Reset the state of the line number information to reflect that
-   it has been used.  */
-extern void dwarf2_consume_line_info (void);
-
-/* Should be called for each code label.  */
-extern void dwarf2_emit_label (symbolS *);
-
-/* True when we've seen a .loc directive recently.  Used to avoid
-   doing work when there's nothing to do.  */
-extern bfd_boolean dwarf2_loc_directive_seen;
-
-/* True when we're supposed to set the basic block mark whenever a label
-   is seen.  Unless the target is doing Something Weird, just call 
-   dwarf2_emit_label.  */
-extern bfd_boolean dwarf2_loc_mark_labels;
-
-extern void dwarf2_init (void);
 
 extern void dwarf2_finish (void);
 

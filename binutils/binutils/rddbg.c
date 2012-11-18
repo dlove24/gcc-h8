@@ -1,13 +1,13 @@
 /* rddbg.c -- Read debugging information into a generic form.
-   Copyright 1995, 1996, 1997, 2000, 2002, 2003, 2005, 2007, 2008,
-   2010  Free Software Foundation, Inc.
+   Copyright 1995, 1996, 1997, 2000, 2002, 2003
+   Free Software Foundation, Inc.
    Written by Ian Lance Taylor <ian@cygnus.com>.
 
    This file is part of GNU Binutils.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,18 +17,16 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
-
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 /* This file reads debugging information into a generic form.  This
    file knows how to dig the debugging information out of an object
    file.  */
 
-#include "sysdep.h"
 #include "bfd.h"
-#include "libiberty.h"
 #include "bucomm.h"
+#include "libiberty.h"
 #include "debug.h"
 #include "budbg.h"
 
@@ -45,7 +43,7 @@ static void free_saved_stabs (void);
    pointer.  */
 
 void *
-read_debugging_info (bfd *abfd, asymbol **syms, long symcount, bfd_boolean no_messages)
+read_debugging_info (bfd *abfd, asymbol **syms, long symcount)
 {
   void *dhandle;
   bfd_boolean found;
@@ -84,9 +82,8 @@ read_debugging_info (bfd *abfd, asymbol **syms, long symcount, bfd_boolean no_me
 
   if (! found)
     {
-      if (! no_messages)
-	non_fatal (_("%s: no recognized debugging information"),
-		   bfd_get_filename (abfd));
+      non_fatal (_("%s: no recognized debugging information"),
+		 bfd_get_filename (abfd));
       return NULL;
     }
 
@@ -103,13 +100,8 @@ read_section_stabs_debugging_info (bfd *abfd, asymbol **syms, long symcount,
     {
       const char *secname;
       const char *strsecname;
-    }
-  names[] =
-    {
-      { ".stab", ".stabstr" },
-      { "LC_SYMTAB.stabs", "LC_SYMTAB.stabstr" },
-      { "$GDB_SYMBOLS$", "$GDB_STRINGS$" }
-    };
+    } names[] = { { ".stab", ".stabstr" },
+		  { "LC_SYMTAB.stabs", "LC_SYMTAB.stabstr" } };
   unsigned int i;
   void *shandle;
 
@@ -164,7 +156,7 @@ read_section_stabs_debugging_info (bfd *abfd, asymbol **syms, long symcount,
 	    {
 	      unsigned int strx;
 	      int type;
-	      int other ATTRIBUTE_UNUSED;
+	      int other;
 	      int desc;
 	      bfd_vma value;
 

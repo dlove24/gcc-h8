@@ -2,23 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright 1996-2005 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
-   This file is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   It is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with this program; if not, write to the Free Software Foundation, Inc.,
-   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
@@ -32,38 +32,44 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
 /* -- opc.c */
 unsigned int
-m32r_cgen_dis_hash (const char * buf ATTRIBUTE_UNUSED, CGEN_INSN_INT value)
+m32r_cgen_dis_hash (buf, value)
+     const char * buf ATTRIBUTE_UNUSED;
+     CGEN_INSN_INT value;
 {
   unsigned int x;
-
-  if (value & 0xffff0000) /* 32bit instructions.  */
+                                                                                
+  if (value & 0xffff0000) /* 32bit instructions */
     value = (value >> 16) & 0xffff;
-
-  x = (value >> 8) & 0xf0;
+                                                                                
+  x = (value>>8) & 0xf0;
   if (x == 0x40 || x == 0xe0 || x == 0x60 || x == 0x50)
     return x;
-
+                                                                                
   if (x == 0x70 || x == 0xf0)
-    return x | ((value >> 8) & 0x0f);
-
+    return x | ((value>>8) & 0x0f);
+                                                                                
   if (x == 0x30)
     return x | ((value & 0x70) >> 4);
   else
     return x | ((value & 0xf0) >> 4);
 }
-
+                                                                                
 /* -- */
 /* The hash functions are recorded here to help keep assembler code out of
    the disassembler and vice versa.  */
 
-static int asm_hash_insn_p        (const CGEN_INSN *);
-static unsigned int asm_hash_insn (const char *);
-static int dis_hash_insn_p        (const CGEN_INSN *);
-static unsigned int dis_hash_insn (const char *, CGEN_INSN_INT);
+static int asm_hash_insn_p PARAMS ((const CGEN_INSN *));
+static unsigned int asm_hash_insn PARAMS ((const char *));
+static int dis_hash_insn_p PARAMS ((const CGEN_INSN *));
+static unsigned int dis_hash_insn PARAMS ((const char *, CGEN_INSN_INT));
 
 /* Instruction formats.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define F(f) & m32r_cgen_ifld_table[M32R_##f]
+#else
+#define F(f) & m32r_cgen_ifld_table[M32R_/**/f]
+#endif
 static const CGEN_IFMT ifmt_empty ATTRIBUTE_UNUSED = {
   0, 0, 0x0, { { 0 } }
 };
@@ -206,8 +212,16 @@ static const CGEN_IFMT ifmt_btst ATTRIBUTE_UNUSED = {
 
 #undef F
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define A(a) (1 << CGEN_INSN_##a)
+#else
+#define A(a) (1 << CGEN_INSN_/**/a)
+#endif
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define OPERAND(op) M32R_OPERAND_##op
+#else
+#define OPERAND(op) M32R_OPERAND_/**/op
+#endif
 #define MNEM CGEN_SYNTAX_MNEMONIC /* syntax value for mnemonic */
 #define OP(field) CGEN_SYNTAX_MAKE_FIELD (OPERAND (field))
 
@@ -1116,7 +1130,11 @@ static const CGEN_OPCODE m32r_cgen_insn_opcode_table[MAX_INSNS] =
 
 /* Formats for ALIAS macro-insns.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define F(f) & m32r_cgen_ifld_table[M32R_##f]
+#else
+#define F(f) & m32r_cgen_ifld_table[M32R_/**/f]
+#endif
 static const CGEN_IFMT ifmt_bc8r ATTRIBUTE_UNUSED = {
   16, 16, 0xff00, { { F (F_OP1) }, { F (F_R1) }, { F (F_DISP8) }, { 0 } }
 };
@@ -1265,8 +1283,16 @@ static const CGEN_IFMT ifmt_push ATTRIBUTE_UNUSED = {
 
 /* Each non-simple macro entry points to an array of expansion possibilities.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define A(a) (1 << CGEN_INSN_##a)
+#else
+#define A(a) (1 << CGEN_INSN_/**/a)
+#endif
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define OPERAND(op) M32R_OPERAND_##op
+#else
+#define OPERAND(op) M32R_OPERAND_/**/op
+#endif
 #define MNEM CGEN_SYNTAX_MNEMONIC /* syntax value for mnemonic */
 #define OP(field) CGEN_SYNTAX_MAKE_FIELD (OPERAND (field))
 
@@ -1277,182 +1303,182 @@ static const CGEN_IBASE m32r_cgen_macro_insn_table[] =
 /* bc $disp8 */
   {
     -1, "bc8r", "bc", 16,
-    { 0|A(RELAXABLE)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(RELAXABLE)|A(COND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* bc $disp24 */
   {
     -1, "bc24r", "bc", 32,
-    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* bl $disp8 */
   {
     -1, "bl8r", "bl", 16,
-    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(UNCOND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(UNCOND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* bl $disp24 */
   {
     -1, "bl24r", "bl", 32,
-    { 0|A(RELAXED)|A(UNCOND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(RELAXED)|A(UNCOND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* bcl $disp8 */
   {
     -1, "bcl8r", "bcl", 16,
-    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(COND_CTI)|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_O } }
   },
 /* bcl $disp24 */
   {
     -1, "bcl24r", "bcl", 32,
-    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_NONE } }
   },
 /* bnc $disp8 */
   {
     -1, "bnc8r", "bnc", 16,
-    { 0|A(RELAXABLE)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(RELAXABLE)|A(COND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* bnc $disp24 */
   {
     -1, "bnc24r", "bnc", 32,
-    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* bra $disp8 */
   {
     -1, "bra8r", "bra", 16,
-    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(UNCOND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(UNCOND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* bra $disp24 */
   {
     -1, "bra24r", "bra", 32,
-    { 0|A(RELAXED)|A(UNCOND_CTI)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(RELAXED)|A(UNCOND_CTI)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* bncl $disp8 */
   {
     -1, "bncl8r", "bncl", 16,
-    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(RELAXABLE)|A(FILL_SLOT)|A(COND_CTI)|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_O } }
   },
 /* bncl $disp24 */
   {
     -1, "bncl24r", "bncl", 32,
-    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(RELAXED)|A(COND_CTI)|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_NONE } }
   },
 /* ld $dr,@($sr) */
   {
     -1, "ld-2", "ld", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* ld $dr,@($sr,$slo16) */
   {
     -1, "ld-d2", "ld", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* ldb $dr,@($sr) */
   {
     -1, "ldb-2", "ldb", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* ldb $dr,@($sr,$slo16) */
   {
     -1, "ldb-d2", "ldb", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* ldh $dr,@($sr) */
   {
     -1, "ldh-2", "ldh", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* ldh $dr,@($sr,$slo16) */
   {
     -1, "ldh-d2", "ldh", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* ldub $dr,@($sr) */
   {
     -1, "ldub-2", "ldub", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* ldub $dr,@($sr,$slo16) */
   {
     -1, "ldub-d2", "ldub", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* lduh $dr,@($sr) */
   {
     -1, "lduh-2", "lduh", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* lduh $dr,@($sr,$slo16) */
   {
     -1, "lduh-d2", "lduh", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* pop $dr */
   {
     -1, "pop", "pop", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* ldi $dr,$simm8 */
   {
     -1, "ldi8a", "ldi", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_OS, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE), PIPE_OS } }
   },
 /* ldi $dr,$hash$slo16 */
   {
     -1, "ldi16a", "ldi", 32,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* rac $accd */
   {
     -1, "rac-d", "rac", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_S, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_S } }
   },
 /* rac $accd,$accs */
   {
     -1, "rac-ds", "rac", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_S, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_S } }
   },
 /* rach $accd */
   {
     -1, "rach-d", "rach", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_S, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_S } }
   },
 /* rach $accd,$accs */
   {
     -1, "rach-ds", "rach", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_M32RX)|(1<<MACH_M32R2), 0 } }, { { PIPE_S, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_M32RX)|(1<<MACH_M32R2), PIPE_S } }
   },
 /* st $src1,@($src2) */
   {
     -1, "st-2", "st", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* st $src1,@($src2,$slo16) */
   {
     -1, "st-d2", "st", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* stb $src1,@($src2) */
   {
     -1, "stb-2", "stb", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* stb $src1,@($src2,$slo16) */
   {
     -1, "stb-d2", "stb", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* sth $src1,@($src2) */
   {
     -1, "sth-2", "sth", 16,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 /* sth $src1,@($src2,$slo16) */
   {
     -1, "sth-d2", "sth", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_NONE, 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_BASE), PIPE_NONE } }
   },
 /* push $src1 */
   {
     -1, "push", "push", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } }, { { PIPE_O, 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE), PIPE_O } }
   },
 };
 
@@ -1752,10 +1778,14 @@ dis_hash_insn (buf, value)
   return CGEN_DIS_HASH (buf, value);
 }
 
+static void set_fields_bitsize PARAMS ((CGEN_FIELDS *, int));
+
 /* Set the recorded length of the insn in the CGEN_FIELDS struct.  */
 
 static void
-set_fields_bitsize (CGEN_FIELDS *fields, int size)
+set_fields_bitsize (fields, size)
+     CGEN_FIELDS *fields;
+     int size;
 {
   CGEN_FIELDS_BITSIZE (fields) = size;
 }
@@ -1764,19 +1794,16 @@ set_fields_bitsize (CGEN_FIELDS *fields, int size)
    This plugs the opcode entries and macro instructions into the cpu table.  */
 
 void
-m32r_cgen_init_opcode_table (CGEN_CPU_DESC cd)
+m32r_cgen_init_opcode_table (cd)
+     CGEN_CPU_DESC cd;
 {
   int i;
   int num_macros = (sizeof (m32r_cgen_macro_insn_table) /
 		    sizeof (m32r_cgen_macro_insn_table[0]));
   const CGEN_IBASE *ib = & m32r_cgen_macro_insn_table[0];
   const CGEN_OPCODE *oc = & m32r_cgen_macro_insn_opcode_table[0];
-  CGEN_INSN *insns = xmalloc (num_macros * sizeof (CGEN_INSN));
-
-  /* This test has been added to avoid a warning generated
-     if memset is called with a third argument of value zero.  */
-  if (num_macros >= 1)
-    memset (insns, 0, num_macros * sizeof (CGEN_INSN));
+  CGEN_INSN *insns = (CGEN_INSN *) xmalloc (num_macros * sizeof (CGEN_INSN));
+  memset (insns, 0, num_macros * sizeof (CGEN_INSN));
   for (i = 0; i < num_macros; ++i)
     {
       insns[i].base = &ib[i];

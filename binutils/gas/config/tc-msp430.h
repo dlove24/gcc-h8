@@ -1,5 +1,5 @@
 /* This file is tc-msp430.h
-   Copyright (C) 2002, 2004, 2005, 2007 Free Software Foundation, Inc.
+   Copyright (C) 2002, 2004 Free Software Foundation, Inc.
 
    Contributed by Dmitry Diky <diwil@mail.ru>
 
@@ -7,7 +7,7 @@
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -17,8 +17,12 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
+
+#ifndef BFD_ASSEMBLER
+ #error MSP430 support requires BFD_ASSEMBLER
+#endif
 
 #define TC_MSP430
 /*   By convention, you should define this macro in the `.h' file.  For
@@ -73,8 +77,6 @@
      and define `md_create_long_jump' to create a long jump.  */
 
 #define MD_APPLY_FIX3
-/* Values passed to md_apply_fix don't include symbol values.  */
-#define MD_APPLY_SYM_VALUE(FIX) 0
 
 #define TC_HANDLES_FX_DONE
 
@@ -114,11 +116,3 @@ extern long md_pcrel_from_section (struct fix *, segT);
 #define md_relax_frag(SEG, FRAGP, STRETCH)             \
    msp430_relax_frag (SEG, FRAGP, STRETCH)
 extern long msp430_relax_frag (segT, fragS *, long);
-
-#define TC_FORCE_RELOCATION_LOCAL(FIX)	\
-   msp430_force_relocation_local(FIX)
-extern int msp430_force_relocation_local(struct fix *);
-
-
-extern int msp430_enable_relax;
-extern int msp430_enable_polys;

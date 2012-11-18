@@ -1,28 +1,26 @@
 /* Assembler interface for targets using CGEN. -*- C -*-
    CGEN: Cpu tools GENerator
 
-   THIS FILE IS MACHINE GENERATED WITH CGEN.
-   - the resultant file is machine generated, cgen-asm.in isn't
+THIS FILE IS MACHINE GENERATED WITH CGEN.
+- the resultant file is machine generated, cgen-asm.in isn't
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2005, 2007, 2008, 2010
-   Free Software Foundation, Inc.
+Copyright 1996, 1997, 1998, 1999, 2000, 2001 Free Software Foundation, Inc.
 
-   This file is part of libopcodes.
+This file is part of the GNU Binutils and GDB, the GNU debugger.
 
-   This library is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   It is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation, Inc.,
-   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
-
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 /* ??? Eventually more and more of this stuff can go to cpu-independent files.
    Keep that in mind.  */
@@ -51,11 +49,24 @@ static const char * parse_insn_normal
 
 /* -- asm.c */
 
+#define PARSE_FUNC_DECL(name) \
+  static const char *name (CGEN_CPU_DESC, const char **, int, long *)
+#define PARSE_UFUNC_DECL(name) \
+  static const char *name (CGEN_CPU_DESC, const char **, int, unsigned long *)
+
+PARSE_UFUNC_DECL (parse_fr);
+PARSE_UFUNC_DECL (parse_addr16);
+PARSE_UFUNC_DECL (parse_addr16_cjp);
+PARSE_FUNC_DECL (parse_lit8);
+PARSE_UFUNC_DECL (parse_bit3);
+
+
 static const char *
-parse_fr (CGEN_CPU_DESC cd,
-	  const char **strp,
-	  int opindex,
-	  unsigned long *valuep)
+parse_fr (cd, strp, opindex, valuep)
+     CGEN_CPU_DESC cd;
+     const char **strp;
+     int opindex;
+     unsigned long *valuep;
 {
   const char *errmsg;
   const char *old_strp;
@@ -66,7 +77,7 @@ parse_fr (CGEN_CPU_DESC cd,
   bfd_vma tempvalue;
 
   old_strp = *strp;
-  afteroffset = NULL;
+  afteroffset = NULL; 
 
   /* Check here to see if you're about to try parsing a w as the first arg
      and return an error if you are.  */
@@ -144,7 +155,7 @@ parse_fr (CGEN_CPU_DESC cd,
 	    {
 	      /* Value is ok.  Fix up the first 2 bits and return.  */
 	      *valuep = 0x0100 | tempvalue;
-	      *strp += 4; /* Skip over the (DP) in *strp.  */
+	      *strp += 4; /* skip over the (DP) in *strp.  */
 	      return errmsg;
 	    }
 	  else
@@ -185,7 +196,7 @@ parse_fr (CGEN_CPU_DESC cd,
 	    {
 	      /* Value is ok.  Fix up the first 2 bits and return.  */
 	      *valuep = 0x0180 | tempvalue;
-	      *strp += 4; /* Skip over the (SP) in *strp.  */
+	      *strp += 4; /* skip over the (SP) in *strp.  */
 	      return errmsg;
 	    }
 	  else
@@ -206,11 +217,11 @@ parse_fr (CGEN_CPU_DESC cd,
     {
       *valuep = value;
 
-      /* If a parenthesis is found, warn about invalid form.  */
+      /* if a parenthesis is found, warn about invalid form.  */
       if (**strp == '(')
 	errmsg = _("illegal use of parentheses");
 
-      /* If a numeric value is specified, ensure that it is between
+      /* if a numeric value is specified, ensure that it is between
 	 1 and 255.  */
       else if (result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
 	{
@@ -222,10 +233,11 @@ parse_fr (CGEN_CPU_DESC cd,
 }
 
 static const char *
-parse_addr16 (CGEN_CPU_DESC cd,
-	      const char **strp,
-	      int opindex,
-	      unsigned long *valuep)
+parse_addr16 (cd, strp, opindex, valuep)
+     CGEN_CPU_DESC cd;
+     const char **strp;
+     int opindex;
+     unsigned long *valuep;
 {
   const char *errmsg;
   enum cgen_parse_operand_result result_type;
@@ -238,7 +250,7 @@ parse_addr16 (CGEN_CPU_DESC cd,
     code = BFD_RELOC_IP2K_LO8DATA;
   else
     {
-      /* Something is very wrong. opindex has to be one of the above.  */
+      /* Something is very wrong. opindex has to be one of the above. */
       errmsg = _("parse_addr16: invalid opindex.");
       return errmsg;
     }
@@ -247,14 +259,13 @@ parse_addr16 (CGEN_CPU_DESC cd,
 			       & result_type, & value);
   if (errmsg == NULL)
     {
-      /* We either have a relocation or a number now.  */
+      /* We either have a relocation or a number now. */
       if (result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
 	{
-	  /* We got a number back.  */
+	  /* We got a number back. */
 	  if (code == BFD_RELOC_IP2K_HI8DATA)
             value >>= 8;
-	  else
-	    /* code = BFD_RELOC_IP2K_LOW8DATA.  */
+	  else    /* code = BFD_RELOC_IP2K_LOW8DATA */
 	    value &= 0x00FF;
 	}   
       *valuep = value;
@@ -263,11 +274,13 @@ parse_addr16 (CGEN_CPU_DESC cd,
   return errmsg;
 }
 
+
 static const char *
-parse_addr16_cjp (CGEN_CPU_DESC cd,
-		  const char **strp,
-		  int opindex,
-		  unsigned long *valuep)
+parse_addr16_cjp (cd, strp, opindex, valuep)
+     CGEN_CPU_DESC cd;
+     const char **strp;
+     int opindex;
+     unsigned long *valuep;
 {
   const char *errmsg;
   enum cgen_parse_operand_result result_type;
@@ -288,7 +301,7 @@ parse_addr16_cjp (CGEN_CPU_DESC cd,
 	  if ((value & 0x1) == 0)  /* If the address is even .... */
 	    {
 	      if (opindex == (CGEN_OPERAND_TYPE) IP2K_OPERAND_ADDR16CJP)
-                *valuep = (value >> 1) & 0x1FFF;  /* Should mask be 1FFF?  */
+                *valuep = (value >> 1) & 0x1FFF;  /* Should mask be 1FFF? */
 	      else if (opindex == (CGEN_OPERAND_TYPE) IP2K_OPERAND_ADDR16P)
                 *valuep = (value >> 14) & 0x7;
 	    }
@@ -307,18 +320,20 @@ parse_addr16_cjp (CGEN_CPU_DESC cd,
   return errmsg; 
 }
 
+
 static const char *
-parse_lit8 (CGEN_CPU_DESC cd,
-	    const char **strp,
-	    int opindex,
-	    long *valuep)
+parse_lit8 (cd, strp, opindex, valuep)
+     CGEN_CPU_DESC cd;
+     const char **strp;
+     int opindex;
+     long *valuep;
 {
   const char *errmsg;
   enum cgen_parse_operand_result result_type;
   bfd_reloc_code_real_type code = BFD_RELOC_NONE;
   bfd_vma value;
 
-  /* Parse %OP relocating operators.  */
+  /* Parse %OP relocating operators. */
   if (strncmp (*strp, "%bank", 5) == 0)
     {
       *strp += 5;
@@ -349,6 +364,7 @@ parse_lit8 (CGEN_CPU_DESC cd,
       *strp += 8;
       code = BFD_RELOC_IP2K_HI8INSN;
     }
+  
 
   /* Parse %op operand.  */
   if (code != BFD_RELOC_NONE)
@@ -357,7 +373,7 @@ parse_lit8 (CGEN_CPU_DESC cd,
 				   & result_type, & value);
       if ((errmsg == NULL) &&
 	  (result_type != CGEN_PARSE_OPERAND_RESULT_QUEUED))
-	errmsg = _("percent-operator operand is not a symbol");
+	errmsg = _("%operator operand is not a symbol");
 
       *valuep = value;
     }
@@ -366,7 +382,7 @@ parse_lit8 (CGEN_CPU_DESC cd,
     {
       errmsg = cgen_parse_signed_integer (cd, strp, opindex, valuep);
 
-      /* Truncate to eight bits to accept both signed and unsigned input.  */
+      /* Truncate to eight bits to accept both signed and unsigned input. */
       if (errmsg == NULL)
 	*valuep &= 0xFF;
     }
@@ -375,10 +391,11 @@ parse_lit8 (CGEN_CPU_DESC cd,
 }
 
 static const char *
-parse_bit3 (CGEN_CPU_DESC cd,
-	    const char **strp,
-	    int opindex,
-	    unsigned long *valuep)
+parse_bit3 (cd, strp, opindex, valuep)
+     CGEN_CPU_DESC cd;
+     const char **strp;
+     int opindex;
+     unsigned long *valuep;
 {
   const char *errmsg;
   char mode = 0;
@@ -439,10 +456,11 @@ parse_bit3 (CGEN_CPU_DESC cd,
   return errmsg;
 }
 
+
 /* -- dis.c */
 
 const char * ip2k_cgen_parse_operand
-  (CGEN_CPU_DESC, int, const char **, CGEN_FIELDS *);
+  PARAMS ((CGEN_CPU_DESC, int, const char **, CGEN_FIELDS *));
 
 /* Main entry point for operand parsing.
 
@@ -458,10 +476,11 @@ const char * ip2k_cgen_parse_operand
    the handlers.  */
 
 const char *
-ip2k_cgen_parse_operand (CGEN_CPU_DESC cd,
-			   int opindex,
-			   const char ** strp,
-			   CGEN_FIELDS * fields)
+ip2k_cgen_parse_operand (cd, opindex, strp, fields)
+     CGEN_CPU_DESC cd;
+     int opindex;
+     const char ** strp;
+     CGEN_FIELDS * fields;
 {
   const char * errmsg = NULL;
   /* Used by scalar operands that still need to be parsed.  */
@@ -521,15 +540,13 @@ cgen_parse_fn * const ip2k_cgen_parse_handlers[] =
 };
 
 void
-ip2k_cgen_init_asm (CGEN_CPU_DESC cd)
+ip2k_cgen_init_asm (cd)
+     CGEN_CPU_DESC cd;
 {
   ip2k_cgen_init_opcode_table (cd);
   ip2k_cgen_init_ibld_table (cd);
   cd->parse_handlers = & ip2k_cgen_parse_handlers[0];
   cd->parse_operand = ip2k_cgen_parse_operand;
-#ifdef CGEN_ASM_INIT_HOOK
-CGEN_ASM_INIT_HOOK
-#endif
 }
 
 
@@ -758,11 +775,9 @@ parse_insn_normal (CGEN_CPU_DESC cd,
 	  continue;
 	}
 
-#ifdef CGEN_MNEMONIC_OPERANDS
-      (void) past_opcode_p;
-#endif
       /* We have an operand of some sort.  */
-      errmsg = cd->parse_operand (cd, CGEN_SYNTAX_FIELD (*syn), &str, fields);
+      errmsg = cd->parse_operand (cd, CGEN_SYNTAX_FIELD (*syn),
+					  &str, fields);
       if (errmsg)
 	return errmsg;
 
@@ -879,41 +894,60 @@ ip2k_cgen_assemble_insn (CGEN_CPU_DESC cd,
 
   {
     static char errbuf[150];
-    const char *tmp_errmsg;
 #ifdef CGEN_VERBOSE_ASSEMBLER_ERRORS
-#define be_verbose 1
+    const char *tmp_errmsg;
+
+    /* If requesting verbose error messages, use insert_errmsg.
+       Failing that, use parse_errmsg.  */
+    tmp_errmsg = (insert_errmsg ? insert_errmsg :
+		  parse_errmsg ? parse_errmsg :
+		  recognized_mnemonic ?
+		  _("unrecognized form of instruction") :
+		  _("unrecognized instruction"));
+
+    if (strlen (start) > 50)
+      /* xgettext:c-format */
+      sprintf (errbuf, "%s `%.50s...'", tmp_errmsg, start);
+    else 
+      /* xgettext:c-format */
+      sprintf (errbuf, "%s `%.50s'", tmp_errmsg, start);
 #else
-#define be_verbose 0
+    if (strlen (start) > 50)
+      /* xgettext:c-format */
+      sprintf (errbuf, _("bad instruction `%.50s...'"), start);
+    else 
+      /* xgettext:c-format */
+      sprintf (errbuf, _("bad instruction `%.50s'"), start);
 #endif
-
-    if (be_verbose)
-      {
-	/* If requesting verbose error messages, use insert_errmsg.
-	   Failing that, use parse_errmsg.  */
-	tmp_errmsg = (insert_errmsg ? insert_errmsg :
-		      parse_errmsg ? parse_errmsg :
-		      recognized_mnemonic ?
-		      _("unrecognized form of instruction") :
-		      _("unrecognized instruction"));
-
-	if (strlen (start) > 50)
-	  /* xgettext:c-format */
-	  sprintf (errbuf, "%s `%.50s...'", tmp_errmsg, start);
-	else 
-	  /* xgettext:c-format */
-	  sprintf (errbuf, "%s `%.50s'", tmp_errmsg, start);
-      }
-    else
-      {
-	if (strlen (start) > 50)
-	  /* xgettext:c-format */
-	  sprintf (errbuf, _("bad instruction `%.50s...'"), start);
-	else 
-	  /* xgettext:c-format */
-	  sprintf (errbuf, _("bad instruction `%.50s'"), start);
-      }
       
     *errmsg = errbuf;
     return NULL;
   }
 }
+
+#if 0 /* This calls back to GAS which we can't do without care.  */
+
+/* Record each member of OPVALS in the assembler's symbol table.
+   This lets GAS parse registers for us.
+   ??? Interesting idea but not currently used.  */
+
+/* Record each member of OPVALS in the assembler's symbol table.
+   FIXME: Not currently used.  */
+
+void
+ip2k_cgen_asm_hash_keywords (CGEN_CPU_DESC cd, CGEN_KEYWORD *opvals)
+{
+  CGEN_KEYWORD_SEARCH search = cgen_keyword_search_init (opvals, NULL);
+  const CGEN_KEYWORD_ENTRY * ke;
+
+  while ((ke = cgen_keyword_search_next (& search)) != NULL)
+    {
+#if 0 /* Unnecessary, should be done in the search routine.  */
+      if (! ip2k_cgen_opval_supported (ke))
+	continue;
+#endif
+      cgen_asm_record_register (cd, ke->name, ke->value);
+    }
+}
+
+#endif /* 0 */

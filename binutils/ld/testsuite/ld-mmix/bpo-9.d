@@ -12,13 +12,17 @@
 SYMBOL TABLE:
 0+ l    d  \.init	0+ (|\.init)
 0+10 l    d  \.text	0+ (|\.text)
+20+ l    d  \.sbss	0+ (|\.sbss)
+2000000000000000 l    d  \.bss	0+ (|\.bss)
 0+7e8 l    d  \.MMIX\.reg_contents	0+ (|\.MMIX\.reg_contents)
-#...
+0+ l    d  \*ABS\*	0+ (|\.shstrtab)
+0+ l    d  \*ABS\*	0+ (|\.symtab)
+0+ l    d  \*ABS\*	0+ (|\.strtab)
 0+ l       \.init	0+ _start
-#...
 0+14 g       \.text	0+ x
 0+10 g       \.text	0+ x2
 #...
+
 Contents of section \.init:
  0000 00000000 0000003d 00000000 0000003a  .*
 Contents of section \.text:

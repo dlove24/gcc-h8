@@ -1,6 +1,6 @@
 /* ecoff.h -- header file for ECOFF debugging support
-   Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2003, 2004, 2005,
-   2007, 2009 Free Software Foundation, Inc.
+   Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2003, 2005
+   Free Software Foundation, Inc.
    Contributed by Cygnus Support.
    Put together by Ian Lance Taylor <ian@cygnus.com>.
 
@@ -8,7 +8,7 @@
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -18,8 +18,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #ifndef GAS_ECOFF_H
 #define GAS_ECOFF_H
@@ -43,8 +43,6 @@ extern void ecoff_new_file (const char *, int);
 /* This function should be called when a new symbol is created, by
    obj_symbol_new_hook.  */
 extern void ecoff_symbol_new_hook (symbolS *);
-
-extern void ecoff_symbol_clone_hook (symbolS *, symbolS *);
 
 /* This function should be called by the obj_frob_symbol hook.  */
 extern void ecoff_frob_symbol (symbolS *);

@@ -1,5 +1,5 @@
 /* V850 ELF support for BFD.
-   Copyright 1997, 1998, 2000, 2002, 2003, 2004, 2007, 2008, 2010
+   Copyright 1997, 1998, 2000, 2002, 2003, 2004
    Free Software Foundation, Inc.
    Created by Michael Meissner, Cygnus Support <meissner@cygnus.com>
 
@@ -7,7 +7,7 @@
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,8 +17,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 /* This file holds definitions specific to the MIPS ELF ABI.  Note
    that most of this is not actually implemented by BFD.  */
@@ -40,16 +39,12 @@
 /* v850e1 code.  */
 #define E_V850E1_ARCH		0x20000000
 
-/* v850e2 code.  */
-#define E_V850E2_ARCH		0x30000000
-
-/* v850e2v3 code.  */
-#define E_V850E2V3_ARCH		0x40000000
 
 /* Flags for the st_other field.  */
-#define V850_OTHER_SDA		0x10	/* Symbol had SDA relocations.  */
-#define V850_OTHER_ZDA		0x20	/* Symbol had ZDA relocations.  */
-#define V850_OTHER_TDA		0x40	/* Symbol had TDA relocations.  */
+#define V850_OTHER_SDA		0x01	/* Symbol had SDA relocations.  */
+#define V850_OTHER_ZDA		0x02	/* Symbol had ZDA relocations.  */
+#define V850_OTHER_TDA		0x04	/* Symbol had TDA relocations.  */
+#define V850_OTHER_TDA_BYTE	0x08	/* Symbol had TDA byte relocations.  */
 #define V850_OTHER_ERROR	0x80	/* Symbol had an error reported.  */
 
 /* V850 relocations.  */
@@ -86,29 +81,6 @@ START_RELOC_NUMBERS (v850_reloc_type)
      RELOC_NUMBER (R_V850_ALIGN, 27)
      RELOC_NUMBER (R_V850_REL32, 28)
      RELOC_NUMBER (R_V850_LO16_SPLIT_OFFSET, 29)	/* For ld.bu */
-     RELOC_NUMBER (R_V850_16_PCREL, 30)      		/* For loop */
-     RELOC_NUMBER (R_V850_17_PCREL, 31)      		/* For br */
-     RELOC_NUMBER (R_V850_23, 32)			/* For 23bit ld.[w,h,hu,b,bu],st.[w,h,b] */
-     RELOC_NUMBER (R_V850_32_PCREL, 33)      		/* For jr32, jarl32 */
-     RELOC_NUMBER (R_V850_32_ABS, 34)      		/* For jmp32 */
-     RELOC_NUMBER (R_V850_16_SPLIT_OFFSET, 35)      	/* For ld.bu */
-     RELOC_NUMBER (R_V850_16_S1, 36)      		/* For ld.w, ld.h st.w st.h */
-     RELOC_NUMBER (R_V850_LO16_S1, 37)      		/* For ld.w, ld.h st.w st.h */
-     RELOC_NUMBER (R_V850_CALLT_15_16_OFFSET, 38)	/* For ld.w, ld.h, ld.hu, st.w, st.h */
-     RELOC_NUMBER (R_V850_32_GOTPCREL, 39)		/* GLOBAL_OFFSET_TABLE from pc */
-     RELOC_NUMBER (R_V850_16_GOT, 40)      		/* GOT ENTRY from gp */
-     RELOC_NUMBER (R_V850_32_GOT, 41)      		
-     RELOC_NUMBER (R_V850_22_PLT, 42)			/* For jr */
-     RELOC_NUMBER (R_V850_32_PLT, 43)			/* For jr32 */
-     RELOC_NUMBER (R_V850_COPY, 44)      		
-     RELOC_NUMBER (R_V850_GLOB_DAT, 45)      		
-     RELOC_NUMBER (R_V850_JMP_SLOT, 46)      		
-     RELOC_NUMBER (R_V850_RELATIVE, 47)      		
-     RELOC_NUMBER (R_V850_16_GOTOFF, 48)      		/* From gp */
-     RELOC_NUMBER (R_V850_32_GOTOFF, 49)      		
-     RELOC_NUMBER (R_V850_CODE, 50)      		
-     RELOC_NUMBER (R_V850_DATA, 51)      		/* For loop */
-
 END_RELOC_NUMBERS (R_V850_max)
 
 
@@ -117,13 +89,13 @@ END_RELOC_NUMBERS (R_V850_max)
    values have a special meaning.  */
 
 /* Small data area common symbol.  */
-#define SHN_V850_SCOMMON	SHN_LORESERVE
+#define SHN_V850_SCOMMON	0xff00
 
 /* Tiny data area common symbol.  */
-#define SHN_V850_TCOMMON	(SHN_LORESERVE + 1)
+#define SHN_V850_TCOMMON	0xff01
 
 /* Zero data area common symbol.  */
-#define SHN_V850_ZCOMMON	(SHN_LORESERVE + 2)
+#define SHN_V850_ZCOMMON	0xff02
 
 
 /* Processor specific section types.  */

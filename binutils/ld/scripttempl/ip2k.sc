@@ -1,7 +1,7 @@
 cat << EOF
 OUTPUT_FORMAT("elf32-ip2k", "elf32-ip2k", "elf32-ip2k")
 OUTPUT_ARCH(ip2k)
-${RELOCATING+ENTRY(_start)}
+ENTRY(_start)
 SEARCH_DIR(.);
 
 /* IP2022 default linker script.  */
@@ -146,12 +146,5 @@ SECTIONS
 	.debug_str      0 : { *(.debug_str) }
 	.debug_loc      0 : { *(.debug_loc) }
 	.debug_macinfo  0 : { *(.debug_macinfo) }
-
-	/* DWARF 3 */
-	.debug_pubtypes 0 : { *(.debug_pubtypes) }
-	.debug_ranges   0 : { *(.debug_ranges) }
-
-	/* DWARF Extension.  */
-	.debug_macro    0 : { *(.debug_macro) } 
 }
 EOF

@@ -1,5 +1,5 @@
 /* tc-cris.h -- Header file for tc-cris.c, the CRIS GAS port.
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2009
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005
    Free Software Foundation, Inc.
 
    Contributed by Axis Communications AB, Lund, Sweden.
@@ -10,7 +10,7 @@
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -20,8 +20,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the
-   Free Software Foundation, 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Free Software Foundation, 59 Temple Place - Suite 330, Boston,
+   MA 02111-1307, USA.  */
 
 /* See the GAS "internal" document for general documentation on this.
    It is called internals.texi (internals.info when makeinfo:d), but is
@@ -35,12 +35,12 @@
 #define TC_CRIS
 
 /* Multi-target support is always on.  */
-extern const char *cris_target_format (void);
+extern const char *cris_target_format PARAMS ((void));
 #define TARGET_FORMAT cris_target_format ()
 
 #define TARGET_ARCH bfd_arch_cris
 
-extern unsigned int cris_mach (void);
+extern unsigned int cris_mach PARAMS ((void));
 #define TARGET_MACH (cris_mach ())
 
 #define TARGET_BYTES_BIG_ENDIAN 0
@@ -68,10 +68,15 @@ extern const char FLT_CHARS[];
 #define md_operand(x)
 
 #define md_number_to_chars number_to_chars_littleendian
+
+/* There's no use having different functions for this; the sizes are the
+   same.  Note that we can't #define md_short_jump_size here.  */
+#define md_create_short_jump md_create_long_jump
+
 extern const struct relax_type md_cris_relax_table[];
 #define TC_GENERIC_RELAX_TABLE md_cris_relax_table
 
-long cris_relax_frag (segT, fragS *, long);
+long cris_relax_frag PARAMS ((segT, fragS *, long));
 
 /* GAS only handles relaxations for pc-relative data targeting addresses
    in the same segment, so we have to handle the rest on our own.  */
@@ -82,7 +87,7 @@ long cris_relax_frag (segT, fragS *, long);
   : cris_relax_frag (SEG, FRAGP, STRETCH))
 
 #define TC_FORCE_RELOCATION(FIX) md_cris_force_relocation (FIX)
-extern int md_cris_force_relocation (struct fix *);
+extern int md_cris_force_relocation PARAMS ((struct fix *));
 
 #define IS_CRIS_PIC_RELOC(RTYPE)			\
   ((RTYPE) == BFD_RELOC_CRIS_16_GOT			\
@@ -94,9 +99,10 @@ extern int md_cris_force_relocation (struct fix *);
    || (RTYPE) == BFD_RELOC_CRIS_32_PLT_PCREL)
 
 /* Make sure we don't resolve fixups for which we want to emit dynamic
-   relocations.  */
+   relocations.  FIXME: Set fx_plt instead of using IS_CRIS_PIC_RELOC.  */
 #define TC_FORCE_RELOCATION_LOCAL(FIX)			\
   (!(FIX)->fx_pcrel					\
+   || (FIX)->fx_plt					\
    || IS_CRIS_PIC_RELOC ((FIX)->fx_r_type)		\
    || TC_FORCE_RELOCATION (FIX))
 
@@ -107,13 +113,6 @@ extern int md_cris_force_relocation (struct fix *);
   && (FIX)->fx_r_type != BFD_RELOC_VTABLE_ENTRY		\
   && (! IS_CRIS_PIC_RELOC ((FIX)->fx_r_type)		\
       || (FIX)->fx_r_type == BFD_RELOC_CRIS_32_GOTREL))
-
-/* FIXME: This *should* be a redundant definition, as the
-   TC_FORCE_RELOCATION* definitions already told about the cases where
-   we *don't* want the symbol value calculated.  Here we seem to answer
-   the "are you sure" question.  It certainly has very little to do with
-   whether the symbol value is passed to md_apply_fix.  */
-#define MD_APPLY_SYM_VALUE(FIX) 0
 
 /* When we have fixups against constant expressions, we get a GAS-specific
    section symbol at no extra charge for obscure reasons in
@@ -147,8 +146,9 @@ extern int md_cris_force_relocation (struct fix *);
    it is only for use with WORKING_DOT_WORD and warns about most stuff.
    (still in 2.9.1).  */
 struct broken_word;
-extern void tc_cris_check_adjusted_broken_word (offsetT,
-						struct broken_word *);
+extern void tc_cris_check_adjusted_broken_word PARAMS ((offsetT,
+							struct
+							broken_word *));
 #define TC_CHECK_ADJUSTED_BROKEN_DOT_WORD(new_offset, brokw) \
  tc_cris_check_adjusted_broken_word ((offsetT) (new_offset), brokw)
 

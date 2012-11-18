@@ -1,12 +1,12 @@
 /* ELF core file support for BFD.
-   Copyright 1995, 1996, 1997, 1998, 2000, 2001, 2002, 2003, 2005, 2007,
-   2008, 2010 Free Software Foundation, Inc.
+   Copyright 1995, 1996, 1997, 1998, 2000, 2001, 2002, 2003, 2005
+   Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -16,8 +16,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 char*
 elf_core_file_failing_command (bfd *abfd)
@@ -29,12 +28,6 @@ int
 elf_core_file_failing_signal (bfd *abfd)
 {
   return elf_tdata (abfd)->core_signal;
-}
-
-int
-elf_core_file_pid (bfd *abfd)
-{
-  return elf_tdata (abfd)->core_pid;
 }
 
 bfd_boolean
@@ -164,9 +157,7 @@ elf_core_file_p (bfd *abfd)
 
 	  if ((*target_ptr)->flavour != bfd_target_elf_flavour)
 	    continue;
-	  back = xvec_get_elf_backend_data (*target_ptr);
-	  if (back->s->arch_size != ARCH_SIZE)
-	    continue;
+	  back = (const struct elf_backend_data *) (*target_ptr)->backend_data;
 	  if (back->elf_machine_code == i_ehdrp->e_machine
 	      || (back->elf_machine_alt1 != 0
 	          && i_ehdrp->e_machine == back->elf_machine_alt1)
@@ -190,68 +181,13 @@ elf_core_file_p (bfd *abfd)
   if (i_ehdrp->e_phentsize != sizeof (Elf_External_Phdr))
     goto wrong;
 
-  /* If the program header count is PN_XNUM(0xffff), the actual
-     count is in the first section header.  */
-  if (i_ehdrp->e_shoff != 0 && i_ehdrp->e_phnum == PN_XNUM)
-    {
-      Elf_External_Shdr x_shdr;
-      Elf_Internal_Shdr i_shdr;
-      bfd_signed_vma where = i_ehdrp->e_shoff;
-
-      if (where != (file_ptr) where)
-	goto wrong;
-
-      /* Seek to the section header table in the file.  */
-      if (bfd_seek (abfd, (file_ptr) where, SEEK_SET) != 0)
-	goto fail;
-
-      /* Read the first section header at index 0, and convert to internal
-	 form.  */
-      if (bfd_bread (&x_shdr, sizeof (x_shdr), abfd) != sizeof (x_shdr))
-	goto fail;
-      elf_swap_shdr_in (abfd, &x_shdr, &i_shdr);
-
-      if (i_shdr.sh_info != 0)
-	{
-	  i_ehdrp->e_phnum = i_shdr.sh_info;
-	  if (i_ehdrp->e_phnum != i_shdr.sh_info)
-	    goto wrong;
-	}
-    }
-
-  /* Sanity check that we can read all of the program headers.
-     It ought to be good enough to just read the last one.  */
-  if (i_ehdrp->e_phnum > 1)
-    {
-      Elf_External_Phdr x_phdr;
-      Elf_Internal_Phdr i_phdr;
-      bfd_signed_vma where;
-
-      /* Check that we don't have a totally silly number of
-	 program headers.  */
-      if (i_ehdrp->e_phnum > (unsigned int) -1 / sizeof (x_phdr)
-	  || i_ehdrp->e_phnum > (unsigned int) -1 / sizeof (i_phdr))
-	goto wrong;
-
-      where = i_ehdrp->e_phoff + (i_ehdrp->e_phnum - 1) * sizeof (x_phdr);
-      if (where != (file_ptr) where)
-	goto wrong;
-      if ((bfd_size_type) where <= i_ehdrp->e_phoff)
-	goto wrong;
-
-      if (bfd_seek (abfd, (file_ptr) where, SEEK_SET) != 0)
-	goto fail;
-      if (bfd_bread (&x_phdr, sizeof (x_phdr), abfd) != sizeof (x_phdr))
-	goto fail;
-    }
-
   /* Move to the start of the program headers.  */
   if (bfd_seek (abfd, (file_ptr) i_ehdrp->e_phoff, SEEK_SET) != 0)
     goto wrong;
 
   /* Allocate space for the program headers.  */
   amt = sizeof (*i_phdrp) * i_ehdrp->e_phnum;
-  i_phdrp = (Elf_Internal_Phdr *) bfd_alloc (abfd, amt);
+  i_phdrp = bfd_alloc (abfd, amt);
   if (!i_phdrp)
     goto fail;
 
@@ -290,32 +226,6 @@ elf_core_file_p (bfd *abfd)
     if (! bfd_section_from_phdr (abfd, i_phdrp + phindex, (int) phindex))
       goto fail;
 
-  /* Check for core truncation.  */
-  {
-    bfd_size_type high = 0;
-    struct stat statbuf;
-    for (phindex = 0; phindex < i_ehdrp->e_phnum; ++phindex) 
-      {
-	Elf_Internal_Phdr *p = i_phdrp + phindex;
-	if (p->p_filesz)
-	  {
-	    bfd_size_type current = p->p_offset + p->p_filesz;
-	    if (high < current)
-	      high = current;
-	  }
-      }
-    if (bfd_stat (abfd, &statbuf) == 0)
-      {
-	if ((bfd_size_type) statbuf.st_size < high)
-	  {
-	    (*_bfd_error_handler)
-	      (_("Warning: %B is truncated: expected core file "
-		 "size >= %lu, found: %lu."),
-	       abfd, (unsigned long) high, (unsigned long) statbuf.st_size);
-	  }
-      }
-  }
-  
   /* Save the entry point from the ELF header.  */
   bfd_get_start_address (abfd) = i_ehdrp->e_entry;
 

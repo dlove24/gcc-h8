@@ -5,7 +5,6 @@ TEMPLATE_NAME=elf32
 
 # Symbols have underscore prepended.
 OUTPUT_FORMAT="elf32-us-cris"
-NO_REL_RELOCS=yes
 ARCH=cris
 MAXPAGESIZE=32
 ENTRY=__start
@@ -14,12 +13,7 @@ ALIGNMENT=32
 TEXT_START_ADDR=0
 
 # Put crt0 for flash/eprom etc. in this section.
-INITIAL_READONLY_SECTIONS=
-if test -z "${CREATE_SHLIB}"; then
-  INITIAL_READONLY_SECTIONS=".interp       ${RELOCATING-0} : { *(.interp) }"
-fi
-INITIAL_READONLY_SECTIONS="${INITIAL_READONLY_SECTIONS}
-  .startup : { KEEP(*(.startup)) }"
+INITIAL_READONLY_SECTIONS='.startup : { KEEP(*(.startup)) }'
 
 # Setting __Stext to . in TEXT_START_SYMBOLS doesn't get what we want
 # most of the time, which is the start of all read-only sections;
@@ -50,10 +44,10 @@ OTHER_SDATA_SECTIONS="${RELOCATING+PROVIDE (__Edata = .);}"
 # end symbol.
 OTHER_BSS_END_SYMBOLS='
  PROVIDE (__Ebss = .);
+ PROVIDE (__end = .);
  __Sbss = ADDR (.bss);
  PROVIDE (_bss_start = __Sbss);
 '
-OTHER_END_SYMBOLS='PROVIDE (__end = .);'
 
 INIT_START='
  . = ALIGN(2);
@@ -96,7 +90,7 @@ CTOR_END='
 '
 
 # Also add the other symbols provided for rsim/xsim and elinux.
-OTHER_SYMBOLS='
+OTHER_END_SYMBOLS='
   PROVIDE (__Eall = .);
   PROVIDE (__Endmem = 0x10000000); 
   PROVIDE (__Stacksize = 0);

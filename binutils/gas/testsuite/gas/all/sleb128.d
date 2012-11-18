@@ -1,9 +1,9 @@
-#objdump : -s -j .data -j "\$DATA\$"
+#objdump : -s -j .data
 #name : .sleb128 tests
 
 .*: .*
 
-Contents of section (\.data|\$DATA\$):
+Contents of section .data:
 #
 # 0x76543210   :           000_0111 0110_010 1_0100_00 11_0010_0 001_0000
 # 0x80000000   :           000_1000 0000_000 0_0000_00 00_0000_0 000_0000

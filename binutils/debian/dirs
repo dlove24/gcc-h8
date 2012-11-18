@@ -1,0 +1,6 @@
+usr/share/lintian/overrides
+usr/share/doc/binutils-h8300-hms
+usr/share/doc/binutils-h8300-hms/bfd
+usr/share/doc/binutils-h8300-hms/gas
+usr/share/doc/binutils-h8300-hms/gprof
+usr/share/doc/binutils-h8300-hms/ld

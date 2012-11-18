@@ -6,7 +6,7 @@
 # assemble and disassemble correctly for v32 given "old-style"
 # mnemonics.
 
-.*:     file format elf32.*-cris
+.*:     file format elf32-us-cris
 
 Disassembly of section \.text:
 

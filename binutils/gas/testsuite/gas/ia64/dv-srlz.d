@@ -1,4 +1,4 @@
-# as: -xauto -mtune=itanium1
+# as: -xauto
 # objdump: -d
 # name ia64 dv-srlz
 

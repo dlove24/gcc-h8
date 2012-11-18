@@ -1,12 +1,11 @@
 /* SH ELF support for BFD.
-   Copyright 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2010
-   Free Software Foundation, Inc.
+   Copyright 1998, 2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -16,7 +15,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 #ifndef _ELF_SH_H
 #define _ELF_SH_H
@@ -55,7 +54,7 @@
    bfd_mach_* are defined in bfd_in2.h (generated from
    archures.c).  */
 #define EF_SH_BFD_TABLE \
-/* EF_SH_UNKNOWN	*/ bfd_mach_sh		, \
+/* EF_SH_UNKNOWN	*/ bfd_mach_sh3		, \
 /* EF_SH1		*/ bfd_mach_sh		, \
 /* EF_SH2		*/ bfd_mach_sh2		, \
 /* EF_SH3		*/ bfd_mach_sh3		, \
@@ -85,12 +84,6 @@ int sh_find_elf_flags (unsigned int arch_set);
 
 /* Convert bfd_mach_* into EF_SH*.  */
 int sh_elf_get_flags_from_mach (unsigned long mach);
-
-/* Other e_flags bits.  */
-
-#define EF_SH_PIC		0x100	/* Segments of an FDPIC binary may
-					   be relocated independently.  */
-#define EF_SH_FDPIC		0x8000	/* Uses the FDPIC ABI.  */
 
 /* Flags for the st_other symbol field.
    Keep away from the STV_ visibility flags (bit 0..1).  */
@@ -220,17 +213,7 @@ START_RELOC_NUMBERS (elf_sh_reloc_type)
   RELOC_NUMBER (R_SH_JMP_SLOT64, 195)
   RELOC_NUMBER (R_SH_RELATIVE64, 196)
   FAKE_RELOC (R_SH_FIRST_INVALID_RELOC_5, 197)
-  FAKE_RELOC (R_SH_LAST_INVALID_RELOC_5, 200)
-  RELOC_NUMBER (R_SH_GOT20, 201)
-  RELOC_NUMBER (R_SH_GOTOFF20, 202)
-  RELOC_NUMBER (R_SH_GOTFUNCDESC, 203)
-  RELOC_NUMBER (R_SH_GOTFUNCDESC20, 204)
-  RELOC_NUMBER (R_SH_GOTOFFFUNCDESC, 205)
-  RELOC_NUMBER (R_SH_GOTOFFFUNCDESC20, 206)
-  RELOC_NUMBER (R_SH_FUNCDESC, 207)
-  RELOC_NUMBER (R_SH_FUNCDESC_VALUE, 208)
-  FAKE_RELOC (R_SH_FIRST_INVALID_RELOC_6, 209)
-  FAKE_RELOC (R_SH_LAST_INVALID_RELOC_6, 241)
+  FAKE_RELOC (R_SH_LAST_INVALID_RELOC_5, 241)
   RELOC_NUMBER (R_SH_SHMEDIA_CODE, 242)
   RELOC_NUMBER (R_SH_PT_16, 243)
   RELOC_NUMBER (R_SH_IMMS16, 244)

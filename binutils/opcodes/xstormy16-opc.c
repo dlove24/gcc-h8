@@ -2,23 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright 1996-2005 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
-   This file is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   It is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with this program; if not, write to the Free Software Foundation, Inc.,
-   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
@@ -33,14 +33,18 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 /* The hash functions are recorded here to help keep assembler code out of
    the disassembler and vice versa.  */
 
-static int asm_hash_insn_p        (const CGEN_INSN *);
-static unsigned int asm_hash_insn (const char *);
-static int dis_hash_insn_p        (const CGEN_INSN *);
-static unsigned int dis_hash_insn (const char *, CGEN_INSN_INT);
+static int asm_hash_insn_p PARAMS ((const CGEN_INSN *));
+static unsigned int asm_hash_insn PARAMS ((const char *));
+static int dis_hash_insn_p PARAMS ((const CGEN_INSN *));
+static unsigned int dis_hash_insn PARAMS ((const char *, CGEN_INSN_INT));
 
 /* Instruction formats.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define F(f) & xstormy16_cgen_ifld_table[XSTORMY16_##f]
+#else
+#define F(f) & xstormy16_cgen_ifld_table[XSTORMY16_/**/f]
+#endif
 static const CGEN_IFMT ifmt_empty ATTRIBUTE_UNUSED = {
   0, 0, 0x0, { { 0 } }
 };
@@ -159,8 +163,16 @@ static const CGEN_IFMT ifmt_iret ATTRIBUTE_UNUSED = {
 
 #undef F
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define A(a) (1 << CGEN_INSN_##a)
+#else
+#define A(a) (1 << CGEN_INSN_/**/a)
+#endif
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define OPERAND(op) XSTORMY16_OPERAND_##op
+#else
+#define OPERAND(op) XSTORMY16_OPERAND_/**/op
+#endif
 #define MNEM CGEN_SYNTAX_MNEMONIC /* syntax value for mnemonic */
 #define OP(field) CGEN_SYNTAX_MAKE_FIELD (OPERAND (field))
 
@@ -949,7 +961,11 @@ static const CGEN_OPCODE xstormy16_cgen_insn_opcode_table[MAX_INSNS] =
 
 /* Formats for ALIAS macro-insns.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define F(f) & xstormy16_cgen_ifld_table[XSTORMY16_##f]
+#else
+#define F(f) & xstormy16_cgen_ifld_table[XSTORMY16_/**/f]
+#endif
 static const CGEN_IFMT ifmt_movimm8 ATTRIBUTE_UNUSED = {
   16, 16, 0xff00, { { F (F_OP1) }, { F (F_OP2) }, { F (F_IMM8) }, { 0 } }
 };
@@ -974,8 +990,16 @@ static const CGEN_IFMT ifmt_decgr ATTRIBUTE_UNUSED = {
 
 /* Each non-simple macro entry points to an array of expansion possibilities.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define A(a) (1 << CGEN_INSN_##a)
+#else
+#define A(a) (1 << CGEN_INSN_/**/a)
+#endif
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define OPERAND(op) XSTORMY16_OPERAND_##op
+#else
+#define OPERAND(op) XSTORMY16_OPERAND_/**/op
+#endif
 #define MNEM CGEN_SYNTAX_MNEMONIC /* syntax value for mnemonic */
 #define OP(field) CGEN_SYNTAX_MAKE_FIELD (OPERAND (field))
 
@@ -986,27 +1010,27 @@ static const CGEN_IBASE xstormy16_cgen_macro_insn_table[] =
 /* mov Rx,#$imm8 */
   {
     -1, "movimm8", "mov", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* mov $Rm,#$imm8small */
   {
     -1, "movgrimm8", "mov", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* mov $Rd,#$imm16 */
   {
     -1, "movgrimm16", "mov", 32,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* inc $Rd */
   {
     -1, "incgr", "inc", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* dec $Rd */
   {
     -1, "decgr", "dec", 16,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE) } }
   },
 };
 
@@ -1120,10 +1144,14 @@ dis_hash_insn (buf, value)
   return CGEN_DIS_HASH (buf, value);
 }
 
+static void set_fields_bitsize PARAMS ((CGEN_FIELDS *, int));
+
 /* Set the recorded length of the insn in the CGEN_FIELDS struct.  */
 
 static void
-set_fields_bitsize (CGEN_FIELDS *fields, int size)
+set_fields_bitsize (fields, size)
+     CGEN_FIELDS *fields;
+     int size;
 {
   CGEN_FIELDS_BITSIZE (fields) = size;
 }
@@ -1132,19 +1160,16 @@ set_fields_bitsize (CGEN_FIELDS *fields, int size)
    This plugs the opcode entries and macro instructions into the cpu table.  */
 
 void
-xstormy16_cgen_init_opcode_table (CGEN_CPU_DESC cd)
+xstormy16_cgen_init_opcode_table (cd)
+     CGEN_CPU_DESC cd;
 {
   int i;
   int num_macros = (sizeof (xstormy16_cgen_macro_insn_table) /
 		    sizeof (xstormy16_cgen_macro_insn_table[0]));
   const CGEN_IBASE *ib = & xstormy16_cgen_macro_insn_table[0];
   const CGEN_OPCODE *oc = & xstormy16_cgen_macro_insn_opcode_table[0];
-  CGEN_INSN *insns = xmalloc (num_macros * sizeof (CGEN_INSN));
-
-  /* This test has been added to avoid a warning generated
-     if memset is called with a third argument of value zero.  */
-  if (num_macros >= 1)
-    memset (insns, 0, num_macros * sizeof (CGEN_INSN));
+  CGEN_INSN *insns = (CGEN_INSN *) xmalloc (num_macros * sizeof (CGEN_INSN));
+  memset (insns, 0, num_macros * sizeof (CGEN_INSN));
   for (i = 0; i < num_macros; ++i)
     {
       insns[i].base = &ib[i];

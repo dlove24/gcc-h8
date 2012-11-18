@@ -4,27 +4,30 @@
 label:
 	# ARMV6K instructions
 	clrex
-	ldrexb		r4, [r12]
-	ldrexbne	r12, [r4]
-	ldrexd		r4, [r12]
-	ldrexdne	r12, [r4]
-	ldrexh		r4, [r12]
-	ldrexhne	r12, [r4]
-	nop 		{128}
-	nopne		{127}
+	ldrexb r3, [r12]
+	ldrexbne r12, [r3]
+	ldrexd r3, [r12]
+	ldrexdne r12, [r3]
+	ldrexh r3, [r12]
+	ldrexhne r12, [r3]
+	nop {128}
+	nopne {127}
 	sev
-	strexb		r4, r12, [r7]
-	strexbne	r12, r4, [r8]
-	strexd		r4, r12, [r7]
-	strexdne	r12, r4, [r8]
-	strexh		r4, r12, [r7]
-	strexhne	r12, r4, [r8]
+	strexb r3, r12, [r7]
+	strexbne r12, r3, [r8]
+	strexd r3, r12, [r7]
+	strexdne r12, r3, [r8]
+	strexh r3, r12, [r7]
+	strexhne r12, r3, [r8]
 	wfe
 	wfi
 	yield
 	# ARMV6Z instructions
-	smc 0xec31
-	smcne 0x13ce
+	smi 0xec31
+	smine 0x13ce
 
-	# Ensure output is 32-byte aligned as required for arm-aout.
-	.p2align 5
+	# Add three nop instructions to ensure that the 
+	# output is 32-byte aligned as required for arm-aout.
+	nop
+	nop
+	nop

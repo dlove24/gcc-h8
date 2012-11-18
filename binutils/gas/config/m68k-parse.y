@@ -1,5 +1,5 @@
 /* m68k.y -- bison grammar for m68k operand parsing
-   Copyright 1995, 1996, 1997, 1998, 2001, 2003, 2004, 2005, 2007, 2009
+   Copyright 1995, 1996, 1997, 1998, 2001, 2003, 2004
    Free Software Foundation, Inc.
    Written by Ken Raeburn and Ian Lance Taylor, Cygnus Support
 
@@ -7,7 +7,7 @@
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -17,8 +17,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 /* This file holds a bison grammar to parse m68k operands.  The m68k
    has a complicated operand syntax, and gas supports two main
@@ -83,9 +83,9 @@
 
 /* Internal functions.  */
 
-static enum m68k_register m68k_reg_parse (char **);
-static int yylex (void);
-static void yyerror (const char *);
+static enum m68k_register m68k_reg_parse PARAMS ((char **));
+static int yylex PARAMS ((void));
+static void yyerror PARAMS ((const char *));
 
 /* The parser sets fields pointed to by this global variable.  */
 static struct m68k_op *op;
@@ -1010,20 +1010,7 @@ yylex ()
 
     yylval.exp.pic_reloc = pic_none;
     cp = s - tail;
-    if (cp - 7 > str && cp[-7] == '@')
-      {
-	if (strncmp (cp - 7, "@TLSLDM", 7) == 0)
-	  {
-	    yylval.exp.pic_reloc = pic_tls_ldm;
-	    tail += 7;
-	  }
-	else if (strncmp (cp - 7, "@TLSLDO", 7) == 0)
-	  {
-	    yylval.exp.pic_reloc = pic_tls_ldo;
-	    tail += 7;
-	  }
-      }
-    else if (cp - 6 > str && cp[-6] == '@')
+    if (cp - 6 > str && cp[-6] == '@')
       {
 	if (strncmp (cp - 6, "@PLTPC", 6) == 0)
 	  {
@@ -1035,21 +1022,6 @@ yylex ()
 	    yylval.exp.pic_reloc = pic_got_pcrel;
 	    tail += 6;
 	  }
-	else if (strncmp (cp - 6, "@TLSGD", 6) == 0)
-	  {
-	    yylval.exp.pic_reloc = pic_tls_gd;
-	    tail += 6;
-	  }
-	else if (strncmp (cp - 6, "@TLSIE", 6) == 0)
-	  {
-	    yylval.exp.pic_reloc = pic_tls_ie;
-	    tail += 6;
-	  }	
-	else if (strncmp (cp - 6, "@TLSLE", 6) == 0)
-	  {
-	    yylval.exp.pic_reloc = pic_tls_le;
-	    tail += 6;
-	  }	
       }
     else if (cp - 4 > str && cp[-4] == '@')
       {

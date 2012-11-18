@@ -20,15 +20,14 @@ CTOR=".ctors ${CONSTRUCTING-0} :
        doesn't matter which directory crtbegin.o
        is in.  */
 
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
+    KEEP (*crtbegin*.o(.ctors))
 
     /* We don't want to include the .ctor section from
-       the crtend.o file until after the sorted ctors.
+       from the crtend.o file until after the sorted ctors.
        The .ctor section from the crtend file contains the
        end of ctors marker and it must be last */
 
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o) .ctors))
+    KEEP (*(EXCLUDE_FILE (*crtend*.o) .ctors))
     KEEP (*(SORT(.ctors.*)))
     KEEP (*(.ctors))
     ${CONSTRUCTING+${CTOR_END}}
@@ -37,9 +36,8 @@ CTOR=".ctors ${CONSTRUCTING-0} :
 DTOR=" .dtors       ${CONSTRUCTING-0} :
   {
     ${CONSTRUCTING+${DTOR_START}}
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o) .dtors))
+    KEEP (*crtbegin*.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend*.o) .dtors))
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
     ${CONSTRUCTING+${DTOR_END}}
@@ -58,7 +56,7 @@ cat <<EOF
 OUTPUT_FORMAT("${OUTPUT_FORMAT}", "${BIG_OUTPUT_FORMAT}",
 	      "${LITTLE_OUTPUT_FORMAT}")
 OUTPUT_ARCH(${OUTPUT_ARCH})
-${RELOCATING+ENTRY(${ENTRY})}
+ENTRY(${ENTRY})
 
 ${RELOCATING+${LIB_SEARCH_DIRS}}
 ${RELOCATING+/* Do we need any of these for elf?
@@ -87,10 +85,10 @@ SECTIONS
   .text ${RELOCATING+${TEXT_START_ADDR}} :
   {
     ${RELOCATING+${TEXT_START_SYMBOLS}}
-    KEEP (*(SORT_NONE(.init)))
-    KEEP (*(SORT_NONE(.init.*)))
-    KEEP (*(SORT_NONE(.fini)))
-    KEEP (*(SORT_NONE(.fini.*)))
+    KEEP (*(.init))
+    KEEP (*(.init.*))
+    KEEP (*(.fini))
+    KEEP (*(.fini.*))
     *(.text)
     *(.text.*)
     /* .gnu.warning sections are handled specially by elf32.em.  */
@@ -194,13 +192,5 @@ SECTIONS
   .debug_funcnames 0 : { *(.debug_funcnames) }
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
-
-  /* DWARF 3 */
-  .debug_pubtypes 0 : { *(.debug_pubtypes) }
-  .debug_ranges   0 : { *(.debug_ranges) }
-
-  /* DWARF Extension.  */
-  .debug_macro    0 : { *(.debug_macro) } 
-  
 }
 EOF

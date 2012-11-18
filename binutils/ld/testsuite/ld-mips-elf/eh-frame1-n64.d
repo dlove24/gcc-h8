@@ -1,39 +1,49 @@
 #name: MIPS eh-frame 1, n64
 #source: eh-frame1.s
 #source: eh-frame1.s
-#as: -march=from-abi -EB -64 --defsym alignment=3 --defsym fill=0x40
+#as: -EB -64 --defsym alignment=3 --defsym fill=0x40
 #readelf: --relocs -wf
 #ld: -shared -melf64btsmip -Teh-frame1.ld
-#warning: fde encoding in.*prevents \.eh_frame_hdr table being created.
 
 Relocation section '\.rel\.dyn' .*:
  *Offset .*
-000000000000  [0-9a-f]+ R_MIPS_NONE *
+000000000000  000000000000 R_MIPS_NONE *
  *Type2: R_MIPS_NONE *
  *Type3: R_MIPS_NONE *
 # Initial PCs for the FDEs attached to CIE 0x120
-000000030148  [0-9a-f]+ R_MIPS_REL32 *
+000000030148  000000001203 R_MIPS_REL32 *
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-000000030168  [0-9a-f]+ R_MIPS_REL32 *
+000000030168  000000001203 R_MIPS_REL32 *
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-000000030308  [0-9a-f]+ R_MIPS_REL32 *
+# Likewise CIE 0x340
+000000030368  000000001203 R_MIPS_REL32 *
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-000000030328  [0-9a-f]+ R_MIPS_REL32 *
+000000030388  000000001203 R_MIPS_REL32 *
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-0000000300cb  [0-9a-f]+ R_MIPS_REL32      0000000000000000 foo
+0000000300cb  000500001203 R_MIPS_REL32      0000000000000000 foo
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-000000030138  [0-9a-f]+ R_MIPS_REL32      0000000000000000 foo
+000000030138  000500001203 R_MIPS_REL32      0000000000000000 foo
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-000000030192  [0-9a-f]+ R_MIPS_REL32      0000000000000000 foo
+000000030192  000500001203 R_MIPS_REL32      0000000000000000 foo
  *Type2: R_MIPS_64 *
  *Type3: R_MIPS_NONE *
-Contents of the \.eh_frame section:
+0000000302eb  000500001203 R_MIPS_REL32      0000000000000000 foo
+ *Type2: R_MIPS_64 *
+ *Type3: R_MIPS_NONE *
+000000030358  000500001203 R_MIPS_REL32      0000000000000000 foo
+ *Type2: R_MIPS_64 *
+ *Type3: R_MIPS_NONE *
+0000000303b2  000500001203 R_MIPS_REL32      0000000000000000 foo
+ *Type2: R_MIPS_64 *
+ *Type3: R_MIPS_NONE *
+#...
+The section \.eh_frame contains:
 
 00000000 00000014 00000000 CIE
   Version:               1
@@ -41,7 +51,7 @@ Contents of the \.eh_frame section:
   Code alignment factor: 1
   Data alignment factor: 4
   Return address column: 31
-  Augmentation data:     1c
+  Augmentation data:     10
 
   DW_CFA_advance_loc: 0 to 00000000
   DW_CFA_advance_loc: 0 to 00000000
@@ -105,7 +115,7 @@ Contents of the \.eh_frame section:
   Code alignment factor: 1
   Data alignment factor: 4
   Return address column: 31
-  Augmentation data:     1c 00 00 00 00 00 00 00 00 00
+  Augmentation data:     10 00 00 00 00 00 00 00 00 00
 
   DW_CFA_advance_loc: 0 to 00000000
   DW_CFA_advance_loc: 0 to 00000000
@@ -172,7 +182,7 @@ Contents of the \.eh_frame section:
   Code alignment factor: 1
   Data alignment factor: 4
   Return address column: 31
-  Augmentation data:     00 00 00 00 00 00 00 00 00 1c
+  Augmentation data:     00 00 00 00 00 00 00 00 00 10
 
   DW_CFA_advance_loc: 0 to 00000000
   DW_CFA_advance_loc: 0 to 00000000
@@ -209,7 +219,23 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 00020190
   DW_CFA_advance_loc: 0 to 00020190
 
-00000200 0000001c 00000204 FDE cie=00000000 pc=000201d0..000201e0
+00000200 00000014 00000000 CIE
+  Version:               1
+  Augmentation:          "zR"
+  Code alignment factor: 1
+  Data alignment factor: 4
+  Return address column: 31
+  Augmentation data:     10
+
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+
+00000218 0000001c 0000001c FDE cie=00000200 pc=000201d0..000201e0
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
@@ -219,7 +245,7 @@ Contents of the \.eh_frame section:
   DW_CFA_nop
 
 # basic1 removed, followed by repeat of above
-00000220 0000001c 00000224 FDE cie=00000000 pc=000201e0..000201f0
+00000238 0000001c 0000003c FDE cie=00000200 pc=000201e0..000201f0
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
@@ -228,7 +254,7 @@ Contents of the \.eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-00000240 0000001c 00000244 FDE cie=00000000 pc=000201f0..00020210
+00000258 0000001c 0000005c FDE cie=00000200 pc=000201f0..00020210
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
@@ -237,7 +263,7 @@ Contents of the \.eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-00000260 0000001c 00000264 FDE cie=00000000 pc=00020210..00020240
+00000278 0000001c 0000007c FDE cie=00000200 pc=00020210..00020240
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
@@ -246,7 +272,7 @@ Contents of the \.eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-00000280 0000001c 00000284 FDE cie=00000000 pc=00020240..00020280
+00000298 0000001c 0000009c FDE cie=00000200 pc=00020240..00020280
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
@@ -255,7 +281,7 @@ Contents of the \.eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-000002a0 0000001c 000002a4 FDE cie=00000000 pc=00020280..000202d0
+000002b8 0000001c 000000bc FDE cie=00000200 pc=00020280..000202d0
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
@@ -264,7 +290,29 @@ Contents of the \.eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-000002c0 0000001c 0000020c FDE cie=000000b8 pc=000202d0..000202e0
+000002d8 00000024 00000000 CIE
+  Version:               1
+  Augmentation:          "zRP"
+  Code alignment factor: 1
+  Data alignment factor: 4
+  Return address column: 31
+  Augmentation data:     10 00 00 00 00 00 00 00 00 00
+
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+
+00000300 0000001c 0000002c FDE cie=000002d8 pc=000202d0..000202e0
   DW_CFA_advance_loc: 0 to 000202d0
   DW_CFA_advance_loc: 0 to 000202d0
   DW_CFA_advance_loc: 0 to 000202d0
@@ -273,7 +321,7 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 000202d0
   DW_CFA_advance_loc: 0 to 000202d0
 
-000002e0 0000001c 0000022c FDE cie=000000b8 pc=000202e0..00020300
+00000320 0000001c 0000004c FDE cie=000002d8 pc=000202e0..00020300
   DW_CFA_advance_loc: 0 to 000202e0
   DW_CFA_advance_loc: 0 to 000202e0
   DW_CFA_advance_loc: 0 to 000202e0
@@ -282,7 +330,16 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 000202e0
   DW_CFA_advance_loc: 0 to 000202e0
 
-00000300 0000001c 000001e4 FDE cie=00000120 pc=00020300..00020310
+00000340 0000001c 00000000 CIE
+  Version:               1
+  Augmentation:          "zP"
+  Code alignment factor: 1
+  Data alignment factor: 4
+  Return address column: 31
+  Augmentation data:     50 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+
+00000360 0000001c 00000024 FDE cie=00000340 pc=00020300..00020310
   DW_CFA_advance_loc: 0 to 00020300
   DW_CFA_advance_loc: 0 to 00020300
   DW_CFA_advance_loc: 0 to 00020300
@@ -291,7 +348,7 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 00020300
   DW_CFA_advance_loc: 0 to 00020300
 
-00000320 0000001c 00000204 FDE cie=00000120 pc=00020310..00020330
+00000380 0000001c 00000044 FDE cie=00000340 pc=00020310..00020330
   DW_CFA_advance_loc: 0 to 00020310
   DW_CFA_advance_loc: 0 to 00020310
   DW_CFA_advance_loc: 0 to 00020310
@@ -300,7 +357,21 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 00020310
   DW_CFA_advance_loc: 0 to 00020310
 
-00000340 0000001c 000001c4 FDE cie=00000180 pc=00020330..00020340
+000003a0 0000001c 00000000 CIE
+  Version:               1
+  Augmentation:          "zPR"
+  Code alignment factor: 1
+  Data alignment factor: 4
+  Return address column: 31
+  Augmentation data:     00 00 00 00 00 00 00 00 00 10
+
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+
+000003c0 0000001c 00000024 FDE cie=000003a0 pc=00020330..00020340
   DW_CFA_advance_loc: 0 to 00020330
   DW_CFA_advance_loc: 0 to 00020330
   DW_CFA_advance_loc: 0 to 00020330
@@ -309,7 +380,7 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 00020330
   DW_CFA_advance_loc: 0 to 00020330
 
-00000360 0000001c 000001e4 FDE cie=00000180 pc=00020340..00020370
+000003e0 0000001c 00000044 FDE cie=000003a0 pc=00020340..00020370
   DW_CFA_advance_loc: 0 to 00020340
   DW_CFA_advance_loc: 0 to 00020340
   DW_CFA_advance_loc: 0 to 00020340
@@ -318,7 +389,7 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 00020340
   DW_CFA_advance_loc: 0 to 00020340
 
-00000380 0000001c 00000204 FDE cie=00000180 pc=00020370..000203b0
+00000400 0000001c 00000064 FDE cie=000003a0 pc=00020370..000203b0
   DW_CFA_advance_loc: 0 to 00020370
   DW_CFA_advance_loc: 0 to 00020370
   DW_CFA_advance_loc: 0 to 00020370
@@ -327,7 +398,23 @@ Contents of the \.eh_frame section:
   DW_CFA_advance_loc: 0 to 00020370
   DW_CFA_advance_loc: 0 to 00020370
 
-000003a0 0000001c 000003a4 FDE cie=00000000 pc=000203b0..000203c0
+00000420 00000014 00000000 CIE
+  Version:               1
+  Augmentation:          "zR"
+  Code alignment factor: 1
+  Data alignment factor: 4
+  Return address column: 31
+  Augmentation data:     10
+
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_advance_loc: 0 to 00000000
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+
+00000438 0000001c 0000001c FDE cie=00000420 pc=000203b0..000203c0
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop

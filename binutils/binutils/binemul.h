@@ -1,12 +1,12 @@
 /* Binutils emulation layer.
-   Copyright 2002, 2003, 2005, 2007, 2008 Free Software Foundation, Inc.
-   Written by Tom Rix, Red Hat Inc.
+   Copyright 2002, 2003 Free Software Foundation, Inc.
+   Written by Tom Rix, Redhat.
 
    This file is part of GNU Binutils.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -16,29 +16,22 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 #ifndef BINEMUL_H
 #define BINEMUL_H
 
-#include "sysdep.h"
 #include "bfd.h"
 #include "bucomm.h"
 
 extern void ar_emul_usage (FILE *);
 extern void ar_emul_default_usage (FILE *);
-extern bfd_boolean ar_emul_append (bfd **, char *, const char *,
-				   bfd_boolean, bfd_boolean);
-extern bfd_boolean ar_emul_default_append (bfd **, char *, const char *,
-					   bfd_boolean, bfd_boolean);
-extern bfd_boolean do_ar_emul_append (bfd **, bfd *,
-				      bfd_boolean, bfd_boolean,
-				      bfd_boolean (*)(bfd *));
-extern bfd_boolean ar_emul_replace (bfd **, char *, const char *,
-				    bfd_boolean);
-extern bfd_boolean ar_emul_default_replace (bfd **, char *,
-					    const char *, bfd_boolean);
+extern bfd_boolean ar_emul_append (bfd **, char *, bfd_boolean);
+extern bfd_boolean ar_emul_default_append (bfd **, char *, bfd_boolean);
+extern bfd_boolean ar_emul_replace (bfd **, char *, bfd_boolean);
+extern bfd_boolean ar_emul_default_replace (bfd **, char *, bfd_boolean);
+extern bfd_boolean ar_emul_create (bfd **, char *, char *);
+extern bfd_boolean ar_emul_default_create (bfd **, char *, char *);
 extern bfd_boolean ar_emul_parse_arg (char *);
 extern bfd_boolean ar_emul_default_parse_arg (char *);
 
@@ -49,7 +42,7 @@ extern bfd_boolean ar_emul_default_parse_arg (char *);
   fprintf (fp, _(" emulation options: \n"))
 
 #define AR_EMUL_ELEMENT_CHECK(abfd, file_name) \
-  do { if ((abfd) == NULL) bfd_fatal (file_name); } while (0)
+  do { if ((abfd) == (bfd *) NULL) bfd_fatal (file_name); } while (0)
 
 #define AR_EMUL_APPEND_PRINT_VERBOSE(verbose, file_name) \
   do { if (verbose) printf ("a - %s\n", file_name); } while (0)
@@ -61,9 +54,9 @@ typedef struct bin_emulation_xfer_struct
 {
   /* Print out the extra options.  */
   void (* ar_usage) (FILE *fp);
-  bfd_boolean (* ar_append) (bfd **, char *, const char *, bfd_boolean,
-			     bfd_boolean);
-  bfd_boolean (* ar_replace) (bfd **, char *, const char *, bfd_boolean);
+  bfd_boolean (* ar_append) (bfd **, char *, bfd_boolean);
+  bfd_boolean (* ar_replace) (bfd **, char *, bfd_boolean);
+  bfd_boolean (* ar_create) (bfd **, char *, char *);
   bfd_boolean (* ar_parse_arg) (char *);
 }
 bin_emulation_xfer_type;

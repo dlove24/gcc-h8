@@ -1,14 +1,14 @@
 /* tc.h - target cpu dependent
 
    Copyright 1987, 1990, 1991, 1992, 1993, 1994, 1995, 2000, 2001, 2003,
-   2004, 2005, 2006, 2007, 2008, 2009
+   2004, 2005
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -18,30 +18,30 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 /* In theory (mine, at least!) the machine dependent part of the assembler
    should only have to include one file.  This one.  -- JF */
 
 extern const pseudo_typeS md_pseudo_table[];
 
+extern const int md_reloc_size;	/* Size of a relocation record.  */
+
 char * md_atof (int, char *, int *);
 int    md_parse_option (int, char *);
 void   md_show_usage (FILE *);
+short  tc_coff_fix2rtype (fixS *);
 void   md_assemble (char *);
 void   md_begin (void);
-#ifndef md_number_to_chars
 void   md_number_to_chars (char *, valueT, int);
-#endif
-void   md_apply_fix (fixS *, valueT *, segT);
+void   md_apply_fix3 (fixS *, valueT *, segT);
 
 #ifndef WORKING_DOT_WORD
 extern int md_short_jump_size;
 extern int md_long_jump_size;
 #endif
 
-#ifdef TE_PE
+#ifdef USE_UNIQUE
 /* The name of an external symbol which is
    used to make weak PE symbol names unique.  */
 extern const char * an_external_name;
@@ -69,11 +69,30 @@ valueT  md_section_align (segT, valueT);
 symbolS *md_undefined_symbol (char *);
 #endif
 
+#ifdef BFD_ASSEMBLER
+
 #ifndef md_convert_frag
 void    md_convert_frag (bfd *, segT, fragS *);
+#endif
+#ifndef tc_headers_hook
+void    tc_headers_hook (segT *, fixS *);
 #endif
 #ifndef RELOC_EXPANSION_POSSIBLE
 extern arelent *tc_gen_reloc (asection *, fixS *);
 #else
 extern arelent **tc_gen_reloc (asection *, fixS *);
 #endif
+
+#else /* not BFD_ASSEMBLER */
+
+#ifndef md_convert_frag
+void    md_convert_frag (object_headers *, segT, fragS *);
+#endif
+#ifndef tc_crawl_symbol_chain
+void    tc_crawl_symbol_chain (object_headers *);
+#endif
+#ifndef tc_headers_hook
+void    tc_headers_hook (object_headers *);
+#endif
+
+#endif /* BFD_ASSEMBLER */

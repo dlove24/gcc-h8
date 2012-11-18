@@ -1,27 +1,23 @@
 /* unwind-ia64.c -- utility routines to dump IA-64 unwind info for readelf.
-   Copyright 2000, 2001, 2002, 2003, 2005, 2007, 2012
-   Free Software Foundation, Inc.
+   Copyright 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+	Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
 
-   Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
+This file is part of GNU Binutils.
 
-   This file is part of GNU Binutils.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
-
-#include "config.h"
 #include "unwind-ia64.h"
 #include <stdio.h>
 #include <string.h>
@@ -115,7 +111,7 @@ unw_print_frmask (char *cp, unsigned int mask)
 static void
 unw_print_abreg (char *cp, unsigned int abreg)
 {
-  static const char * const special_reg[16] =
+  static const char *special_reg[16] =
   {
     "pr", "psp", "@priunat", "rp", "ar.bsp", "ar.bspstore", "ar.rnat",
     "ar.unat", "ar.fpsr", "ar.pfs", "ar.lc",
@@ -306,7 +302,7 @@ typedef bfd_vma unw_word;
 #define UNW_DEC_ABI(fmt, abi, context, arg)			\
   do								\
     {								\
-      static const char * const abiname[] =			\
+      static const char *abiname[] =				\
       {								\
 	"@svr4", "@hpux", "@nt"					\
       };							\
@@ -375,7 +371,7 @@ typedef bfd_vma unw_word;
 #define UNW_DEC_SPILL_SPREL(fmt, t, abreg, spoff, arg)				\
   do										\
     {										\
-      char regname[20];								\
+      char regname[10];								\
 										\
       unw_print_abreg (regname, abreg);						\
       printf ("\t%s:spill_sprel(reg=%s,t=%lu,spoff=0x%lx)\n",			\
@@ -386,7 +382,7 @@ typedef bfd_vma unw_word;
 #define UNW_DEC_SPILL_PSPREL(fmt, t, abreg, pspoff, arg)			\
   do										\
     {										\
-      char regname[20];								\
+      char regname[10];								\
 										\
       unw_print_abreg (regname, abreg);						\
       printf ("\t%s:spill_psprel(reg=%s,t=%lu,pspoff=0x10-0x%lx)\n",		\
@@ -397,7 +393,7 @@ typedef bfd_vma unw_word;
 #define UNW_DEC_RESTORE(fmt, t, abreg, arg)			\
   do								\
     {								\
-      char regname[20];						\
+      char regname[10];						\
 								\
       unw_print_abreg (regname, abreg);				\
       printf ("\t%s:restore(t=%lu,reg=%s)\n",			\
@@ -408,7 +404,7 @@ typedef bfd_vma unw_word;
 #define UNW_DEC_SPILL_REG(fmt, t, abreg, x, ytreg, arg)		\
   do								\
     {								\
-      char abregname[20], tregname[20];				\
+      char abregname[10], tregname[10];				\
 								\
       unw_print_abreg (abregname, abreg);			\
       unw_print_xyreg (tregname, x, ytreg);			\
@@ -1047,7 +1043,7 @@ unw_decode_b3_x4 (const unsigned char *dp, unsigned int code, void *arg)
 typedef const unsigned char *(*unw_decoder)
      (const unsigned char *, unsigned int, void *);
 
-static const unw_decoder unw_decode_table[2][8] =
+static unw_decoder unw_decode_table[2][8] =
   {
     /* prologue table: */
     {

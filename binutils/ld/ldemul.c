@@ -1,29 +1,28 @@
 /* ldemul.c -- clearing house for ld emulation states
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2005, 2007, 2008, 2009, 2010, 2011, 2012
+   2001, 2002, 2003
    Free Software Foundation, Inc.
 
-   This file is part of the GNU Binutils.
+This file is part of GLD, the Gnu Linker.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+GLD is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+GLD is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with GLD; see the file COPYING.  If not, write to the Free
+Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+02111-1307, USA.  */
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "getopt.h"
-#include "bfdlink.h"
 
 #include "ld.h"
 #include "ldmisc.h"
@@ -34,7 +33,7 @@
 #include "ldmain.h"
 #include "ldemul-list.h"
 
-static ld_emulation_xfer_type *ld_emulation;
+ld_emulation_xfer_type *ld_emulation;
 
 void
 ldemul_hll (char *name)
@@ -75,7 +74,8 @@ ldemul_after_allocation (void)
 void
 ldemul_before_allocation (void)
 {
-  ld_emulation->before_allocation ();
+  if (ld_emulation->before_allocation)
+    ld_emulation->before_allocation ();
 }
 
 void
@@ -87,7 +87,8 @@ ldemul_set_output_arch (void)
 void
 ldemul_finish (void)
 {
-  ld_emulation->finish ();
+  if (ld_emulation->finish)
+    ld_emulation->finish ();
 }
 
 void
@@ -119,12 +120,12 @@ ldemul_open_dynamic_archive (const char *arch, search_dirs_type *search,
   return FALSE;
 }
 
-lang_output_section_statement_type *
-ldemul_place_orphan (asection *s, const char *name, int constraint)
+bfd_boolean
+ldemul_place_orphan (lang_input_statement_type *file, asection *s)
 {
   if (ld_emulation->place_orphan)
-    return (*ld_emulation->place_orphan) (s, name, constraint);
-  return NULL;
+    return (*ld_emulation->place_orphan) (file, s);
+  return FALSE;
 }
 
 void
@@ -192,35 +193,9 @@ ldemul_default_target (int argc ATTRIBUTE_UNUSED, char **argv ATTRIBUTE_UNUSED)
   return ld_emulation->target_name;
 }
 
-/* If the entry point was not specified as an address, then add the
-   symbol as undefined.  This will cause ld to extract an archive
-   element defining the entry if ld is linking against such an archive.
-
-   We don't do this when generating shared libraries unless given -e
-   on the command line, because most shared libs are not designed to
-   be run as an executable.  However, some are, eg. glibc ld.so and
-   may rely on the default linker script supplying ENTRY.  So we can't
-   remove the ENTRY from the script, but would rather not insert
-   undefined _start syms.  */
-
 void
 after_parse_default (void)
 {
-  if (entry_symbol.name != NULL
-      && (link_info.executable || entry_from_cmdline))
-    {
-      bfd_boolean is_vma = FALSE;
-
-      if (entry_from_cmdline)
-	{
-	  const char *send;
-
-	  bfd_scan_vma (entry_symbol.name, &send, 0);
-	  is_vma = *send == '\0';
-	}
-      if (!is_vma)
-	ldlang_add_undef (entry_symbol.name, entry_from_cmdline);
-    }
 }
 
 void
@@ -231,44 +206,31 @@ after_open_default (void)
 void
 after_allocation_default (void)
 {
-  lang_relax_sections (FALSE);
 }
 
 void
 before_allocation_default (void)
 {
-  if (!link_info.relocatable)
-    strip_excluded_output_sections ();
-}
-
-void
-finish_default (void)
-{
-  if (!link_info.relocatable)
-    _bfd_fix_excluded_sec_syms (link_info.output_bfd, &link_info);
 }
 
 void
 set_output_arch_default (void)
 {
   /* Set the output architecture and machine if possible.  */
-  bfd_set_arch_mach (link_info.output_bfd,
+  bfd_set_arch_mach (output_bfd,
 		     ldfile_output_architecture, ldfile_output_machine);
-
-  bfd_emul_set_maxpagesize (output_target, config.maxpagesize);
-  bfd_emul_set_commonpagesize (output_target, config.commonpagesize);
 }
 
 void
 syslib_default (char *ignore ATTRIBUTE_UNUSED)
 {
-  info_msg (_("%S SYSLIB ignored\n"), NULL);
+  info_msg (_("%S SYSLIB ignored\n"));
 }
 
 void
 hll_default (char *ignore ATTRIBUTE_UNUSED)
 {
-  info_msg (_("%S HLL ignored\n"), NULL);
+  info_msg (_("%S HLL ignored\n"));
 }
 
 ld_emulation_xfer_type *ld_emulations[] = { EMULATION_LIST };

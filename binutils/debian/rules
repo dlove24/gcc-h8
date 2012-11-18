@@ -1,0 +1,133 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+################################################################################
+
+include /usr/share/dpatch/dpatch.make
+
+################################################################################
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+DEB_BUILD_GNU_TYPE      := $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+DEB_HOST_GNU_TYPE       := $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+
+CFLAGS = $(shell dpkg-buildflags --get CFLAGS) -U_FORTIFY_SOURCE
+
+TARGET = h8300-hitachi-coff
+
+# TODO package name should be changed in the future
+p_cross = binutils-h8300-hms
+
+configure: configure-stamp
+configure-stamp: patch-stamp 
+	dh_testdir
+
+	cp /usr/share/misc/config.sub .
+	cp /usr/share/misc/config.guess .
+	mkdir builddir-$(TARGET)
+	cd builddir-$(TARGET) && \
+	    env CC="$(CC)" CFLAGS="$(CFLAGS)" ../configure --prefix=/usr \
+                         --infodir=/usr/share/info \
+                         --mandir=/usr/share/man \
+	        							 --build=$(DEB_BUILD_GNU_TYPE) \
+												 --host=$(DEB_HOST_GNU_TYPE) \
+												 --target=$(TARGET) 
+	touch $@
+
+build: build-stamp
+build-stamp: configure-stamp
+	dh_testdir
+	cd builddir-$(TARGET) && $(MAKE)
+	touch $@
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/$(p_cross)
+	cd builddir-$(TARGET) && \
+		$(MAKE) install prefix=$(CURDIR)/debian/$(p_cross)/usr \
+		                mandir=$(CURDIR)/debian/$(p_cross)/usr/share/man \
+										infodir=$(CURDIR)/debian/$(p_cross)/usr/share/info
+	
+	for i in $(CURDIR)/debian/$(p_cross)/usr/bin/$(TARGET)-* ; do \
+		ln -s `basename $$i` $(CURDIR)/debian/$(p_cross)/usr/bin/h8300-hms-`echo $$i | sed 's/.*$(TARGET)-//'` ; \
+		ln -s `basename $$i`.1 $(CURDIR)/debian/$(p_cross)/usr/share/man/man1/h8300-hms-`echo $$i | sed 's/.*$(TARGET)-//'`.1 ; \
+	done
+	
+	# Files also in main binutils pkg
+	rm -rf $(CURDIR)/debian/$(p_cross)/usr/include
+	rm -rf $(CURDIR)/debian/$(p_cross)/usr/lib
+	rm -rf $(CURDIR)/debian/$(p_cross)/usr/share/info
+	rm -rf $(CURDIR)/debian/$(p_cross)/usr/share/locale
+
+	# install documentation
+	install -p -o root -g root -m 644 binutils/NEWS \
+		$(CURDIR)/debian/$(p_cross)/usr/share/doc/$(p_cross)/NEWS
+	install -p -o root -g root -m 644 binutils/MAINTAINERS \
+		$(CURDIR)/debian/$(p_cross)/usr/share/doc/$(p_cross)/MAINTAINERS
+	for pkg in bfd gas gprof ld; do \
+		for f in ChangeLog NEWS README PORTING MAINTAINERS TODO ; do \
+			[ -f $$pkg/$$f ] || continue ; \
+			install -p -o root -g root -m 644 $$pkg/$$f \
+				$(CURDIR)/debian/$(p_cross)/usr/share/doc/$(p_cross)/$$pkg/$$f ; \
+		done ; \
+	done
+	
+	# Override files
+	install -p -o root -g root -m 644 $(CURDIR)/debian/overrides.lintian \
+		$(CURDIR)/debian/$(p_cross)/usr/share/lintian/overrides/$(p_cross)
+
+clean: unpatch
+	dh_testdir
+	dh_testroot
+	rm -rf builddir-$(TARGET)
+	rm -rf debian/patched
+	rm -f build-stamp configure-stamp 
+	rm -f config.sub config.guess
+
+	dh_clean
+
+
+# Build architecture-independent files here.
+binary-indep: build install 
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+#	dh_installdebconf	
+	dh_installdocs
+#	dh_installexamples
+#	dh_installmenu
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_installinit
+#	dh_installcron
+	dh_installman
+#	dh_installinfo
+	dh_installchangelogs binutils/ChangeLog
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+#	dh_makeshlibs
+	dh_installdeb
+#	dh_perl
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

@@ -1,12 +1,12 @@
 /* tc-mcore.c -- Assemble code for M*Core
-   Copyright 1999, 2000, 2001, 2002, 2003, 2005, 2006, 2007, 2008, 2009
+   Copyright 1999, 2000, 2001, 2002, 2003, 2005
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,14 +16,17 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
+#include <stdio.h>
 #include "as.h"
+#include "bfd.h"
 #include "subsegs.h"
 #define DEFINE_TABLE
 #include "../opcodes/mcore-opc.h"
 #include "safe-ctype.h"
+#include <string.h>
 
 #ifdef OBJ_ELF
 #include "elf/mcore.h"
@@ -34,6 +37,31 @@
 #endif
 
 /* Forward declarations for dumb compilers.  */
+static void   mcore_s_literals PARAMS ((int));
+static void   mcore_pool_count PARAMS ((void (*) (int), int));
+static void   mcore_cons PARAMS ((int));
+static void   mcore_float_cons PARAMS ((int));
+static void   mcore_stringer PARAMS ((int));
+static void   mcore_fill   PARAMS ((int));
+static int    mylog2 PARAMS ((unsigned int));
+static char * parse_reg    PARAMS ((char *, unsigned *));
+static char * parse_creg   PARAMS ((char *, unsigned *));
+static char * parse_exp    PARAMS ((char *, expressionS *));
+static char * parse_rt     PARAMS ((char *, char **, int, expressionS *));
+static char * parse_imm    PARAMS ((char *, unsigned *, unsigned, unsigned));
+static char * parse_mem    PARAMS ((char *, unsigned *, unsigned *, unsigned));
+static char * parse_psrmod PARAMS ((char *, unsigned *));
+static void   make_name PARAMS ((char *, char *, int));
+static int    enter_literal PARAMS ((expressionS *, int));
+static void   dump_literals PARAMS ((int));
+static void   check_literals PARAMS ((int, int));
+static void   mcore_s_text    PARAMS ((int));
+static void   mcore_s_data    PARAMS ((int));
+static void   mcore_s_section PARAMS ((int));
+static void   mcore_s_bss     PARAMS ((int));
+#ifdef OBJ_ELF
+static void   mcore_s_comm    PARAMS ((int));
+#endif
 
 /* Several places in this file insert raw instructions into the
    object. They should use MCORE_INST_XXX macros to get the opcodes
@@ -45,6 +73,8 @@
 const char comment_chars[] = "#/";
 const char line_separator_chars[] = ";";
 const char line_comment_chars[] = "#/";
+
+const int md_reloc_size = 8;
 
 static int do_jsri2bsr = 0;	/* Change here from 1 by Cruess 19 August 97.  */
 static int sifilter_mode = 0;
@@ -59,7 +89,7 @@ const char FLT_CHARS[] = "rRsSfFdDxXpP";
 #define C(what,length) (((what) << 2) + (length))
 #define GET_WHAT(x)    ((x >> 2))
 
-/* These are the two types of relaxable instruction.  */
+/* These are the two types of relaxable instruction */
 #define COND_JUMP  1
 #define UNCD_JUMP  2
 
@@ -69,9 +99,9 @@ const char FLT_CHARS[] = "rRsSfFdDxXpP";
 #define UNDEF_WORD_DISP 3
 
 #define C12_LEN	        2
-#define C32_LEN	       10	/* Allow for align.  */
+#define C32_LEN	       10	/* allow for align */
 #define U12_LEN	        2
-#define U32_LEN	        8	/* Allow for align.  */
+#define U32_LEN	        8	/* allow for align */
 
 typedef enum
 {
@@ -83,8 +113,7 @@ cpu_type;
 cpu_type cpu = M340;
 
 /* Initialize the relax table.  */
-const relax_typeS md_relax_table[] =
-{
+const relax_typeS md_relax_table[] = {
   {    0,     0, 0,	  0 },
   {    0,     0, 0,	  0 },
   {    0,     0, 0,	  0 },
@@ -134,76 +163,68 @@ static unsigned long poolspan;
 #define SPANPANIC	(1016)		/* 1024 - 1 entry - 2 byte rounding.  */
 #define SPANCLOSE	(900)
 #define SPANEXIT	(600)
-static symbolS * poolsym;		/* Label for current pool.  */
+static symbolS * poolsym;		/* label for current pool.  */
 static char poolname[8];
 static struct hash_control * opcode_hash_control;	/* Opcode mnemonics.  */
 
-#define POOL_END_LABEL   ".LE"
-#define POOL_START_LABEL ".LS"
-
-static void
-make_name (char * s, char * p, int n)
+/* This table describes all the machine specific pseudo-ops the assembler
+   has to support.  The fields are:
+     Pseudo-op name without dot
+     Function to call to execute this pseudo-op
+     Integer arg to pass to the function.   */
+const pseudo_typeS md_pseudo_table[] =
 {
-  static const char hex[] = "0123456789ABCDEF";
+  { "export",   s_globl,          0 },
+  { "import",   s_ignore,         0 },
+  { "literals", mcore_s_literals, 0 },
+  { "page",     listing_eject,    0 },
 
-  s[0] = p[0];
-  s[1] = p[1];
-  s[2] = p[2];
-  s[3] = hex[(n >> 12) & 0xF];
-  s[4] = hex[(n >>  8) & 0xF];
-  s[5] = hex[(n >>  4) & 0xF];
-  s[6] = hex[(n)       & 0xF];
-  s[7] = 0;
-}
+  /* The following are to intercept the placement of data into the text
+     section (eg addresses for a switch table), so that the space they
+     occupy can be taken into account when deciding whether or not to
+     dump the current literal pool.
+     XXX - currently we do not cope with the .space and .dcb.d directives.  */
+  { "ascii",    mcore_stringer,       0 },
+  { "asciz",    mcore_stringer,       1 },
+  { "byte",     mcore_cons,           1 },
+  { "dc",       mcore_cons,           2 },
+  { "dc.b",     mcore_cons,           1 },
+  { "dc.d",     mcore_float_cons,    'd'},
+  { "dc.l",     mcore_cons,           4 },
+  { "dc.s",     mcore_float_cons,    'f'},
+  { "dc.w",     mcore_cons,           2 },
+  { "dc.x",     mcore_float_cons,    'x'},
+  { "double",   mcore_float_cons,    'd'},
+  { "float",    mcore_float_cons,    'f'},
+  { "hword",    mcore_cons,           2 },
+  { "int",      mcore_cons,           4 },
+  { "long",     mcore_cons,           4 },
+  { "octa",     mcore_cons,          16 },
+  { "quad",     mcore_cons,           8 },
+  { "short",    mcore_cons,           2 },
+  { "single",   mcore_float_cons,    'f'},
+  { "string",   mcore_stringer,       1 },
+  { "word",     mcore_cons,           2 },
+  { "fill",     mcore_fill,           0 },
 
-static void
-dump_literals (int isforce)
-{
-  unsigned int i;
-  struct literal * p;
-  symbolS * brarsym = NULL;
+  /* Allow for the effect of section changes.  */
+  { "text",      mcore_s_text,    0 },
+  { "data",      mcore_s_data,    0 },
+  { "bss",       mcore_s_bss,     1 },
+#ifdef OBJ_ELF
+  { "comm",      mcore_s_comm,    0 },
+#endif
+  { "section",   mcore_s_section, 0 },
+  { "section.s", mcore_s_section, 0 },
+  { "sect",      mcore_s_section, 0 },
+  { "sect.s",    mcore_s_section, 0 },
 
-  if (poolsize == 0)
-    return;
-
-  /* Must we branch around the literal table?  */
-  if (isforce)
-    {
-      char * output;
-      char brarname[8];
-
-      make_name (brarname, POOL_END_LABEL, poolnumber);
-
-      brarsym = symbol_make (brarname);
-
-      symbol_table_insert (brarsym);
-
-      output = frag_var (rs_machine_dependent,
-			 md_relax_table[C (UNCD_JUMP, DISP32)].rlx_length,
-			 md_relax_table[C (UNCD_JUMP, DISP12)].rlx_length,
-			 C (UNCD_JUMP, 0), brarsym, 0, 0);
-      output[0] = INST_BYTE0 (MCORE_INST_BR);	/* br .+xxx */
-      output[1] = INST_BYTE1 (MCORE_INST_BR);
-    }
-
-  /* Make sure that the section is sufficiently aligned and that
-     the literal table is aligned within it.  */
-  record_alignment (now_seg, 2);
-  frag_align (2, 0, 0);
-
-  colon (S_GET_NAME (poolsym));
-
-  for (i = 0, p = litpool; i < poolsize; i++, p++)
-    emit_expr (& p->e, 4);
-
-  if (brarsym != NULL)
-    colon (S_GET_NAME (brarsym));
-
-   poolsize = 0;
-}
+  { 0,          0,                0 }
+};
 
 static void
-mcore_s_literals (int ignore ATTRIBUTE_UNUSED)
+mcore_s_literals (ignore)
+     int ignore ATTRIBUTE_UNUSED;
 {
   dump_literals (0);
   demand_empty_rest_of_line ();
@@ -212,7 +233,9 @@ mcore_s_literals (int ignore ATTRIBUTE_UNUSED)
 /* Perform FUNC (ARG), and track number of bytes added to frag.  */
 
 static void
-mcore_pool_count (void (*func) (int), int arg)
+mcore_pool_count (func, arg)
+     void (*func) PARAMS ((int));
+     int arg;
 {
   const fragS *curr_frag = frag_now;
   offsetT added = -frag_now_fix_octets ();
@@ -230,42 +253,8 @@ mcore_pool_count (void (*func) (int), int arg)
 }
 
 static void
-check_literals (int kind, int offset)
-{
-  poolspan += offset;
-
-  /* SPANCLOSE and SPANEXIT are smaller numbers than SPANPANIC.
-     SPANPANIC means that we must dump now.
-     kind == 0 is any old instruction.
-     kind  > 0 means we just had a control transfer instruction.
-     kind == 1 means within a function
-     kind == 2 means we just left a function
-
-     The dump_literals (1) call inserts a branch around the table, so
-     we first look to see if its a situation where we won't have to
-     insert a branch (e.g., the previous instruction was an unconditional
-     branch).
-
-     SPANPANIC is the point where we must dump a single-entry pool.
-     it accounts for alignments and an inserted branch.
-     the 'poolsize*2' accounts for the scenario where we do:
-       lrw r1,lit1; lrw r2,lit2; lrw r3,lit3
-     Note that the 'lit2' reference is 2 bytes further along
-     but the literal it references will be 4 bytes further along,
-     so we must consider the poolsize into this equation.
-     This is slightly over-cautious, but guarantees that we won't
-     panic because a relocation is too distant.  */
-
-  if (poolspan > SPANCLOSE && kind > 0)
-    dump_literals (0);
-  else if (poolspan > SPANEXIT && kind > 1)
-    dump_literals (0);
-  else if (poolspan >= (SPANPANIC - poolsize * 2))
-    dump_literals (1);
-}
-
-static void
-mcore_cons (int nbytes)
+mcore_cons (nbytes)
+     int nbytes;
 {
   if (now_seg == text_section)
     mcore_pool_count (cons, nbytes);
@@ -280,7 +269,8 @@ mcore_cons (int nbytes)
 }
 
 static void
-mcore_float_cons (int float_type)
+mcore_float_cons (float_type)
+     int float_type;
 {
   if (now_seg == text_section)
     mcore_pool_count (float_cons, float_type);
@@ -295,7 +285,8 @@ mcore_float_cons (int float_type)
 }
 
 static void
-mcore_stringer (int append_zero)
+mcore_stringer (append_zero)
+     int append_zero;
 {
   if (now_seg == text_section)
     mcore_pool_count (stringer, append_zero);
@@ -311,7 +302,8 @@ mcore_stringer (int append_zero)
 }
 
 static void
-mcore_fill (int unused)
+mcore_fill (unused)
+     int unused;
 {
   if (now_seg == text_section)
     mcore_pool_count (s_fill, unused);
@@ -323,9 +315,9 @@ mcore_fill (int unused)
 
 /* Handle the section changing pseudo-ops.  These call through to the
    normal implementations, but they dump the literal pool first.  */
-
 static void
-mcore_s_text (int ignore)
+mcore_s_text (ignore)
+     int ignore;
 {
   dump_literals (0);
 
@@ -337,7 +329,8 @@ mcore_s_text (int ignore)
 }
 
 static void
-mcore_s_data (int ignore)
+mcore_s_data (ignore)
+     int ignore;
 {
   dump_literals (0);
 
@@ -349,7 +342,8 @@ mcore_s_data (int ignore)
 }
 
 static void
-mcore_s_section (int ignore)
+mcore_s_section (ignore)
+     int ignore;
 {
   /* Scan forwards to find the name of the section.  If the section
      being switched to is ".line" then this is a DWARF1 debug section
@@ -377,7 +371,8 @@ mcore_s_section (int ignore)
 }
 
 static void
-mcore_s_bss (int needs_align)
+mcore_s_bss (needs_align)
+     int needs_align;
 {
   dump_literals (0);
 
@@ -386,7 +381,8 @@ mcore_s_bss (int needs_align)
 
 #ifdef OBJ_ELF
 static void
-mcore_s_comm (int needs_align)
+mcore_s_comm (needs_align)
+     int needs_align;
 {
   dump_literals (0);
 
@@ -394,73 +390,17 @@ mcore_s_comm (int needs_align)
 }
 #endif
 
-/* This table describes all the machine specific pseudo-ops the assembler
-   has to support.  The fields are:
-     Pseudo-op name without dot
-     Function to call to execute this pseudo-op
-     Integer arg to pass to the function.   */
-const pseudo_typeS md_pseudo_table[] =
-{
-  { "export",   s_globl,          0 },
-  { "import",   s_ignore,         0 },
-  { "literals", mcore_s_literals, 0 },
-  { "page",     listing_eject,    0 },
-
-  /* The following are to intercept the placement of data into the text
-     section (eg addresses for a switch table), so that the space they
-     occupy can be taken into account when deciding whether or not to
-     dump the current literal pool.
-     XXX - currently we do not cope with the .space and .dcb.d directives.  */
-  { "ascii",    mcore_stringer,       8 + 0 },
-  { "asciz",    mcore_stringer,       8 + 1 },
-  { "byte",     mcore_cons,           1 },
-  { "dc",       mcore_cons,           2 },
-  { "dc.b",     mcore_cons,           1 },
-  { "dc.d",     mcore_float_cons,    'd'},
-  { "dc.l",     mcore_cons,           4 },
-  { "dc.s",     mcore_float_cons,    'f'},
-  { "dc.w",     mcore_cons,           2 },
-  { "dc.x",     mcore_float_cons,    'x'},
-  { "double",   mcore_float_cons,    'd'},
-  { "float",    mcore_float_cons,    'f'},
-  { "hword",    mcore_cons,           2 },
-  { "int",      mcore_cons,           4 },
-  { "long",     mcore_cons,           4 },
-  { "octa",     mcore_cons,          16 },
-  { "quad",     mcore_cons,           8 },
-  { "short",    mcore_cons,           2 },
-  { "single",   mcore_float_cons,    'f'},
-  { "string",   mcore_stringer,       8 + 1 },
-  { "word",     mcore_cons,           2 },
-  { "fill",     mcore_fill,           0 },
-
-  /* Allow for the effect of section changes.  */
-  { "text",      mcore_s_text,    0 },
-  { "data",      mcore_s_data,    0 },
-  { "bss",       mcore_s_bss,     1 },
-#ifdef OBJ_ELF
-  { "comm",      mcore_s_comm,    0 },
-#endif
-  { "section",   mcore_s_section, 0 },
-  { "section.s", mcore_s_section, 0 },
-  { "sect",      mcore_s_section, 0 },
-  { "sect.s",    mcore_s_section, 0 },
-
-  { 0,          0,                0 }
-};
-
 /* This function is called once, at assembler startup time.  This should
    set up all the tables, etc that the MD part of the assembler needs.  */
-
 void
-md_begin (void)
+md_begin ()
 {
   const mcore_opcode_info * opcode;
   char * prev_name = "";
 
   opcode_hash_control = hash_new ();
 
-  /* Insert unique names into hash table.  */
+  /* Insert unique names into hash table */
   for (opcode = mcore_table; opcode->name; opcode ++)
     {
       if (! streq (prev_name, opcode->name))
@@ -472,25 +412,25 @@ md_begin (void)
 }
 
 /* Get a log2(val).  */
-
 static int
-mylog2 (unsigned int val)
+mylog2 (val)
+    unsigned int val;
 {
-  int log = -1;
-
-  while (val != 0)
+    int log = -1;
+    while (val != 0)
       {
 	log ++;
 	val >>= 1;
       }
 
-  return log;
+    return log;
 }
 
 /* Try to parse a reg name.  */
-
 static char *
-parse_reg (char * s, unsigned * reg)
+parse_reg (s, reg)
+     char * s;
+     unsigned * reg;
 {
   /* Strip leading whitespace.  */
   while (ISSPACE (* s))
@@ -546,7 +486,9 @@ cregs[] =
 };
 
 static char *
-parse_creg (char * s, unsigned * reg)
+parse_creg (s, reg)
+     char * s;
+     unsigned * reg;
 {
   int i;
 
@@ -606,7 +548,9 @@ parse_creg (char * s, unsigned * reg)
 }
 
 static char *
-parse_psrmod (char * s, unsigned * reg)
+parse_psrmod (s, reg)
+  char *     s;
+  unsigned * reg;
 {
   int  i;
   char buf[10];
@@ -644,10 +588,12 @@ parse_psrmod (char * s, unsigned * reg)
 }
 
 static char *
-parse_exp (char * s, expressionS * e)
+parse_exp (s, e)
+     char * s;
+     expressionS * e;
 {
   char * save;
-  char * new_pointer;
+  char * new;
 
   /* Skip whitespace.  */
   while (ISSPACE (* s))
@@ -661,26 +607,135 @@ parse_exp (char * s, expressionS * e)
   if (e->X_op == O_absent)
     as_bad (_("missing operand"));
 
-  new_pointer = input_line_pointer;
+  new = input_line_pointer;
   input_line_pointer = save;
 
-  return new_pointer;
+  return new;
+}
+
+static void
+make_name (s, p, n)
+     char * s;
+     char * p;
+     int n;
+{
+  static const char hex[] = "0123456789ABCDEF";
+
+  s[0] = p[0];
+  s[1] = p[1];
+  s[2] = p[2];
+  s[3] = hex[(n >> 12) & 0xF];
+  s[4] = hex[(n >>  8) & 0xF];
+  s[5] = hex[(n >>  4) & 0xF];
+  s[6] = hex[(n)       & 0xF];
+  s[7] = 0;
+}
+
+#define POOL_END_LABEL   ".LE"
+#define POOL_START_LABEL ".LS"
+
+static void
+dump_literals (isforce)
+     int isforce;
+{
+  unsigned int i;
+  struct literal * p;
+  symbolS * brarsym = NULL;
+
+  if (poolsize == 0)
+    return;
+
+  /* Must we branch around the literal table? */
+  if (isforce)
+    {
+      char * output;
+      char brarname[8];
+
+      make_name (brarname, POOL_END_LABEL, poolnumber);
+
+      brarsym = symbol_make (brarname);
+
+      symbol_table_insert (brarsym);
+
+      output = frag_var (rs_machine_dependent,
+			 md_relax_table[C (UNCD_JUMP, DISP32)].rlx_length,
+			 md_relax_table[C (UNCD_JUMP, DISP12)].rlx_length,
+			 C (UNCD_JUMP, 0), brarsym, 0, 0);
+      output[0] = INST_BYTE0 (MCORE_INST_BR);	/* br .+xxx */
+      output[1] = INST_BYTE1 (MCORE_INST_BR);
+    }
+
+  /* Make sure that the section is sufficiently aligned and that
+     the literal table is aligned within it.  */
+  record_alignment (now_seg, 2);
+  frag_align (2, 0, 0);
+
+  colon (S_GET_NAME (poolsym));
+
+  for (i = 0, p = litpool; i < poolsize; i++, p++)
+    emit_expr (& p->e, 4);
+
+  if (brarsym != NULL)
+    colon (S_GET_NAME (brarsym));
+
+   poolsize = 0;
+}
+
+static void
+check_literals (kind, offset)
+     int kind;
+     int offset;
+{
+  poolspan += offset;
+
+  /* SPANCLOSE and SPANEXIT are smaller numbers than SPANPANIC.
+     SPANPANIC means that we must dump now.
+     kind == 0 is any old instruction.
+     kind  > 0 means we just had a control transfer instruction.
+     kind == 1 means within a function
+     kind == 2 means we just left a function
+
+     The dump_literals (1) call inserts a branch around the table, so
+     we first look to see if its a situation where we won't have to
+     insert a branch (e.g., the previous instruction was an unconditional
+     branch).
+
+     SPANPANIC is the point where we must dump a single-entry pool.
+     it accounts for alignments and an inserted branch.
+     the 'poolsize*2' accounts for the scenario where we do:
+       lrw r1,lit1; lrw r2,lit2; lrw r3,lit3
+     Note that the 'lit2' reference is 2 bytes further along
+     but the literal it references will be 4 bytes further along,
+     so we must consider the poolsize into this equation.
+     This is slightly over-cautious, but guarantees that we won't
+     panic because a relocation is too distant.  */
+
+  if (poolspan > SPANCLOSE && kind > 0)
+    dump_literals (0);
+  else if (poolspan > SPANEXIT && kind > 1)
+    dump_literals (0);
+  else if (poolspan >= (SPANPANIC - poolsize * 2))
+    dump_literals (1);
 }
 
 static int
-enter_literal (expressionS * e, int ispcrel)
+enter_literal (e, ispcrel)
+     expressionS * e;
+     int ispcrel;
 {
   unsigned int i;
   struct literal * p;
 
   if (poolsize >= MAX_POOL_SIZE - 2)
-    /* The literal pool is as full as we can handle. We have
-       to be 2 entries shy of the 1024/4=256 entries because we
-       have to allow for the branch (2 bytes) and the alignment
-       (2 bytes before the first insn referencing the pool and
-       2 bytes before the pool itself) == 6 bytes, rounds up
-       to 2 entries.  */
-    dump_literals (1);
+    {
+      /* The literal pool is as full as we can handle. We have
+	 to be 2 entries shy of the 1024/4=256 entries because we
+	 have to allow for the branch (2 bytes) and the alignment
+	 (2 bytes before the first insn referencing the pool and
+	 2 bytes before the pool itself) == 6 bytes, rounds up
+	 to 2 entries.  */
+      dump_literals (1);
+    }
 
   if (poolsize == 0)
     {
@@ -719,12 +774,12 @@ enter_literal (expressionS * e, int ispcrel)
 /* Parse a literal specification. -- either new or old syntax.
    old syntax: the user supplies the label and places the literal.
    new syntax: we put it into the literal pool.  */
-
 static char *
-parse_rt (char * s,
-	  char ** outputp,
-	  int ispcrel,
-	  expressionS * ep)
+parse_rt (s, outputp, ispcrel, ep)
+     char * s;
+     char ** outputp;
+     int ispcrel;
+     expressionS * ep;
 {
   expressionS e;
   int n;
@@ -766,15 +821,16 @@ parse_rt (char * s,
 }
 
 static char *
-parse_imm (char * s,
-	   unsigned * val,
-	   unsigned min,
-	   unsigned max)
+parse_imm (s, val, min, max)
+     char * s;
+     unsigned * val;
+     unsigned min;
+     unsigned max;
 {
-  char * new_pointer;
+  char * new;
   expressionS e;
 
-  new_pointer = parse_exp (s, & e);
+  new = parse_exp (s, & e);
 
   if (e.X_op == O_absent)
     ; /* An error message has already been emitted.  */
@@ -786,14 +842,15 @@ parse_imm (char * s,
 
   * val = e.X_add_number;
 
-  return new_pointer;
+  return new;
 }
 
 static char *
-parse_mem (char * s,
-	   unsigned * reg,
-	   unsigned * off,
-	   unsigned siz)
+parse_mem (s, reg, off, siz)
+     char * s;
+     unsigned * reg;
+     unsigned * off;
+     unsigned siz;
 {
   * off = 0;
 
@@ -847,7 +904,8 @@ parse_mem (char * s,
    the frags/bytes it assembles to.  */
 
 void
-md_assemble (char * str)
+md_assemble (str)
+     char * str;
 {
   char * op_start;
   char * op_end;
@@ -859,7 +917,7 @@ md_assemble (char * str)
   unsigned off;
   unsigned isize;
   expressionS e;
-  char name[21];
+  char name[20];
 
   /* Drop leading whitespace.  */
   while (ISSPACE (* str))
@@ -935,15 +993,15 @@ md_assemble (char * str)
 
       if (sifilter_mode)
 	{
-	  /* Replace with:  bsr .+2 ; addi r15,6; jmp rx ; jmp rx.  */
-	  inst = MCORE_INST_BSR;	/* With 0 displacement.  */
+	  /* Replace with:  bsr .+2 ; addi r15,6; jmp rx ; jmp rx */
+	  inst = MCORE_INST_BSR;	/* with 0 displacement */
 	  output[0] = INST_BYTE0 (inst);
 	  output[1] = INST_BYTE1 (inst);
 
 	  output = frag_more (2);
 	  inst = MCORE_INST_ADDI;
-	  inst |= 15;			/* addi r15,6  */
-	  inst |= (6 - 1) << 4;		/* Over the jmp's.  */
+	  inst |= 15;			/* addi r15,6 */
+	  inst |= (6 - 1) << 4;		/* over the jmp's */
 	  output[0] = INST_BYTE0 (inst);
 	  output[1] = INST_BYTE1 (inst);
 
@@ -952,8 +1010,7 @@ md_assemble (char * str)
 	  output[0] = INST_BYTE0 (inst);
 	  output[1] = INST_BYTE1 (inst);
 
-	  /* 2nd emitted in fallthrough.  */
-	  output = frag_more (2);
+	  output = frag_more (2);		/* 2nd emitted in fallthru */
 	}
       break;
 
@@ -1000,15 +1057,14 @@ md_assemble (char * str)
       output = frag_more (2);
       break;
 
-    case X1:
-      /* Handle both syntax-> xtrb- r1,rx OR xtrb- rx.  */
+    case X1:	/* Handle both syntax-> xtrb- r1,rx OR xtrb- rx */
       op_end = parse_reg (op_end + 1, & reg);
 
       /* Skip whitespace.  */
       while (ISSPACE (* op_end))
 	++ op_end;
 
-      if (* op_end == ',')	/* xtrb- r1,rx.  */
+      if (* op_end == ',')	/* xtrb- r1,rx */
 	{
 	  if (reg != 1)
 	    as_bad (_("destination register must be r1"));
@@ -1020,7 +1076,7 @@ md_assemble (char * str)
       output = frag_more (2);
       break;
 
-    case O1R1:  /* div- rx,r1.  */
+    case O1R1:  /* div- rx,r1 */
       op_end = parse_reg (op_end + 1, & reg);
       inst |= reg;
 
@@ -1078,8 +1134,7 @@ md_assemble (char * str)
       output = frag_more (2);
       break;
 
-    case OB2:
-      /* Like OB, but arg is 2^n instead of n.  */
+    case OB2:		/* like OB, but arg is 2^n instead of n */
       op_end = parse_reg (op_end + 1, & reg);
       inst |= reg;
 
@@ -1119,7 +1174,7 @@ md_assemble (char * str)
       if (* op_end == ',')
 	{
 	  op_end = parse_imm (op_end + 1, & reg, 0, 31);
-	  /* Immediate values of 0 -> 6 translate to movi.  */
+	  /* immediate values of 0 -> 6 translate to movi */
 	  if (reg <= 6)
 	    {
 	      inst = (inst & 0xF) | MCORE_INST_BGENI_ALT;
@@ -1135,7 +1190,7 @@ md_assemble (char * str)
       output = frag_more (2);
       break;
 
-    case OBR2:	/* Like OBR, but arg is 2^n instead of n.  */
+    case OBR2:	/* like OBR, but arg is 2^n instead of n */
       op_end = parse_reg (op_end + 1, & reg);
       inst |= reg;
 
@@ -1488,8 +1543,7 @@ md_assemble (char * str)
 	}
       break;
 
-    case RSI:
-      /* SI, but imm becomes 32-imm.  */
+    case RSI:				/* SI, but imm becomes 32-imm */
       op_end = parse_reg (op_end + 1, & reg);
       inst |= reg;
 
@@ -1603,38 +1657,104 @@ md_assemble (char * str)
 }
 
 symbolS *
-md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
+md_undefined_symbol (name)
+       char *name ATTRIBUTE_UNUSED;
 {
   return 0;
 }
 
 void
-md_mcore_end (void)
+md_mcore_end ()
 {
   dump_literals (0);
   subseg_set (text_section, 0);
 }
 
 /* Various routines to kill one day.  */
+/* Equal to MAX_PRECISION in atof-ieee.c */
+#define MAX_LITTLENUMS 6
 
+/* Turn a string in input_line_pointer into a floating point constant of type
+   type, and store the appropriate bytes in *litP.  The number of LITTLENUMS
+   emitted is stored in *sizeP.  An error message is returned, or NULL on OK.*/
 char *
-md_atof (int type, char * litP, int * sizeP)
+md_atof (type, litP, sizeP)
+     int type;
+     char * litP;
+     int * sizeP;
 {
-  return ieee_md_atof (type, litP, sizeP, target_big_endian);
+  int prec;
+  LITTLENUM_TYPE words[MAX_LITTLENUMS];
+  int    i;
+  char * t;
+
+  switch (type)
+    {
+    case 'f':
+    case 'F':
+    case 's':
+    case 'S':
+      prec = 2;
+      break;
+
+    case 'd':
+    case 'D':
+    case 'r':
+    case 'R':
+      prec = 4;
+      break;
+
+    case 'x':
+    case 'X':
+      prec = 6;
+      break;
+
+    case 'p':
+    case 'P':
+      prec = 6;
+      break;
+
+    default:
+      *sizeP = 0;
+      return _("Bad call to MD_NTOF()");
+    }
+
+  t = atof_ieee (input_line_pointer, type, words);
+
+  if (t)
+    input_line_pointer = t;
+
+  *sizeP = prec * sizeof (LITTLENUM_TYPE);
+
+  if (! target_big_endian)
+    {
+      for (i = prec - 1; i >= 0; i--)
+	{
+	  md_number_to_chars (litP, (valueT) words[i],
+			      sizeof (LITTLENUM_TYPE));
+	  litP += sizeof (LITTLENUM_TYPE);
+	}
+    }
+  else
+    for (i = 0; i < prec; i++)
+      {
+	md_number_to_chars (litP, (valueT) words[i],
+			    sizeof (LITTLENUM_TYPE));
+	litP += sizeof (LITTLENUM_TYPE);
+      }
+
+  return 0;
 }
 
 const char * md_shortopts = "";
 
-enum options
-{
-  OPTION_JSRI2BSR_ON = OPTION_MD_BASE,
-  OPTION_JSRI2BSR_OFF,
-  OPTION_SIFILTER_ON,
-  OPTION_SIFILTER_OFF,
-  OPTION_CPU,
-  OPTION_EB,
-  OPTION_EL,
-};
+#define OPTION_JSRI2BSR_ON	(OPTION_MD_BASE + 0)
+#define OPTION_JSRI2BSR_OFF	(OPTION_MD_BASE + 1)
+#define OPTION_SIFILTER_ON	(OPTION_MD_BASE + 2)
+#define OPTION_SIFILTER_OFF	(OPTION_MD_BASE + 3)
+#define OPTION_CPU		(OPTION_MD_BASE + 4)
+#define OPTION_EB		(OPTION_MD_BASE + 5)
+#define OPTION_EL		(OPTION_MD_BASE + 6)
 
 struct option md_longopts[] =
 {
@@ -1651,7 +1771,9 @@ struct option md_longopts[] =
 size_t md_longopts_size = sizeof (md_longopts);
 
 int
-md_parse_option (int c, char * arg)
+md_parse_option (c, arg)
+     int c;
+     char * arg;
 {
   switch (c)
     {
@@ -1680,7 +1802,8 @@ md_parse_option (int c, char * arg)
 }
 
 void
-md_show_usage (FILE * stream)
+md_show_usage (stream)
+     FILE * stream;
 {
   fprintf (stream, _("\
 MCORE specific options:\n\
@@ -1694,31 +1817,33 @@ MCORE specific options:\n\
 int md_short_jump_size;
 
 void
-md_create_short_jump (char * ptr ATTRIBUTE_UNUSED,
-		      addressT from_Nddr ATTRIBUTE_UNUSED,
-		      addressT to_Nddr ATTRIBUTE_UNUSED,
-		      fragS * frag ATTRIBUTE_UNUSED,
-		      symbolS * to_symbol ATTRIBUTE_UNUSED)
+md_create_short_jump (ptr, from_Nddr, to_Nddr, frag, to_symbol)
+     char * ptr ATTRIBUTE_UNUSED;
+     addressT from_Nddr ATTRIBUTE_UNUSED;
+     addressT to_Nddr ATTRIBUTE_UNUSED;
+     fragS * frag ATTRIBUTE_UNUSED;
+     symbolS * to_symbol ATTRIBUTE_UNUSED;
 {
   as_fatal (_("failed sanity check: short_jump"));
 }
 
 void
-md_create_long_jump (char * ptr ATTRIBUTE_UNUSED,
-		     addressT from_Nddr ATTRIBUTE_UNUSED,
-		     addressT to_Nddr ATTRIBUTE_UNUSED,
-		     fragS * frag ATTRIBUTE_UNUSED,
-		     symbolS * to_symbol ATTRIBUTE_UNUSED)
+md_create_long_jump (ptr, from_Nddr, to_Nddr, frag, to_symbol)
+     char * ptr ATTRIBUTE_UNUSED;
+     addressT from_Nddr ATTRIBUTE_UNUSED;
+     addressT to_Nddr ATTRIBUTE_UNUSED;
+     fragS * frag ATTRIBUTE_UNUSED;
+     symbolS * to_symbol ATTRIBUTE_UNUSED;
 {
   as_fatal (_("failed sanity check: long_jump"));
 }
 
 /* Called after relaxing, change the frags so they know how big they are.  */
-
 void
-md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
-		 segT sec ATTRIBUTE_UNUSED,
-		 fragS * fragP)
+md_convert_frag (abfd, sec, fragP)
+     bfd * abfd ATTRIBUTE_UNUSED;
+     segT sec ATTRIBUTE_UNUSED;
+     register fragS * fragP;
 {
   char *buffer;
   int targ_addr = S_GET_VALUE (fragP->fr_symbol) + fragP->fr_offset;
@@ -1765,46 +1890,47 @@ md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
     case C (COND_JUMP, UNDEF_WORD_DISP):
       {
 	/* A conditional branch wont fit into 12 bits so:
-	  	b!cond	1f
-	  	jmpi	0f
-	  	.align 2
-	   0:	.long disp
-	   1:
-	  
-	   If the b!cond is 4 byte aligned, the literal which would
-	   go at x+4 will also be aligned.  */
+	 *	b!cond	1f
+	 *	jmpi	0f
+	 *	.align 2
+	 * 0:	.long disp
+	 * 1:
+	 *
+	 * if the b!cond is 4 byte aligned, the literal which would
+	 * go at x+4 will also be aligned.
+	 */
 	int first_inst = fragP->fr_fix + fragP->fr_address;
 	int needpad = (first_inst & 3);
 
 	if (! target_big_endian)
 	  buffer[1] ^= 0x08;
 	else
-	  buffer[0] ^= 0x08;	/* Toggle T/F bit.  */
+	  buffer[0] ^= 0x08;	/* Toggle T/F bit */
 
-	buffer[2] = INST_BYTE0 (MCORE_INST_JMPI);	/* Build jmpi.  */
+	buffer[2] = INST_BYTE0 (MCORE_INST_JMPI);	/* Build jmpi */
 	buffer[3] = INST_BYTE1 (MCORE_INST_JMPI);
 
 	if (needpad)
 	  {
 	    if (! target_big_endian)
 	      {
-		buffer[0] = 4;	/* Branch over jmpi, pad, and ptr.  */
-		buffer[2] = 1;	/* Jmpi offset of 1 gets the pointer.  */
+		buffer[0] = 4;	/* branch over jmpi, pad, and ptr */
+		buffer[2] = 1;	/* jmpi offset of 1 gets the pointer */
 	      }
 	    else
 	      {
-		buffer[1] = 4;	/* Branch over jmpi, pad, and ptr.  */
-		buffer[3] = 1;	/* Jmpi offset of 1 gets the pointer.  */
+		buffer[1] = 4;	/* branch over jmpi, pad, and ptr */
+		buffer[3] = 1;	/* jmpi offset of 1 gets the pointer */
 	      }
 
-	    buffer[4] = 0;	/* Alignment/pad.  */
+	    buffer[4] = 0;	/* alignment/pad */
 	    buffer[5] = 0;
-	    buffer[6] = 0;	/* Space for 32 bit address.  */
+	    buffer[6] = 0;	/* space for 32 bit address */
 	    buffer[7] = 0;
 	    buffer[8] = 0;
 	    buffer[9] = 0;
 
-	    /* Make reloc for the long disp.  */
+	    /* Make reloc for the long disp */
 	    fix_new (fragP, fragP->fr_fix + 6, 4,
 		     fragP->fr_symbol, fragP->fr_offset, 0, BFD_RELOC_32);
 
@@ -1818,16 +1944,16 @@ md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
 	       for this fragment.  */
 	    if (! target_big_endian)
 	      {
-		buffer[0] = 3;	/* Branch over jmpi, and ptr.  */
-		buffer[2] = 0;	/* Jmpi offset of 0 gets the pointer.  */
+		buffer[0] = 3;	/* branch over jmpi, and ptr */
+		buffer[2] = 0;	/* jmpi offset of 0 gets the pointer */
 	      }
 	    else
 	      {
-		buffer[1] = 3;	/* Branch over jmpi, and ptr.  */
-		buffer[3] = 0;	/* Jmpi offset of 0 gets the pointer.  */
+		buffer[1] = 3;	/* branch over jmpi, and ptr */
+		buffer[3] = 0;	/* jmpi offset of 0 gets the pointer */
 	      }
 
-	    buffer[4] = 0;	/* Space for 32 bit address.  */
+	    buffer[4] = 0;	/* space for 32 bit address */
 	    buffer[5] = 0;
 	    buffer[6] = 0;
 	    buffer[7] = 0;
@@ -1843,9 +1969,9 @@ md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
 	       full length of the fragment, not just what we actually
 	       filled in.  */
 	    if (! target_big_endian)
-	      buffer[0] = 4;	/* Jmpi, ptr, and the 'tail pad'.  */
+	      buffer[0] = 4;	/* jmpi, ptr, and the 'tail pad' */
 	    else
-	      buffer[1] = 4;	/* Jmpi, ptr, and the 'tail pad'.  */
+	      buffer[1] = 4;	/* jmpi, ptr, and the 'tail pad' */
 	  }
       }
       break;
@@ -1859,22 +1985,22 @@ md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
 	  	.align 2
 	     0:	.long disp
 	   we need a pad if "first_inst" is 4 byte aligned.
-	   [because the natural literal place is x + 2].  */
+	   [because the natural literal place is x + 2]  */
 	int first_inst = fragP->fr_fix + fragP->fr_address;
 	int needpad = !(first_inst & 3);
 
-	buffer[0] = INST_BYTE0 (MCORE_INST_JMPI);	/* Build jmpi.  */
+	buffer[0] = INST_BYTE0 (MCORE_INST_JMPI);	/* Build jmpi */
 	buffer[1] = INST_BYTE1 (MCORE_INST_JMPI);
 
 	if (needpad)
 	  {
 	    if (! target_big_endian)
-	      buffer[0] = 1;	/* Jmpi offset of 1 since padded.  */
+	      buffer[0] = 1;	/* jmpi offset of 1 since padded */
 	    else
-	      buffer[1] = 1;	/* Jmpi offset of 1 since padded.  */
-	    buffer[2] = 0;	/* Alignment.  */
+	      buffer[1] = 1;	/* jmpi offset of 1 since padded */
+	    buffer[2] = 0;	/* alignment */
 	    buffer[3] = 0;
-	    buffer[4] = 0;	/* Space for 32 bit address.  */
+	    buffer[4] = 0;	/* space for 32 bit address */
 	    buffer[5] = 0;
 	    buffer[6] = 0;
 	    buffer[7] = 0;
@@ -1888,10 +2014,10 @@ md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
 	else
 	  {
 	    if (! target_big_endian)
-	      buffer[0] = 0;	/* Jmpi offset of 0 if no pad.  */
+	      buffer[0] = 0;	/* jmpi offset of 0 if no pad */
 	    else
-	      buffer[1] = 0;	/* Jmpi offset of 0 if no pad.  */
-	    buffer[2] = 0;	/* Space for 32 bit address.  */
+	      buffer[1] = 0;	/* jmpi offset of 0 if no pad */
+	    buffer[2] = 0;	/* space for 32 bit address */
 	    buffer[3] = 0;
 	    buffer[4] = 0;
 	    buffer[5] = 0;
@@ -1913,9 +2039,10 @@ md_convert_frag (bfd * abfd ATTRIBUTE_UNUSED,
    Also sets up addends for 'rela' type relocations.  */
 
 void
-md_apply_fix (fixS *   fixP,
-	       valueT * valP,
-	       segT     segment ATTRIBUTE_UNUSED)
+md_apply_fix3 (fixP, valP, segment)
+     fixS *   fixP;
+     valueT * valP;
+     segT     segment ATTRIBUTE_UNUSED;
 {
   char *       buf  = fixP->fx_where + fixP->fx_frag->fr_literal;
   char *       file = fixP->fx_file ? fixP->fx_file : _("unknown");
@@ -1941,8 +2068,7 @@ md_apply_fix (fixS *   fixP,
 
   switch (fixP->fx_r_type)
     {
-      /* Second byte of 2 byte opcode.  */
-    case BFD_RELOC_MCORE_PCREL_IMM11BY2:
+    case BFD_RELOC_MCORE_PCREL_IMM11BY2:     /* second byte of 2 byte opcode */
       if ((val & 1) != 0)
 	as_bad_where (file, fixP->fx_line,
 		      _("odd distance branch (0x%lx bytes)"), (long) val);
@@ -1963,8 +2089,7 @@ md_apply_fix (fixS *   fixP,
 	}
       break;
 
-      /* Lower 8 bits of 2 byte opcode.  */
-    case BFD_RELOC_MCORE_PCREL_IMM8BY4:
+    case BFD_RELOC_MCORE_PCREL_IMM8BY4:	/* lower 8 bits of 2 byte opcode */
       val += 3;
       val /= 4;
       if (val & ~0xff)
@@ -1977,8 +2102,7 @@ md_apply_fix (fixS *   fixP,
 	buf[1] |= (val & 0xff);
       break;
 
-      /* Loopt instruction.  */
-    case BFD_RELOC_MCORE_PCREL_IMM4BY2:
+    case BFD_RELOC_MCORE_PCREL_IMM4BY2:	/* loopt instruction */
       if ((val < -32) || (val > -2))
 	as_bad_where (file, fixP->fx_line,
 		      _("pcrel for loopt too far (0x%lx)"), (long) val);
@@ -2038,7 +2162,8 @@ md_apply_fix (fixS *   fixP,
 }
 
 void
-md_operand (expressionS * expressionP)
+md_operand (expressionP)
+     expressionS * expressionP;
 {
   /* Ignore leading hash symbol, if poresent.  */
   if (* input_line_pointer == '#')
@@ -2053,7 +2178,9 @@ int md_long_jump_size;
 /* Called just before address relaxation, return the length
    by which a fragment must grow to reach it's destination.  */
 int
-md_estimate_size_before_relax (fragS * fragP, segT segment_type)
+md_estimate_size_before_relax (fragP, segment_type)
+     register fragS * fragP;
+     register segT segment_type;
 {
   switch (fragP->fr_subtype)
     {
@@ -2063,26 +2190,38 @@ md_estimate_size_before_relax (fragS * fragP, segT segment_type)
     case C (UNCD_JUMP, UNDEF_DISP):
       /* Used to be a branch to somewhere which was unknown.  */
       if (!fragP->fr_symbol)
-	fragP->fr_subtype = C (UNCD_JUMP, DISP12);
+	{
+	  fragP->fr_subtype = C (UNCD_JUMP, DISP12);
+	}
       else if (S_GET_SEGMENT (fragP->fr_symbol) == segment_type)
-	fragP->fr_subtype = C (UNCD_JUMP, DISP12);
+	{
+	  fragP->fr_subtype = C (UNCD_JUMP, DISP12);
+	}
       else
-	fragP->fr_subtype = C (UNCD_JUMP, UNDEF_WORD_DISP);
+	{
+	  fragP->fr_subtype = C (UNCD_JUMP, UNDEF_WORD_DISP);
+	}
       break;
 
     case C (COND_JUMP, UNDEF_DISP):
       /* Used to be a branch to somewhere which was unknown.  */
       if (fragP->fr_symbol
 	  && S_GET_SEGMENT (fragP->fr_symbol) == segment_type)
-	/* Got a symbol and it's defined in this segment, become byte
-	   sized - maybe it will fix up */
-	fragP->fr_subtype = C (COND_JUMP, DISP12);
+	{
+	  /* Got a symbol and it's defined in this segment, become byte
+	     sized - maybe it will fix up */
+	  fragP->fr_subtype = C (COND_JUMP, DISP12);
+	}
       else if (fragP->fr_symbol)
-	/* Its got a segment, but its not ours, so it will always be long.  */
-	fragP->fr_subtype = C (COND_JUMP, UNDEF_WORD_DISP);
+	{
+	  /* Its got a segment, but its not ours, so it will always be long.  */
+	  fragP->fr_subtype = C (COND_JUMP, UNDEF_WORD_DISP);
+	}
       else
-	/* We know the abs value.  */
-	fragP->fr_subtype = C (COND_JUMP, DISP12);
+	{
+	  /* We know the abs value.  */
+	  fragP->fr_subtype = C (COND_JUMP, DISP12);
+	}
       break;
 
     case C (UNCD_JUMP, DISP12):
@@ -2100,31 +2239,47 @@ md_estimate_size_before_relax (fragS * fragP, segT segment_type)
 }
 
 /* Put number into target byte order.  */
-
 void
-md_number_to_chars (char * ptr, valueT use, int nbytes)
+md_number_to_chars (ptr, use, nbytes)
+     char * ptr;
+     valueT use;
+     int nbytes;
 {
-  if (target_big_endian)
-    number_to_chars_bigendian (ptr, use, nbytes);
+  if (! target_big_endian)
+    switch (nbytes)
+      {
+      case 4: ptr[3] = (use >> 24) & 0xff; /* fall through */
+      case 3: ptr[2] = (use >> 16) & 0xff; /* fall through */
+      case 2: ptr[1] = (use >>  8) & 0xff; /* fall through */
+      case 1: ptr[0] = (use >>  0) & 0xff;    break;
+      default: abort ();
+      }
   else
-    number_to_chars_littleendian (ptr, use, nbytes);
+    switch (nbytes)
+      {
+      case 4: *ptr++ = (use >> 24) & 0xff; /* fall through */
+      case 3: *ptr++ = (use >> 16) & 0xff; /* fall through */
+      case 2: *ptr++ = (use >>  8) & 0xff; /* fall through */
+      case 1: *ptr++ = (use >>  0) & 0xff;    break;
+      default: abort ();
+      }
 }
 
 /* Round up a section size to the appropriate boundary.  */
-
 valueT
-md_section_align (segT segment ATTRIBUTE_UNUSED,
-		  valueT size)
+md_section_align (segment, size)
+     segT segment ATTRIBUTE_UNUSED;
+     valueT size;
 {
-  /* Byte alignment is fine.  */
-  return size;
+  return size;			/* Byte alignment is fine */
 }
 
 /* The location from which a PC relative jump should be calculated,
    given a PC relative reloc.  */
-
 long
-md_pcrel_from_section (fixS * fixp, segT sec ATTRIBUTE_UNUSED)
+md_pcrel_from_section (fixp, sec)
+     fixS * fixp;
+     segT sec ATTRIBUTE_UNUSED;
 {
 #ifdef OBJ_ELF
   /* If the symbol is undefined or defined in another section
@@ -2135,7 +2290,7 @@ md_pcrel_from_section (fixS * fixp, segT sec ATTRIBUTE_UNUSED)
 	  || (S_GET_SEGMENT (fixp->fx_addsy) != sec)))
 
   {
-    gas_assert (fixp->fx_size == 2);	/* must be an insn */
+    assert (fixp->fx_size == 2);	/* must be an insn */
     return fixp->fx_size;
   }
 #endif
@@ -2148,7 +2303,9 @@ md_pcrel_from_section (fixS * fixp, segT sec ATTRIBUTE_UNUSED)
 #define MAP(SZ,PCREL,TYPE)	case F (SZ, PCREL): code = (TYPE); break
 
 arelent *
-tc_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
+tc_gen_reloc (section, fixp)
+     asection * section ATTRIBUTE_UNUSED;
+     fixS * fixp;
 {
   arelent * rel;
   bfd_reloc_code_real_type code;
@@ -2184,8 +2341,8 @@ tc_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
       break;
   }
 
-  rel = xmalloc (sizeof (arelent));
-  rel->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  rel = (arelent *) xmalloc (sizeof (arelent));
+  rel->sym_ptr_ptr = (asymbol **) xmalloc (sizeof (asymbol *));
   *rel->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   rel->address = fixp->fx_frag->fr_address + fixp->fx_where;
   /* Always pass the addend along!  */
@@ -2201,7 +2358,7 @@ tc_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
 
       /* Set howto to a garbage value so that we can keep going.  */
       rel->howto = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_32);
-      gas_assert (rel->howto != NULL);
+      assert (rel->howto != NULL);
     }
 
   return rel;
@@ -2212,7 +2369,8 @@ tc_gen_reloc (asection * section ATTRIBUTE_UNUSED, fixS * fixp)
    This is used to force out switch and PC relative relocations when
    relaxing.  */
 int
-mcore_force_relocation (fixS * fix)
+mcore_force_relocation (fix)
+     fixS * fix;
 {
   if (fix->fx_r_type == BFD_RELOC_RVA)
     return 1;
@@ -2222,9 +2380,9 @@ mcore_force_relocation (fixS * fix)
 
 /* Return true if the fix can be handled by GAS, false if it must
    be passed through to the linker.  */
-
 bfd_boolean
-mcore_fix_adjustable (fixS * fixP)
+mcore_fix_adjustable (fixP)
+   fixS * fixP;
 {
   /* We need the symbol name for the VTABLE entries.  */
   if (   fixP->fx_r_type == BFD_RELOC_VTABLE_INHERIT

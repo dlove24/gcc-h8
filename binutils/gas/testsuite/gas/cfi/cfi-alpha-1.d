@@ -1,6 +1,6 @@
 #readelf: -wf
 #name: CFI on alpha
-Contents of the .eh_frame section:
+The section .eh_frame contains:
 
 00000000 00000010 00000000 CIE
   Version:               1
@@ -10,7 +10,7 @@ Contents of the .eh_frame section:
   Return address column: 26
   Augmentation data:     1b
 
-  DW_CFA_def_cfa_register: r30
+  DW_CFA_def_cfa_reg: r30
   DW_CFA_nop
 
 00000014 00000020 00000018 FDE cie=00000000 pc=00000000..00000034

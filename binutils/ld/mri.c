@@ -1,31 +1,31 @@
 /* mri.c -- handle MRI style linker scripts
    Copyright 1991, 1992, 1993, 1994, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2007, 2011 Free Software Foundation, Inc.
-   Contributed by Steve Chamberlain <sac@cygnus.com>.
+   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
-   This file is part of the GNU Binutils.
+This file is part of GLD, the Gnu Linker.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+GLD is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+GLD is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with GLD; see the file COPYING.  If not, write to the Free
+Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+02111-1307, USA.
 
+   This bit does the tree decoration when MRI style link scripts
+   are parsed.
 
-/* This bit does the tree decoration when MRI style link scripts
-   are parsed.  */
+   Contributed by Steve Chamberlain <sac@cygnus.com>.  */
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "ld.h"
 #include "ldexp.h"
 #include "ldlang.h"
@@ -44,14 +44,14 @@ struct section_name_struct {
   int ok_to_load;
 };
 
-static unsigned int symbol_truncate = 10000;
-static struct section_name_struct *order;
-static struct section_name_struct *only_load;
-static struct section_name_struct *address;
-static struct section_name_struct *alias;
+unsigned int symbol_truncate = 10000;
+struct section_name_struct *order;
+struct section_name_struct *only_load;
+struct section_name_struct *address;
+struct section_name_struct *alias;
 
-static struct section_name_struct *alignment;
-static struct section_name_struct *subalignment;
+struct section_name_struct *alignment;
+struct section_name_struct *subalignment;
 
 static struct section_name_struct **
 lookup (const char *name, struct section_name_struct **list)
@@ -68,8 +68,7 @@ lookup (const char *name, struct section_name_struct **list)
 	ptr = &((*ptr)->next);
     }
 
-  *ptr = (struct section_name_struct *)
-      xmalloc (sizeof (struct section_name_struct));
+  *ptr = xmalloc (sizeof (struct section_name_struct));
   return ptr;
 }
 
@@ -207,27 +206,25 @@ mri_draw_tree (void)
 	    base = p->vma ? p->vma : exp_nameop (NAME, ".");
 
 	  lang_enter_output_section_statement (p->name, base,
-					       p->ok_to_load ? normal_section : noload_section,
+					       p->ok_to_load ? 0 : noload_section,
 					       align, subalign, NULL, 0);
 	  base = 0;
-	  tmp = (struct wildcard_list *) xmalloc (sizeof *tmp);
+	  tmp = xmalloc (sizeof *tmp);
 	  tmp->next = NULL;
 	  tmp->spec.name = p->name;
 	  tmp->spec.exclude_name_list = NULL;
 	  tmp->spec.sorted = none;
-	  tmp->spec.section_flag_list = NULL;
 	  lang_add_wild (NULL, tmp, FALSE);
 
 	  /* If there is an alias for this section, add it too.  */
 	  for (aptr = alias; aptr; aptr = aptr->next)
 	    if (strcmp (aptr->alias, p->name) == 0)
 	      {
-		tmp = (struct wildcard_list *) xmalloc (sizeof *tmp);
+		tmp = xmalloc (sizeof *tmp);
 		tmp->next = NULL;
 		tmp->spec.name = aptr->name;
 		tmp->spec.exclude_name_list = NULL;
 		tmp->spec.sorted = none;
-		tmp->spec.section_flag_list = NULL;
 		lang_add_wild (NULL, tmp, FALSE);
 	      }
 
@@ -297,7 +294,7 @@ mri_format (const char *name)
 void
 mri_public (const char *name, etree_type *exp)
 {
-  lang_add_assignment (exp_assign (name, exp, FALSE));
+  lang_add_assignment (exp_assop ('=', name, exp));
 }
 
 void

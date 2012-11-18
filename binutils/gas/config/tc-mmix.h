@@ -1,13 +1,12 @@
 /* tc-mmix.h -- Header file for tc-mmix.c.
-   Copyright (C) 2001, 2002, 2003, 2005, 2007, 2008
-   Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003 Free Software Foundation, Inc.
    Written by Hans-Peter Nilsson (hp@bitrange.com).
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -17,8 +16,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #define TC_MMIX
 
@@ -42,25 +41,25 @@ extern const char mmix_flt_chars[];
 /* "@" is a synonym for ".".  */
 #define LEX_AT (LEX_BEGIN_NAME)
 
-extern int mmix_label_without_colon_this_line (void);
+extern int mmix_label_without_colon_this_line PARAMS ((void));
 #define LABELS_WITHOUT_COLONS mmix_label_without_colon_this_line ()
 
 extern int mmix_next_semicolon_is_eoln;
 #define TC_EOL_IN_INSN(p) (*(p) == ';' && ! mmix_next_semicolon_is_eoln)
 
 /* This is one direction we can get mmixal compatibility.  */
-extern void mmix_handle_mmixal (void);
+extern void mmix_handle_mmixal PARAMS ((void));
 #define md_start_line_hook mmix_handle_mmixal
 
-extern void mmix_md_begin (void);
+extern void mmix_md_begin PARAMS ((void));
 #define md_begin mmix_md_begin
 
-extern void mmix_md_end (void);
+extern void mmix_md_end PARAMS ((void));
 #define md_end mmix_md_end
 
 extern int mmix_current_location \
-  (void (*fn) (expressionS *), expressionS *);
-extern int mmix_parse_predefined_name (char *, expressionS *);
+  PARAMS ((void (*fn) (expressionS *), expressionS *));
+extern int mmix_parse_predefined_name PARAMS ((char *, expressionS *));
 
 extern char *mmix_current_prefix;
 
@@ -71,7 +70,7 @@ extern char *mmix_current_prefix;
    The [DVWIOUZX]_Handler symbols are provided when-used.  */
 
 extern int mmix_gnu_syntax;
-#define md_parse_name(name, exp, mode, cpos)			\
+#define md_parse_name(name, exp, cpos)				\
  (! mmix_gnu_syntax						\
   && (name[0] == '@'						\
       ? (! is_part_of_name (name[1])				\
@@ -79,7 +78,7 @@ extern int mmix_gnu_syntax;
       : ((name[0] == ':' || ISUPPER (name[0]))			\
 	 && mmix_parse_predefined_name (name, exp))))
 
-extern char *mmix_prefix_name (char *);
+extern char *mmix_prefix_name PARAMS ((char *));
 
 /* We implement when *creating* a symbol, we also need to strip a ':' or
    prepend a prefix.  */
@@ -88,7 +87,7 @@ extern char *mmix_prefix_name (char *);
 
 #define md_undefined_symbol(x) NULL
 
-extern void mmix_fb_label (expressionS *);
+extern void mmix_fb_label PARAMS ((expressionS *));
 
 /* Since integer_constant is local to expr.c, we have to make this a
    macro.  FIXME: Do it cleaner.  */
@@ -111,7 +110,7 @@ extern void mmix_fb_label (expressionS *);
 /* Gas dislikes the 2ADD, 8ADD etc. insns, so we have to assemble them in
    the error-recovery loop.  Hopefully there are no significant
    differences.  Also, space on a line isn't gracefully handled.  */
-extern int mmix_assemble_return_nonzero (char *);
+extern int mmix_assemble_return_nonzero PARAMS ((char *));
 #define tc_unrecognized_line(c)						\
  ((c) == ' '								\
   || (((c) == '1' || (c) == '2' || (c) == '4' || (c) == '8')		\
@@ -125,7 +124,7 @@ extern const struct relax_type mmix_relax_table[];
 #define TC_GENERIC_RELAX_TABLE mmix_relax_table
 
 /* We use the relax table for everything except the GREG frags and PUSHJ.  */
-extern long mmix_md_relax_frag (segT, fragS *, long);
+extern long mmix_md_relax_frag PARAMS ((segT, fragS *, long));
 #define md_relax_frag mmix_md_relax_frag
 
 #define tc_fix_adjustable(FIX)					\
@@ -137,7 +136,7 @@ extern long mmix_md_relax_frag (segT, fragS *, long);
 
 /* Adjust symbols which are registers.  */
 #define tc_adjust_symtab() mmix_adjust_symtab ()
-extern void mmix_adjust_symtab (void);
+extern void mmix_adjust_symtab PARAMS ((void));
 
 /* Here's where we make all symbols global, when so requested.
    We must avoid doing that for expression symbols or section symbols,
@@ -171,11 +170,11 @@ extern int mmix_globalize_symbols;
 
 /* When relaxing, we need to emit various relocs we otherwise wouldn't.  */
 #define TC_FORCE_RELOCATION(fix) mmix_force_relocation (fix)
-extern int mmix_force_relocation (struct fix *);
+extern int mmix_force_relocation PARAMS ((struct fix *));
 
 /* Call md_pcrel_from_section(), not md_pcrel_from().  */
 #define MD_PCREL_FROM_SECTION(FIX, SEC) md_pcrel_from_section (FIX, SEC)
-extern long md_pcrel_from_section (struct fix *, segT);
+extern long md_pcrel_from_section PARAMS ((struct fix *, segT));
 
 #define md_section_align(seg, size) (size)
 
@@ -193,19 +192,8 @@ extern fragS *mmix_opcode_frag;
    all symbols have been evaluated and all frags mapped, and when the
    fixups are done and relocs are output.  Similarly for each unknown
    symbol.  */
-extern void mmix_frob_file (void);
-#define tc_frob_file_before_fix()					\
-  do									\
-    {									\
-      int i = 0;							\
-									\
-      /* It's likely mmix_frob_file changed (removed) sections, so make	\
-	 sure sections are correctly numbered as per renumber_sections,	\
-	 (static to write.c where this macro is called).  */		\
-      mmix_frob_file ();						\
-      bfd_map_over_sections (stdoutput, renumber_sections, &i);		\
-    }									\
-  while (0)
+extern void mmix_frob_file PARAMS ((void));
+#define tc_frob_file_before_fix mmix_frob_file
 
 /* Used by mmix_frob_file.  Hangs on section symbols and unknown symbols.  */
 struct mmix_symbol_gregs;
@@ -222,10 +210,10 @@ struct mmix_segment_info_type
  };
 #define TC_SEGMENT_INFO_TYPE struct mmix_segment_info_type
 
-extern void mmix_md_elf_section_change_hook (void);
+extern void mmix_md_elf_section_change_hook PARAMS ((void));
 #define md_elf_section_change_hook mmix_md_elf_section_change_hook
 
-extern void mmix_md_do_align (int, char *, int, int);
+extern void mmix_md_do_align PARAMS ((int, char *, int, int));
 #define md_do_align(n, fill, len, max, label) \
  mmix_md_do_align (n, fill, len, max)
 
@@ -233,9 +221,3 @@ extern void mmix_md_do_align (int, char *, int, int);
    sequences sprinkled in, we can get unaligned DWARF2 offsets, so let's
    explicitly say one byte.  */
 #define DWARF2_LINE_MIN_INSN_LENGTH 1
-
-/* This target is buggy, and sets fix size too large.  */
-#define TC_FX_SIZE_SLACK(FIX) 6
-
-/* MMIX has global register symbols.  */
-#define TC_GLOBAL_REGISTER_SYMBOL_OK

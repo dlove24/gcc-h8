@@ -1,4 +1,4 @@
-#as: -xnone -mtune=itanium1
+#as: -xnone
 #objdump: -dr
 #name: ia64 tls
 

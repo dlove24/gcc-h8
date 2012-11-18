@@ -1,22 +1,11 @@
 /* IBM RS/6000 "XCOFF" file definitions for BFD.
-   Copyright (C) 1990, 1991, 2001, 2010 Free Software Foundation, Inc.
-   Written by Mimi Phuong-Thao Vo of IBM
-   and John Gilmore of Cygnus Support.
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Copyright (C) 1990, 1991, 2001 Free Software Foundation, Inc.
+   FIXME: Can someone provide a transliteration of this name into ASCII?
+   Using the following chars caused a compiler warning on HIUX (so I replaced
+   them with octal escapes), and isn't useful without an understanding of what
+   character set it is.
+   Written by Mimi Ph\373\364ng-Th\345o V\365 of IBM
+   and John Gilmore of Cygnus Support.  */
 
 /********************** FILE HEADER **********************/
 
@@ -168,16 +157,13 @@ union external_auxent {
 		char x_tvndx[2];		/* tv index */
 	} x_sym;
 
-        struct {
-                union {
-                        char x_fname[E_FILNMLEN];
-                        struct {
-                                char x_zeroes[4];
-                                char x_offset[4];
-                        } x_n;
-                } x_n;
-                char x_ftype[1];
-        } x_file;
+	union {
+		char x_fname[E_FILNMLEN];
+		struct {
+			char x_zeroes[4];
+			char x_offset[4];
+		} x_n;
+	} x_file;
 
 	struct {
 		char x_scnlen[4];			/* section length */
@@ -253,7 +239,7 @@ struct external_ldsym
 {
   union
     {
-      bfd_byte _l_name[E_SYMNMLEN];
+      bfd_byte _l_name[SYMNMLEN];
       struct
 	{
 	  bfd_byte _l_zeroes[4];
@@ -279,15 +265,3 @@ struct external_ldrel
 };
 
 #define LDRELSZ (2 * 4 + 2 * 2)
-
-struct external_exceptab
-{
-  union {
-    bfd_byte e_symndx[4];
-    bfd_byte e_paddr[4];
-  } e_addr;
-  bfd_byte e_lang[1];
-  bfd_byte e_reason[1];
-};
-
-#define EXCEPTSZ (4 + 2)

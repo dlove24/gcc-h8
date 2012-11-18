@@ -1,13 +1,12 @@
 /* BFD back-end for OpenRISC 1000 COFF binaries.
-   Copyright 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
    Contributed by Ivan Guzvinec  <ivang@opencores.org>
 
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,20 +16,29 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 #define OR32 1
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "libbfd.h"
 #include "coff/or32.h"
 #include "coff/internal.h"
 #include "libcoff.h"
 
+static long get_symbol_value
+  PARAMS ((asymbol *));
 static bfd_reloc_status_type or32_reloc
-  (bfd *, arelent *, asymbol *, void *, asection *, bfd *, char **);
+  PARAMS ((bfd *, arelent *, asymbol *, PTR, asection *, bfd *, char **));
+static bfd_boolean coff_or32_relocate_section
+  PARAMS ((bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
+	   struct internal_reloc *, struct internal_syment *, asection **));
+static bfd_boolean coff_or32_adjust_symndx
+  PARAMS ((bfd *, struct bfd_link_info *, bfd *, asection *,
+	   struct internal_reloc *, bfd_boolean *));
+static void reloc_processing
+  PARAMS ((arelent *, struct internal_reloc *, asymbol **, bfd *, asection *));
 
 #define COFF_DEFAULT_SECTION_ALIGNMENT_POWER (2)
 
@@ -51,7 +59,8 @@ static bfd_reloc_status_type or32_reloc
 /* Provided the symbol, returns the value reffed.  */
 
 static long
-get_symbol_value (asymbol *symbol)
+get_symbol_value (symbol)
+     asymbol *symbol;
 {
   long relocation = 0;
 
@@ -68,13 +77,15 @@ get_symbol_value (asymbol *symbol)
 /* This function is in charge of performing all the or32 relocations.  */
 
 static bfd_reloc_status_type
-or32_reloc (bfd *abfd,
-	    arelent *reloc_entry,
-	    asymbol *symbol_in,
-	    void * data,
-	    asection *input_section,
-	    bfd *output_bfd,
-	    char **error_message)
+or32_reloc (abfd, reloc_entry, symbol_in, data, input_section, output_bfd,
+            error_message)
+     bfd *abfd;
+     arelent *reloc_entry;
+     asymbol *symbol_in;
+     PTR data;
+     asection *input_section;
+     bfd *output_bfd;
+     char **error_message;
 {
   /* The consth relocation comes in two parts, we have to remember
      the state between calls, in these variables.  */
@@ -276,11 +287,12 @@ static reloc_howto_type howto_table[] =
   reloc_processing (relent, reloc, symbols, abfd, section)
 
 static void
-reloc_processing (arelent *relent,
-		  struct internal_reloc *reloc,
-		  asymbol **symbols,
-		  bfd *abfd,
-		  asection *section)
+reloc_processing (relent,reloc, symbols, abfd, section)
+     arelent *relent;
+     struct internal_reloc *reloc;
+     asymbol **symbols;
+     bfd *abfd;
+     asection *section;
 {
   static bfd_vma ihihalf_vaddr = (bfd_vma) -1;
 
@@ -305,7 +317,11 @@ reloc_processing (arelent *relent,
     }
   else
     {
+      asymbol *ptr;
       relent->sym_ptr_ptr = symbols + obj_convert (abfd)[reloc->r_symndx];
+
+      ptr = *(relent->sym_ptr_ptr);
+
       relent->addend = 0;
       relent->address-= section->vma;
 
@@ -319,14 +335,16 @@ reloc_processing (arelent *relent,
 /* The reloc processing routine for the optimized COFF linker.  */
 
 static bfd_boolean
-coff_or32_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
-			    struct bfd_link_info *info,
-			    bfd *input_bfd,
-			    asection *input_section,
-			    bfd_byte *contents,
-			    struct internal_reloc *relocs,
-			    struct internal_syment *syms,
-			    asection **sections)
+coff_or32_relocate_section (output_bfd, info, input_bfd, input_section,
+                            contents, relocs, syms, sections)
+     bfd *output_bfd ATTRIBUTE_UNUSED;
+     struct bfd_link_info *info;
+     bfd *input_bfd;
+     asection *input_section;
+     bfd_byte *contents;
+     struct internal_reloc *relocs;
+     struct internal_syment *syms;
+     asection **sections;
 {
   struct internal_reloc *rel;
   struct internal_reloc *relend;
@@ -538,12 +556,13 @@ coff_or32_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
    is actually an addend, not a symbol index at all.  */
 
 static bfd_boolean
-coff_or32_adjust_symndx (bfd *obfd ATTRIBUTE_UNUSED,
-			 struct bfd_link_info *info ATTRIBUTE_UNUSED,
-			 bfd *ibfd ATTRIBUTE_UNUSED,
-			 asection *sec ATTRIBUTE_UNUSED,
-			 struct internal_reloc *irel,
-			 bfd_boolean *adjustedp)
+coff_or32_adjust_symndx (obfd, info, ibfd, sec, irel, adjustedp)
+     bfd *obfd ATTRIBUTE_UNUSED;
+     struct bfd_link_info *info ATTRIBUTE_UNUSED;
+     bfd *ibfd ATTRIBUTE_UNUSED;
+     asection *sec ATTRIBUTE_UNUSED;
+     struct internal_reloc *irel;
+     bfd_boolean *adjustedp;
 {
   if (irel->r_type == R_IHCONST)
     *adjustedp = TRUE;
@@ -553,10 +572,6 @@ coff_or32_adjust_symndx (bfd *obfd ATTRIBUTE_UNUSED,
 }
 
 #define coff_adjust_symndx coff_or32_adjust_symndx
-
-#ifndef bfd_pe_print_pdata
-#define bfd_pe_print_pdata	NULL
-#endif
 
 #include "coffcode.h"
 
@@ -577,7 +592,6 @@ const bfd_target or32coff_big_vec =
   '_',        /* Leading underscore.  */
   '/',        /* ar_pad_char.  */
   15,         /* ar_max_namelen.  */
-  0,          /* match priority.  */
 
   /* Data.  */
   bfd_getb64, bfd_getb_signed_64, bfd_putb64,

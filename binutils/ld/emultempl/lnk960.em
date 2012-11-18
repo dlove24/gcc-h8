@@ -1,31 +1,30 @@
 # This shell script emits a C file. -*- C -*-
 # It does some substitutions.
-fragment <<EOF
+cat >e${EMULATION_NAME}.c <<EOF
 /* intel coff loader emulation specific stuff
-   Copyright 1991, 1992, 1994, 1995, 1996, 1999, 2000, 2001, 2002, 2003,
-   2005, 2007, 2008 Free Software Foundation, Inc.
+   Copyright 1991, 1992, 1994, 1995, 1996, 1999, 2000, 2001, 2002, 2003, 2005
+   Free Software Foundation, Inc.
    Written by Steve Chamberlain steve@cygnus.com
 
-   This file is part of the GNU Binutils.
+This file is part of GLD, the Gnu Linker.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+GLD is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+GLD is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with GLD; see the file COPYING.  If not, write to
+the Free Software Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
 #include "libiberty.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "bfdlink.h"
 
 /*#include "archures.h"*/
@@ -94,7 +93,7 @@ lnk960_before_parse (void)
 	einfo ("%P%F I960BASE and G960BASE not set\n");
     }
 
-  ldfile_add_library_path (concat (name, "/lib", (const char *) NULL), FALSE);
+  ldfile_add_library_path (concat (name, "/lib", NULL), FALSE);
   ldfile_output_architecture = bfd_arch_i960;
   ldfile_output_machine = bfd_mach_i960_core;
 }
@@ -130,62 +129,9 @@ lnk960_after_parse (void)
   add_on (syslib_list, lang_input_file_is_search_file_enum);
 }
 
-/* Create a symbol with the given name with the value of the
-   address of first byte of the section named.
-
-   If the symbol already exists, then do nothing.  */
-
 static void
-symbol_at_beginning_of (const char *secname, const char *name)
+lnk960_before_allocation (void)
 {
-  struct bfd_link_hash_entry *h;
-
-  h = bfd_link_hash_lookup (link_info.hash, name, TRUE, TRUE, TRUE);
-  if (h == NULL)
-    einfo (_("%P%F: bfd_link_hash_lookup failed: %E\n"));
-
-  if (h->type == bfd_link_hash_new
-      || h->type == bfd_link_hash_undefined)
-    {
-      asection *sec;
-
-      h->type = bfd_link_hash_defined;
-
-      sec = bfd_get_section_by_name (link_info.output_bfd, secname);
-      if (sec == NULL)
-	sec = bfd_abs_section_ptr;
-      h->u.def.value = 0;
-      h->u.def.section = sec;
-    }
-}
-
-/* Create a symbol with the given name with the value of the
-   address of the first byte after the end of the section named.
-
-   If the symbol already exists, then do nothing.  */
-
-static void
-symbol_at_end_of (const char *secname, const char *name)
-{
-  struct bfd_link_hash_entry *h;
-
-  h = bfd_link_hash_lookup (link_info.hash, name, TRUE, TRUE, TRUE);
-  if (h == NULL)
-    einfo (_("%P%F: bfd_link_hash_lookup failed: %E\n"));
-
-  if (h->type == bfd_link_hash_new
-      || h->type == bfd_link_hash_undefined)
-    {
-      asection *sec;
-
-      h->type = bfd_link_hash_defined;
-
-      sec = bfd_get_section_by_name (link_info.output_bfd, secname);
-      if (sec == NULL)
-	sec = bfd_abs_section_ptr;
-      h->u.def.value = sec->size;
-      h->u.def.section = sec;
-    }
 }
 
 static void
@@ -193,10 +139,10 @@ lnk960_after_allocation (void)
 {
   if (!link_info.relocatable)
     {
-      symbol_at_end_of (".text", "_etext");
-      symbol_at_end_of (".data", "_edata");
-      symbol_at_beginning_of (".bss", "_bss_start");
-      symbol_at_end_of (".bss", "_end");
+      lang_abs_symbol_at_end_of (".text", "_etext");
+      lang_abs_symbol_at_end_of (".data", "_edata");
+      lang_abs_symbol_at_beginning_of (".bss", "_bss_start");
+      lang_abs_symbol_at_end_of (".bss", "_end");
     }
 }
 
@@ -247,7 +193,7 @@ lnk960_set_output_arch (void)
 	  break;
 	}
     }
-  bfd_set_arch_mach (link_info.output_bfd, ldfile_output_architecture,
+  bfd_set_arch_mach (output_bfd, ldfile_output_architecture,
 		     ldfile_output_machine);
 }
 
@@ -275,7 +221,7 @@ then
 # sed commands to quote an ld script as a C string.
 sc="-f stringify.sed"
 
-fragment <<EOF
+cat >>e${EMULATION_NAME}.c <<EOF
 {
   *isfile = 0;
 
@@ -296,7 +242,7 @@ echo '; }'                                             >> e${EMULATION_NAME}.c
 else
 # Scripts read from the filesystem.
 
-fragment <<EOF
+cat >>e${EMULATION_NAME}.c <<EOF
 {
   *isfile = 1;
 
@@ -315,7 +261,7 @@ EOF
 
 fi
 
-fragment <<EOF
+cat >>e${EMULATION_NAME}.c <<EOF
 
 struct ld_emulation_xfer_struct ld_lnk960_emulation =
 {
@@ -323,15 +269,15 @@ struct ld_emulation_xfer_struct ld_lnk960_emulation =
   lnk960_syslib,
   lnk960_hll,
   lnk960_after_parse,
-  after_open_default,
+  NULL,			/* after_open */
   lnk960_after_allocation,
   lnk960_set_output_arch,
   lnk960_choose_target,
-  before_allocation_default,
+  lnk960_before_allocation,
   lnk960_get_script,
   "lnk960",
   "",
-  finish_default,
+  NULL,	/* finish */
   NULL,	/* create output section statements */
   NULL,	/* open dynamic archive */
   NULL,	/* place orphan */

@@ -1,8 +1,8 @@
-# Copyright 2001, 2003, 2004, 2006, 2007, 2009 Free Software Foundation, Inc.
+# Copyright 2001, 2003, 2004 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 # 
 # This program is distributed in the hope that it will be useful,
@@ -12,15 +12,23 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 # Please email any bugs, comments, and/or additions to this file to:
 # bug-dejagnu@prep.ai.mit.edu
 
 # Written by DJ Delorie <dj@redhat.com>
 
-if {![istarget "i*86-*-*"] && ![istarget "x86_64-*-mingw*"] } {
+if {![istarget "i*86-*-*"]} {
     return
+}
+
+if {![istarget "i*86-*-*pe*"] \
+    && ![istarget "i*86-*-cygwin*"] \
+    && ![istarget "i*86-*-mingw32*"] } {
+    set target_xfail "yes"
+} else {
+    set target_xfail "no"
 }
 
 if {![info exists WINDRES]} then {
@@ -35,6 +43,7 @@ set wr "$WINDRES --include-dir $srcdir/$subdir"
 
 if [file exists "$srcdir/../../winsup/w32api/include"] {
     set wr "$wr --include-dir $srcdir/../../winsup/w32api/include"
+    set target_xfail "no"
 } else {
     send_log "\nWarning: Assuming windres can find the win32 headers\n\n"
 }
@@ -56,7 +65,6 @@ foreach res $res_list {
     set sroot [file rootname $res]
     set broot [file tail $sroot]
     set done 0
-    set cpp_opts ""
 
     set rc [open $res]
     while { [gets $rc line] != -1 } {
@@ -67,23 +75,19 @@ foreach res $res_list {
 	    setup_xfail $sys
 	    continue
 	}
-	if [regexp "cpparg *(\[^ \]*)" $line junk cppopt] {
-	    set cpp_opts "--preprocessor-arg \"$cppopt\""
-	    continue
-	}
+    }
+
+    if { "$broot" != "bmpalign" && "$target_xfail" == "yes" } {
+	setup_xfail *-*
     }
 
     verbose "$wr -J rc -O res $res tmpdir/$broot.res" 1
-    catch "exec $wr $cpp_opts -J rc -O res $res tmpdir/$broot.res" err
+    catch "exec $wr -J rc -O res $res tmpdir/$broot.res" err
 
     if ![string match "" $err] then {
 	send_log "$err\n"
 	verbose "$err" 1
-	if [string match "*windows.h: No such file*" $err] then {
-	    unsupported "windres/$broot (parse)"
-	} else {
-	    fail "windres/$broot (parse)"
-	}
+	fail "windres/$broot (parse)"
 	continue
     }
     pass "windres/$broot (parse)"
@@ -105,6 +109,10 @@ foreach res $res_list {
     }
     if { $done != 0 } {
 	continue
+    }
+
+    if { "$broot" != "bmpalign" && "$target_xfail" == "yes" } {
+	setup_xfail *-*
     }
 
     verbose "$OBJDUMP -b binary -s tmpdir/$broot.res > tmpdir/$broot.dump" 1

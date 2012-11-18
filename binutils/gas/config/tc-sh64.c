@@ -1,12 +1,11 @@
 /* tc-sh64.c -- Assemble code for the SuperH SH SHcompact and SHmedia.
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
-   Free Software Foundation.
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,8 +15,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330,
+   Boston, MA 02111-1307, USA.  */
 
 /* This file defines SHmedia ISA-specific functions and includes tc-sh.c.
    The SHcompact ISA is in all useful aspects the "old" sh4 as implemented
@@ -26,6 +25,7 @@
 
 #define HAVE_SH64
 
+#include <stdio.h>
 #include "as.h"
 #include "safe-ctype.h"
 #include "opcodes/sh64-opc.h"
@@ -39,7 +39,7 @@
    symbol" or local symbol.  */
 #define DATALABEL_SUFFIX " DL"
 
-/* See shmedia_md_apply_fix and shmedia_md_pcrel_from_section for usage.  */
+/* See shmedia_md_apply_fix3 and shmedia_md_pcrel_from_section for usage.  */
 #define SHMEDIA_MD_PCREL_FROM_FIX(FIXP) \
  ((FIXP)->fx_size + (FIXP)->fx_where + (FIXP)->fx_frag->fr_address - 4)
 
@@ -136,7 +136,7 @@ static const unsigned char shmedia_little_nop_pattern[4] =
 static void shmedia_md_begin (void);
 static int shmedia_parse_reg (char *, int *, int *, shmedia_arg_type);
 static void shmedia_md_assemble (char *);
-static void shmedia_md_apply_fix (fixS *, valueT *);
+static void shmedia_md_apply_fix3 (fixS *, valueT *);
 static int shmedia_md_estimate_size_before_relax (fragS *, segT);
 static int shmedia_init_reloc (arelent *, fixS *);
 static char *shmedia_get_operands (shmedia_opcode_info *, char *,
@@ -284,7 +284,7 @@ shmedia_frob_file_before_adjust (void)
 
       if (mainsym != NULL
 	  && S_GET_OTHER (mainsym) != STO_SH5_ISA32
-	  && (S_IS_EXTERNAL (mainsym) || S_IS_WEAK (mainsym)))
+	  && (S_IS_EXTERN (mainsym) || S_IS_WEAK (mainsym)))
 	{
 	  symp->sy_value.X_op = O_symbol;
 	  symp->sy_value.X_add_symbol = mainsym;
@@ -577,10 +577,10 @@ shmedia_init_reloc (arelent *rel, fixS *fixP)
   return 0;
 }
 
-/* Hook called from md_apply_fix in tc-sh.c.  */
+/* Hook called from md_apply_fix3 in tc-sh.c.  */
 
 static void
-shmedia_md_apply_fix (fixS *fixP, valueT *valp)
+shmedia_md_apply_fix3 (fixS *fixP, valueT *valp)
 {
   offsetT val = *valp;
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
@@ -602,7 +602,7 @@ shmedia_md_apply_fix (fixS *fixP, valueT *valp)
 	  /* Because write.c calls MD_PCREL_FROM_SECTION twice, we need to
 	     undo one of the adjustments, if the relocation is not
 	     actually for a symbol within the same segment (which we
-	     cannot check, because we're not called from md_apply_fix, so
+	     cannot check, because we're not called from md_apply_fix3, so
 	     we have to keep the reloc).  FIXME: This is a bug in
 	     write.c:fixup_segment affecting most targets that change
 	     ordinary relocs to pcrel relocs in md_apply_fix.  */
@@ -823,7 +823,7 @@ shmedia_md_convert_frag (bfd *output_bfd ATTRIBUTE_UNUSED,
        || sh_relax
        || symbolP == NULL
        || ! S_IS_DEFINED (symbolP)
-       || S_IS_EXTERNAL (symbolP)
+       || S_IS_EXTERN (symbolP)
        || S_IS_WEAK (symbolP)
        || (S_GET_SEGMENT (fragP->fr_symbol) != absolute_section
 	   && S_GET_SEGMENT (fragP->fr_symbol) != seg));
@@ -1533,7 +1533,7 @@ shmedia_check_limits (offsetT *valp, bfd_reloc_code_real_type reloc,
 
     case BFD_RELOC_SH_IMMU16:
       if (val < 0 || val > (1 << 16) - 1)
-	msg = _("invalid operand, not a 16-bit unsigned value: %d");
+	msg = _("invalid operand, not an 16-bit unsigned value: %d");
       break;
 
     case BFD_RELOC_SH_PT_16:
@@ -2204,16 +2204,16 @@ static char *
 shmedia_parse_exp (char *s, shmedia_operand_info *op)
 {
   char *save;
-  char *new_pointer;
+  char *new;
 
   save = input_line_pointer;
   input_line_pointer = s;
   expression (&op->immediate);
   if (op->immediate.X_op == O_absent)
     as_bad (_("missing operand"));
-  new_pointer = input_line_pointer;
+  new = input_line_pointer;
   input_line_pointer = save;
-  return new_pointer;
+  return new;
 }
 
 /* Parse an operand.  Store pointer to next character in *PTR.  */
@@ -2678,7 +2678,7 @@ shmedia_build_Mytes (shmedia_opcode_info *opcode,
 	    /* Don't allow complex expressions here.  */
 	    if (opjp->immediate.X_op_symbol != NULL)
 	      {
-		as_bad (_("invalid operand: expression in PT target"));
+		as_bad(_("invalid operand: expression in PT target"));
 		return 0;
 	      }
 
@@ -2718,7 +2718,7 @@ shmedia_build_Mytes (shmedia_opcode_info *opcode,
 	    /* Don't allow complex expressions here.  */
 	    if (opjp->immediate.X_op_symbol != NULL)
 	      {
-		as_bad (_("invalid operand: expression in PT target"));
+		as_bad(_("invalid operand: expression in PT target"));
 		return 0;
 	      }
 
@@ -2736,7 +2736,7 @@ shmedia_build_Mytes (shmedia_opcode_info *opcode,
 			insn_loc);
 	    else
 	      /* This reloc-type is just temporary, so we can distinguish
-		 PTA from PT.  It is changed in shmedia_md_apply_fix to
+		 PTA from PT.  It is changed in shmedia_md_apply_fix3 to
 		 BFD_RELOC_SH_PT_16.  */
 	      insn |= shmedia_immediate_op (insn_loc, opjp, 1,
 					    opjp->reloctype == BFD_RELOC_NONE
@@ -2928,14 +2928,14 @@ sh64_target_format (void)
 {
 #ifdef TE_NetBSD
   /* For NetBSD, if the ISA is unspecified, always use SHmedia.  */
-  if (preset_target_arch == 0 && sh64_isa_mode == sh64_isa_unspecified)
+  if (sh64_isa_mode == sh64_isa_unspecified)
     sh64_isa_mode = sh64_isa_shmedia;
 
   /* If the ABI is unspecified, select a default: based on how
      we were configured: sh64 == sh64_abi_64, else sh64_abi_32.  */
   if (sh64_abi == sh64_abi_unspecified)
     {
-      if (preset_target_arch != 0 || sh64_isa_mode == sh64_isa_shcompact)
+      if (sh64_isa_mode == sh64_isa_shcompact)
 	sh64_abi = sh64_abi_32;
       else if (strncmp (TARGET_CPU, "sh64", 4) == 0)
         sh64_abi = sh64_abi_64;
@@ -2945,7 +2945,7 @@ sh64_target_format (void)
 #endif
 
 #ifdef TE_LINUX
-  if (preset_target_arch == 0 && sh64_isa_mode == sh64_isa_unspecified)
+  if (sh64_isa_mode == sh64_isa_unspecified)
     sh64_isa_mode = sh64_isa_shmedia;
 
   if (sh64_abi == sh64_abi_unspecified)
@@ -3035,6 +3035,8 @@ sh64_target_mach (void)
 valueT
 shmedia_md_pcrel_from_section (struct fix *fixP, segT sec ATTRIBUTE_UNUSED)
 {
+  know (fixP->fx_frag->fr_type == rs_machine_dependent);
+
   /* Use the ISA for the instruction to decide which offset to use.  We
      can glean it from the fisup type.  */
   switch (fixP->fx_r_type)
@@ -3064,7 +3066,8 @@ shmedia_md_pcrel_from_section (struct fix *fixP, segT sec ATTRIBUTE_UNUSED)
 
     case BFD_RELOC_64:
     case BFD_RELOC_64_PCREL:
-      /* Fall through.  */
+      know (0 /* Shouldn't get here.  */);
+      break;
 
     default:
       /* If section was SHcompact, use its function.  */
@@ -3241,9 +3244,8 @@ sh64_frob_label (symbolS *symp)
    symbol hook.  */
 
 int
-sh64_consume_datalabel (const char *name, expressionS *exp,
-			enum expr_mode mode, char *cp,
-			segT (*operandf) (expressionS *, enum expr_mode))
+sh64_consume_datalabel (const char *name, expressionS *exp, char *cp,
+			segT (*operandf) (expressionS *))
 {
   static int parsing_datalabel = 0;
 
@@ -3256,7 +3258,7 @@ sh64_consume_datalabel (const char *name, expressionS *exp,
 
       *input_line_pointer = *cp;
       parsing_datalabel = 1;
-      (*operandf) (exp, expr_normal);
+      (*operandf) (exp);
       parsing_datalabel = save_parsing_datalabel;
 
       if (exp->X_op == O_symbol || exp->X_op == O_PIC_reloc)
@@ -3273,9 +3275,9 @@ sh64_consume_datalabel (const char *name, expressionS *exp,
 	  else
 	    {
 	      symbolS *dl_symp;
-	      const char * sname = S_GET_NAME (symp);
+	      const char *name = S_GET_NAME (symp);
 	      char *dl_name
-		= xmalloc (strlen (sname) + sizeof (DATALABEL_SUFFIX));
+		= xmalloc (strlen (name) + sizeof (DATALABEL_SUFFIX));
 
 	      /* Now we copy the datalabel-qualified symbol into a symbol
 		 with the same name, but with " DL" appended.  We mark the
@@ -3283,13 +3285,13 @@ sh64_consume_datalabel (const char *name, expressionS *exp,
 		 the main symbol, so we don't have to inspect all symbol
 		 names.  Note that use of "datalabel" is not expected to
 		 be a common case.  */
-	      strcpy (dl_name, sname);
+	      strcpy (dl_name, name);
 	      strcat (dl_name, DATALABEL_SUFFIX);
 
 	      /* A FAKE_LABEL_NAME marks "$" or ".".  There can be any
 		 number of them and all have the same (faked) name; we
 		 must make a new one each time.  */
-	      if (strcmp (sname, FAKE_LABEL_NAME) == 0)
+	      if (strcmp (name, FAKE_LABEL_NAME) == 0)
 		dl_symp = symbol_make (dl_name);
 	      else
 		dl_symp = symbol_find_or_make (dl_name);
@@ -3329,7 +3331,7 @@ sh64_consume_datalabel (const char *name, expressionS *exp,
       return 1;
     }
 
-  return sh_parse_name (name, exp, mode, cp);
+  return sh_parse_name (name, exp, cp);
 }
 
 /* This function is called just before symbols are being output.  It
@@ -3511,18 +3513,3 @@ sh64_vtable_inherit (int ignore ATTRIBUTE_UNUSED)
   input_line_pointer = eol;
 }
 
-int
-sh64_fake_label (const char *name)
-{
-  size_t len;
-
-  if (strcmp (name, FAKE_LABEL_NAME) == 0)
-    return 1;
-
-  len = strlen (name);
-  if (len >= (sizeof (DATALABEL_SUFFIX) - 1))
-    return strcmp (&name [len - sizeof (DATALABEL_SUFFIX) + 1],
-		   DATALABEL_SUFFIX) == 0;
-
-  return 0;
-}

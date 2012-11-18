@@ -1,25 +1,24 @@
 /* cris-opc.c -- Table of opcodes for the CRIS processor.
-   Copyright 2000, 2001, 2004, 2005, 2007 Free Software Foundation, Inc.
+   Copyright 2000, 2001, 2004 Free Software Foundation, Inc.
    Contributed by Axis Communications AB, Lund, Sweden.
    Originally written for GAS 1.38.1 by Mikael Asker.
    Reorganized by Hans-Peter Nilsson.
 
-   This file is part of the GNU opcodes library.
+This file is part of GAS, GDB and the GNU binutils.
 
-   This library is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+GAS, GDB, and GNU binutils is free software; you can redistribute it
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2, or (at your
+option) any later version.
 
-   It is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+GAS, GDB, and GNU binutils are distributed in the hope that they will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 #include "opcode/cris.h"
 
@@ -753,9 +752,7 @@ cris_opcodes[] =
    cris_ver_v0_10,
    cris_none_reg_mode_add_sub_cmp_and_or_move_op},
 
-  {"move",
-   MOVE_M_TO_PREG_OPCODE, MOVE_M_TO_PREG_ZBITS,
-   "s,P",   0, SIZE_SPEC_REG, 0,
+  {"move",    0x0A30, 0x01c0,		  "s,P",     0, SIZE_SPEC_REG, 0,
    cris_move_to_preg_op},
 
   {"move",    0x0A30, 0x01c0,		  "S,P",     0, SIZE_NONE,

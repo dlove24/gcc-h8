@@ -1,30 +1,50 @@
 /* Matsushita 10300 specific support for 32-bit ELF
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Free Software Foundation, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+   Free Software Foundation, Inc.
 
-   This file is part of BFD, the Binary File Descriptor library.
+This file is part of BFD, the Binary File Descriptor library.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
 #include "elf/mn10300.h"
-#include "libiberty.h"
+
+static bfd_reloc_status_type mn10300_elf_final_link_relocate
+  PARAMS ((reloc_howto_type *, bfd *, bfd *, asection *, bfd_byte *,
+	   bfd_vma, bfd_vma, bfd_vma,
+	   struct elf_link_hash_entry *, unsigned long, struct bfd_link_info *,
+	   asection *, int));
+static bfd_boolean mn10300_elf_relocate_section
+  PARAMS ((bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
+	   Elf_Internal_Rela *, Elf_Internal_Sym *, asection **));
+static bfd_boolean mn10300_elf_relax_section
+  PARAMS ((bfd *, asection *, struct bfd_link_info *, bfd_boolean *));
+static bfd_byte * mn10300_elf_get_relocated_section_contents
+  PARAMS ((bfd *, struct bfd_link_info *, struct bfd_link_order *,
+	   bfd_byte *, bfd_boolean, asymbol **));
+static unsigned long elf_mn10300_mach
+  PARAMS ((flagword));
+void _bfd_mn10300_elf_final_write_processing
+  PARAMS ((bfd *, bfd_boolean));
+bfd_boolean _bfd_mn10300_elf_object_p
+  PARAMS ((bfd *));
+bfd_boolean _bfd_mn10300_elf_merge_private_bfd_data
+  PARAMS ((bfd *,bfd *));
 
 /* The mn10300 linker needs to keep track of the number of relocs that
    it decides to copy in check_relocs for each symbol.  This is so
@@ -32,8 +52,7 @@
    linking with -Bsymbolic.  We store the information in a field
    extending the regular ELF linker hash table.  */
 
-struct elf32_mn10300_link_hash_entry
-{
+struct elf32_mn10300_link_hash_entry {
   /* The basic elf link hash table entry.  */
   struct elf_link_hash_entry root;
 
@@ -66,24 +85,12 @@ struct elf32_mn10300_link_hash_entry
    prologue deleted.  */
 #define MN10300_DELETED_PROLOGUE_BYTES 0x2
   unsigned char flags;
-
-  /* Calculated value.  */
-  bfd_vma value;
-
-#define GOT_UNKNOWN	0
-#define GOT_NORMAL	1
-#define GOT_TLS_GD	2
-#define GOT_TLS_LD	3
-#define GOT_TLS_IE	4
-  /* Used to distinguish GOT entries for TLS types from normal GOT entries.  */
-  unsigned char tls_type;
 };
 
 /* We derive a hash table from the main elf linker hash table so
    we can store state variables and a secondary hash table without
    resorting to global variables.  */
-struct elf32_mn10300_link_hash_table
-{
+struct elf32_mn10300_link_hash_table {
   /* The main hash table.  */
   struct elf_link_hash_table root;
 
@@ -95,51 +102,63 @@ struct elf32_mn10300_link_hash_table
   /* Random linker state flags.  */
 #define MN10300_HASH_ENTRIES_INITIALIZED 0x1
   char flags;
-  struct
-  {
-    bfd_signed_vma  refcount;
-    bfd_vma         offset;
-    char            got_allocated;
-    char            rel_emitted;
-  } tls_ldm_got;
 };
-
-#define elf_mn10300_hash_entry(ent) ((struct elf32_mn10300_link_hash_entry *)(ent))
-
-struct elf_mn10300_obj_tdata
-{
-  struct elf_obj_tdata root;
-
-  /* tls_type for each local got entry.  */
-  char * local_got_tls_type;
-};
-
-#define elf_mn10300_tdata(abfd) \
-  ((struct elf_mn10300_obj_tdata *) (abfd)->tdata.any)
-
-#define elf_mn10300_local_got_tls_type(abfd) \
-  (elf_mn10300_tdata (abfd)->local_got_tls_type)
-
-#ifndef streq
-#define streq(a, b) (strcmp ((a),(b)) == 0)
-#endif
 
 /* For MN10300 linker hash table.  */
 
 /* Get the MN10300 ELF linker hash table from a link_info structure.  */
 
 #define elf32_mn10300_hash_table(p) \
-  (elf_hash_table_id ((struct elf_link_hash_table *) ((p)->hash)) \
-  == MN10300_ELF_DATA ? ((struct elf32_mn10300_link_hash_table *) ((p)->hash)) : NULL)
+  ((struct elf32_mn10300_link_hash_table *) ((p)->hash))
 
 #define elf32_mn10300_link_hash_traverse(table, func, info)		\
   (elf_link_hash_traverse						\
    (&(table)->root,							\
-    (bfd_boolean (*) (struct elf_link_hash_entry *, void *)) (func),	\
+    (bfd_boolean (*) PARAMS ((struct elf_link_hash_entry *, PTR))) (func), \
     (info)))
 
-static reloc_howto_type elf_mn10300_howto_table[] =
-{
+static struct bfd_hash_entry *elf32_mn10300_link_hash_newfunc
+  PARAMS ((struct bfd_hash_entry *, struct bfd_hash_table *, const char *));
+static struct bfd_link_hash_table *elf32_mn10300_link_hash_table_create
+  PARAMS ((bfd *));
+static void elf32_mn10300_link_hash_table_free
+  PARAMS ((struct bfd_link_hash_table *));
+
+static reloc_howto_type *bfd_elf32_bfd_reloc_type_lookup
+  PARAMS ((bfd *abfd, bfd_reloc_code_real_type code));
+static void mn10300_info_to_howto
+  PARAMS ((bfd *, arelent *, Elf_Internal_Rela *));
+static bfd_boolean mn10300_elf_check_relocs
+  PARAMS ((bfd *, struct bfd_link_info *, asection *,
+	   const Elf_Internal_Rela *));
+static asection *mn10300_elf_gc_mark_hook
+  PARAMS ((asection *, struct bfd_link_info *info, Elf_Internal_Rela *,
+	   struct elf_link_hash_entry *, Elf_Internal_Sym *));
+static bfd_boolean mn10300_elf_relax_delete_bytes
+  PARAMS ((bfd *, asection *, bfd_vma, int));
+static bfd_boolean mn10300_elf_symbol_address_p
+  PARAMS ((bfd *, asection *, Elf_Internal_Sym *, bfd_vma));
+static bfd_boolean elf32_mn10300_finish_hash_table_entry
+  PARAMS ((struct bfd_hash_entry *, PTR));
+static void compute_function_info
+  PARAMS ((bfd *, struct elf32_mn10300_link_hash_entry *,
+	   bfd_vma, unsigned char *));
+
+static bfd_boolean _bfd_mn10300_elf_create_got_section
+  PARAMS ((bfd *, struct bfd_link_info *));
+static bfd_boolean _bfd_mn10300_elf_create_dynamic_sections
+  PARAMS ((bfd *, struct bfd_link_info *));
+static bfd_boolean _bfd_mn10300_elf_adjust_dynamic_symbol
+  PARAMS ((struct bfd_link_info *, struct elf_link_hash_entry *));
+static bfd_boolean _bfd_mn10300_elf_size_dynamic_sections
+  PARAMS ((bfd *, struct bfd_link_info *));
+static bfd_boolean _bfd_mn10300_elf_finish_dynamic_symbol
+  PARAMS ((bfd *, struct bfd_link_info *, struct elf_link_hash_entry *,
+	   Elf_Internal_Sym *));
+static bfd_boolean _bfd_mn10300_elf_finish_dynamic_sections
+  PARAMS ((bfd *, struct bfd_link_info *));
+
+static reloc_howto_type elf_mn10300_howto_table[] = {
   /* Dummy relocation.  Does nothing.  */
   HOWTO (R_MN10300_NONE,
 	 0,
@@ -239,7 +258,7 @@ static reloc_howto_type elf_mn10300_howto_table[] =
 	 0xff,
 	 TRUE),
 
-  /* GNU extension to record C++ vtable hierarchy.  */
+  /* GNU extension to record C++ vtable hierarchy */
   HOWTO (R_MN10300_GNU_VTINHERIT, /* type */
 	 0,			/* rightshift */
 	 0,			/* size (0 = byte, 1 = short, 2 = long) */
@@ -479,169 +498,14 @@ static reloc_howto_type elf_mn10300_howto_table[] =
 	 0xffffffff,		/* dst_mask */
 	 FALSE),		/* pcrel_offset */
 
-  HOWTO (R_MN10300_TLS_GD,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_GD",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_LD,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_LD",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_LDO,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_LDO",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_GOTIE,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_GOTIE",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_IE,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_IE",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_LE,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_LE",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_DTPMOD,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_DTPMOD",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_DTPOFF,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_DTPOFF",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_TLS_TPOFF,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc, /* */
-	 "R_MN10300_TLS_TPOFF",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-  
-  HOWTO (R_MN10300_SYM_DIFF,	/* type */
-	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_dont,/* complain_on_overflow */
-	 NULL, 			/* special handler.  */
-	 "R_MN10300_SYM_DIFF",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  HOWTO (R_MN10300_ALIGN,	/* type */
-	 0,			/* rightshift */
-	 0,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 FALSE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_dont,/* complain_on_overflow */
-	 NULL, 			/* special handler.  */
-	 "R_MN10300_ALIGN",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0,			/* src_mask */
-	 0,			/* dst_mask */
-	 FALSE)			/* pcrel_offset */
 };
 
-struct mn10300_reloc_map
-{
+struct mn10300_reloc_map {
   bfd_reloc_code_real_type bfd_reloc_val;
   unsigned char elf_reloc_val;
 };
 
-static const struct mn10300_reloc_map mn10300_reloc_map[] =
-{
+static const struct mn10300_reloc_map mn10300_reloc_map[] = {
   { BFD_RELOC_NONE, R_MN10300_NONE, },
   { BFD_RELOC_32, R_MN10300_32, },
   { BFD_RELOC_16, R_MN10300_16, },
@@ -666,36 +530,25 @@ static const struct mn10300_reloc_map mn10300_reloc_map[] =
   { BFD_RELOC_MN10300_GLOB_DAT, R_MN10300_GLOB_DAT },
   { BFD_RELOC_MN10300_JMP_SLOT, R_MN10300_JMP_SLOT },
   { BFD_RELOC_MN10300_RELATIVE, R_MN10300_RELATIVE },
-  { BFD_RELOC_MN10300_TLS_GD, R_MN10300_TLS_GD },
-  { BFD_RELOC_MN10300_TLS_LD, R_MN10300_TLS_LD },
-  { BFD_RELOC_MN10300_TLS_LDO, R_MN10300_TLS_LDO },
-  { BFD_RELOC_MN10300_TLS_GOTIE, R_MN10300_TLS_GOTIE },
-  { BFD_RELOC_MN10300_TLS_IE, R_MN10300_TLS_IE },
-  { BFD_RELOC_MN10300_TLS_LE, R_MN10300_TLS_LE },
-  { BFD_RELOC_MN10300_TLS_DTPMOD, R_MN10300_TLS_DTPMOD },
-  { BFD_RELOC_MN10300_TLS_DTPOFF, R_MN10300_TLS_DTPOFF },
-  { BFD_RELOC_MN10300_TLS_TPOFF, R_MN10300_TLS_TPOFF },
-  { BFD_RELOC_MN10300_SYM_DIFF, R_MN10300_SYM_DIFF },
-  { BFD_RELOC_MN10300_ALIGN, R_MN10300_ALIGN }
 };
 
 /* Create the GOT section.  */
 
 static bfd_boolean
-_bfd_mn10300_elf_create_got_section (bfd * abfd,
-				     struct bfd_link_info * info)
+_bfd_mn10300_elf_create_got_section (abfd, info)
+     bfd * abfd;
+     struct bfd_link_info * info;
 {
   flagword   flags;
   flagword   pltflags;
   asection * s;
+  struct bfd_link_hash_entry * bh;
   struct elf_link_hash_entry * h;
   const struct elf_backend_data * bed = get_elf_backend_data (abfd);
-  struct elf_link_hash_table *htab;
   int ptralign;
 
   /* This function may be called more than once.  */
-  htab = elf_hash_table (info);
-  if (htab->sgot != NULL)
+  if (bfd_get_section_by_name (abfd, ".got") != NULL)
     return TRUE;
 
   switch (bed->s->arch_size)
@@ -723,34 +576,42 @@ _bfd_mn10300_elf_create_got_section (bfd * abfd,
   if (bed->plt_readonly)
     pltflags |= SEC_READONLY;
 
-  s = bfd_make_section_anyway_with_flags (abfd, ".plt", pltflags);
-  htab->splt = s;
+  s = bfd_make_section (abfd, ".plt");
   if (s == NULL
+      || ! bfd_set_section_flags (abfd, s, pltflags)
       || ! bfd_set_section_alignment (abfd, s, bed->plt_alignment))
     return FALSE;
 
-  /* Define the symbol _PROCEDURE_LINKAGE_TABLE_ at the start of the
-     .plt section.  */
   if (bed->want_plt_sym)
     {
-      h = _bfd_elf_define_linkage_sym (abfd, info, s,
-				       "_PROCEDURE_LINKAGE_TABLE_");
-      htab->hplt = h;
-      if (h == NULL)
+      /* Define the symbol _PROCEDURE_LINKAGE_TABLE_ at the start of the
+	 .plt section.  */
+      bh = NULL;
+      if (! (_bfd_generic_link_add_one_symbol
+	     (info, abfd, "_PROCEDURE_LINKAGE_TABLE_", BSF_GLOBAL, s,
+	      (bfd_vma) 0, (const char *) NULL, FALSE,
+	      get_elf_backend_data (abfd)->collect, &bh)))
+	return FALSE;
+      h = (struct elf_link_hash_entry *) bh;
+      h->def_regular = 1;
+      h->type = STT_OBJECT;
+
+      if (info->shared
+	  && ! bfd_elf_link_record_dynamic_symbol (info, h))
 	return FALSE;
     }
 
-  s = bfd_make_section_anyway_with_flags (abfd, ".got", flags);
-  htab->sgot = s;
+  s = bfd_make_section (abfd, ".got");
   if (s == NULL
+      || ! bfd_set_section_flags (abfd, s, flags)
       || ! bfd_set_section_alignment (abfd, s, ptralign))
     return FALSE;
 
   if (bed->want_got_plt)
     {
-      s = bfd_make_section_anyway_with_flags (abfd, ".got.plt", flags);
-      htab->sgotplt = s;
+      s = bfd_make_section (abfd, ".got.plt");
       if (s == NULL
+	  || ! bfd_set_section_flags (abfd, s, flags)
 	  || ! bfd_set_section_alignment (abfd, s, ptralign))
 	return FALSE;
     }
@@ -759,40 +620,42 @@ _bfd_mn10300_elf_create_got_section (bfd * abfd,
      (or .got.plt) section.  We don't do this in the linker script
      because we don't want to define the symbol if we are not creating
      a global offset table.  */
-  h = _bfd_elf_define_linkage_sym (abfd, info, s, "_GLOBAL_OFFSET_TABLE_");
-  htab->hgot = h;
-  if (h == NULL)
+  bh = NULL;
+  if (!(_bfd_generic_link_add_one_symbol
+	(info, abfd, "_GLOBAL_OFFSET_TABLE_", BSF_GLOBAL, s,
+	 bed->got_symbol_offset, (const char *) NULL, FALSE,
+	 bed->collect, &bh)))
+    return FALSE;
+  h = (struct elf_link_hash_entry *) bh;
+  h->def_regular = 1;
+  h->type = STT_OBJECT;
+
+  if (info->shared
+      && ! bfd_elf_link_record_dynamic_symbol (info, h))
     return FALSE;
 
+  elf_hash_table (info)->hgot = h;
+
   /* The first bit of the global offset table is the header.  */
-  s->size += bed->got_header_size;
+  s->size += bed->got_header_size + bed->got_symbol_offset;
 
   return TRUE;
 }
 
 static reloc_howto_type *
-bfd_elf32_bfd_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
-				 bfd_reloc_code_real_type code)
+bfd_elf32_bfd_reloc_type_lookup (abfd, code)
+     bfd *abfd ATTRIBUTE_UNUSED;
+     bfd_reloc_code_real_type code;
 {
   unsigned int i;
 
-  for (i = ARRAY_SIZE (mn10300_reloc_map); i--;)
-    if (mn10300_reloc_map[i].bfd_reloc_val == code)
-      return &elf_mn10300_howto_table[mn10300_reloc_map[i].elf_reloc_val];
-
-  return NULL;
-}
-
-static reloc_howto_type *
-bfd_elf32_bfd_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
-				 const char *r_name)
-{
-  unsigned int i;
-
-  for (i = ARRAY_SIZE (elf_mn10300_howto_table); i--;)
-    if (elf_mn10300_howto_table[i].name != NULL
-	&& strcasecmp (elf_mn10300_howto_table[i].name, r_name) == 0)
-      return elf_mn10300_howto_table + i;
+  for (i = 0;
+       i < sizeof (mn10300_reloc_map) / sizeof (struct mn10300_reloc_map);
+       i++)
+    {
+      if (mn10300_reloc_map[i].bfd_reloc_val == code)
+	return &elf_mn10300_howto_table[mn10300_reloc_map[i].elf_reloc_val];
+    }
 
   return NULL;
 }
@@ -800,232 +663,16 @@ bfd_elf32_bfd_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
 /* Set the howto pointer for an MN10300 ELF reloc.  */
 
 static void
-mn10300_info_to_howto (bfd *abfd ATTRIBUTE_UNUSED,
-		       arelent *cache_ptr,
-		       Elf_Internal_Rela *dst)
+mn10300_info_to_howto (abfd, cache_ptr, dst)
+     bfd *abfd ATTRIBUTE_UNUSED;
+     arelent *cache_ptr;
+     Elf_Internal_Rela *dst;
 {
   unsigned int r_type;
 
   r_type = ELF32_R_TYPE (dst->r_info);
   BFD_ASSERT (r_type < (unsigned int) R_MN10300_MAX);
-  cache_ptr->howto = elf_mn10300_howto_table + r_type;
-}
-
-static int
-elf_mn10300_tls_transition (struct bfd_link_info *        info,
-			    int                           r_type,
-			    struct elf_link_hash_entry *  h,
-			    asection *                    sec,
-			    bfd_boolean                   counting)
-{
-  bfd_boolean is_local;
-
-  if (r_type == R_MN10300_TLS_GD
-      && h != NULL
-      && elf_mn10300_hash_entry (h)->tls_type == GOT_TLS_IE)
-    return R_MN10300_TLS_GOTIE;
-
-  if (info->shared)
-    return r_type;
-
-  if (! (sec->flags & SEC_CODE))
-    return r_type;
-
-  if (! counting && h != NULL && ! elf_hash_table (info)->dynamic_sections_created)
-    is_local = TRUE;
-  else
-    is_local = SYMBOL_CALLS_LOCAL (info, h);
-
-  /* For the main program, these are the transitions we do.  */
-  switch (r_type)
-    {
-    case R_MN10300_TLS_GD: return is_local ? R_MN10300_TLS_LE : R_MN10300_TLS_GOTIE;
-    case R_MN10300_TLS_LD: return R_MN10300_NONE;
-    case R_MN10300_TLS_LDO: return R_MN10300_TLS_LE;
-    case R_MN10300_TLS_IE:
-    case R_MN10300_TLS_GOTIE: return is_local ? R_MN10300_TLS_LE : r_type;
-    }
-
-  return r_type;
-}
-
-/* Return the relocation value for @tpoff relocation
-   if STT_TLS virtual address is ADDRESS.  */
-
-static bfd_vma
-dtpoff (struct bfd_link_info * info, bfd_vma address)
-{
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-
-  /* If tls_sec is NULL, we should have signalled an error already.  */
-  if (htab->tls_sec == NULL)
-    return 0;
-  return address - htab->tls_sec->vma;
-}
-
-/* Return the relocation value for @tpoff relocation
-   if STT_TLS virtual address is ADDRESS.  */
-
-static bfd_vma
-tpoff (struct bfd_link_info * info, bfd_vma address)
-{
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-
-  /* If tls_sec is NULL, we should have signalled an error already.  */
-  if (htab->tls_sec == NULL)
-    return 0;
-  return address - (htab->tls_size + htab->tls_sec->vma);
-}
-
-/* Returns nonzero if there's a R_MN10300_PLT32 reloc that we now need
-   to skip, after this one.  The actual value is the offset between
-   this reloc and the PLT reloc.  */
-
-static int
-mn10300_do_tls_transition (bfd *         input_bfd,
-			   unsigned int  r_type,
-			   unsigned int  tls_r_type,
-			   bfd_byte *    contents,
-			   bfd_vma       offset)
-{
-  bfd_byte *op = contents + offset;
-  int gotreg = 0;
-
-#define TLS_PAIR(r1,r2) ((r1) * R_MN10300_MAX + (r2))
-
-  /* This is common to all GD/LD transitions, so break it out.  */
-  if (r_type == R_MN10300_TLS_GD
-      || r_type == R_MN10300_TLS_LD)
-    {
-      op -= 2;
-      /* mov imm,d0.  */
-      BFD_ASSERT (bfd_get_8 (input_bfd, op) == 0xFC);
-      BFD_ASSERT (bfd_get_8 (input_bfd, op + 1) == 0xCC);
-      /* add aN,d0.  */
-      BFD_ASSERT (bfd_get_8 (input_bfd, op + 6) == 0xF1);
-      gotreg = (bfd_get_8 (input_bfd, op + 7) & 0x0c) >> 2;
-      /* Call.  */
-      BFD_ASSERT (bfd_get_8 (input_bfd, op + 8) == 0xDD);
-    }
-
-  switch (TLS_PAIR (r_type, tls_r_type))
-    {
-    case TLS_PAIR (R_MN10300_TLS_GD, R_MN10300_TLS_GOTIE):
-      {
-	/* Keep track of which register we put GOTptr in.  */
-	/* mov (_x@indntpoff,a2),a0.  */
-	memcpy (op, "\xFC\x20\x00\x00\x00\x00", 6);
-	op[1] |= gotreg;
-	/* add e2,a0.  */
-	memcpy (op+6, "\xF9\x78\x28", 3);
-	/* or  0x00000000, d0 - six byte nop.  */
-	memcpy (op+9, "\xFC\xE4\x00\x00\x00\x00", 6);
-      }
-      return 7;
-
-    case TLS_PAIR (R_MN10300_TLS_GD, R_MN10300_TLS_LE):
-      {
-	/* Register is *always* a0.  */
-	/* mov _x@tpoff,a0.  */
-	memcpy (op, "\xFC\xDC\x00\x00\x00\x00", 6);
-	/* add e2,a0.  */
-	memcpy (op+6, "\xF9\x78\x28", 3);
-	/* or  0x00000000, d0 - six byte nop.  */
-	memcpy (op+9, "\xFC\xE4\x00\x00\x00\x00", 6);
-      }
-      return 7;
-    case TLS_PAIR (R_MN10300_TLS_LD, R_MN10300_NONE):
-      {
-	/* Register is *always* a0.  */
-	/* mov e2,a0.  */
-	memcpy (op, "\xF5\x88", 2);
-	/* or  0x00000000, d0 - six byte nop.  */
-	memcpy (op+2, "\xFC\xE4\x00\x00\x00\x00", 6);
-	/* or  0x00000000, e2 - seven byte nop.  */
-	memcpy (op+8, "\xFE\x19\x22\x00\x00\x00\x00", 7);
-      }
-      return 7;
-
-    case TLS_PAIR (R_MN10300_TLS_LDO, R_MN10300_TLS_LE):
-      /* No changes needed, just the reloc change.  */
-      return 0;
-
-    /*  These are a little tricky, because we have to detect which
-	opcode is being used (they're different sizes, with the reloc
-	at different offsets within the opcode) and convert each
-	accordingly, copying the operands as needed.  The conversions
-	we do are as follows (IE,GOTIE,LE):
-
-	           1111 1100  1010 01Dn  [-- abs32 --]  MOV (x@indntpoff),Dn
-	           1111 1100  0000 DnAm  [-- abs32 --]  MOV (x@gotntpoff,Am),Dn
-	           1111 1100  1100 11Dn  [-- abs32 --]  MOV x@tpoff,Dn
-
-	           1111 1100  1010 00An  [-- abs32 --]  MOV (x@indntpoff),An
-	           1111 1100  0010 AnAm  [-- abs32 --]  MOV (x@gotntpoff,Am),An
-	           1111 1100  1101 11An  [-- abs32 --]  MOV x@tpoff,An
-
-	1111 1110  0000 1110  Rnnn Xxxx  [-- abs32 --]  MOV (x@indntpoff),Rn
-	1111 1110  0000 1010  Rnnn Rmmm  [-- abs32 --]  MOV (x@indntpoff,Rm),Rn
-	1111 1110  0000 1000  Rnnn Xxxx  [-- abs32 --]  MOV x@tpoff,Rn
-
-	Since the GOT pointer is always $a2, we assume the last
-	normally won't happen, but let's be paranoid and plan for the
-	day that GCC optimizes it somewhow.  */
-
-    case TLS_PAIR (R_MN10300_TLS_IE, R_MN10300_TLS_LE):
-      if (op[-2] == 0xFC)
-	{
-	  op -= 2;
-	  if ((op[1] & 0xFC) == 0xA4) /* Dn */
-	    {
-	      op[1] &= 0x03; /* Leaves Dn.  */
-	      op[1] |= 0xCC;
-	    }
-	  else /* An */
-	    {
-	      op[1] &= 0x03; /* Leaves An. */
-	      op[1] |= 0xDC;
-	    }
-	}
-      else if (op[-3] == 0xFE)
-	op[-2] = 0x08;
-      else
-	abort ();
-      break;
-
-    case TLS_PAIR (R_MN10300_TLS_GOTIE, R_MN10300_TLS_LE):
-      if (op[-2] == 0xFC)
-	{
-	  op -= 2;
-	  if ((op[1] & 0xF0) == 0x00) /* Dn */
-	    {
-	      op[1] &= 0x0C; /* Leaves Dn.  */
-	      op[1] >>= 2;
-	      op[1] |= 0xCC;
-	    }
-	  else /* An */
-	    {
-	      op[1] &= 0x0C; /* Leaves An.  */
-	      op[1] >>= 2;
-	      op[1] |= 0xDC;
-	    }
-	}
-      else if (op[-3] == 0xFE)
-	op[-2] = 0x08;
-      else
-	abort ();
-      break;
-
-    default:
-      (*_bfd_error_handler)
-	(_("%s: Unsupported transition from %s to %s"),
-	 bfd_get_filename (input_bfd),
-	 elf_mn10300_howto_table[r_type].name,
-	 elf_mn10300_howto_table[tls_r_type].name);
-      break;
-    }
-#undef TLS_PAIR
-  return 0;
+  cache_ptr->howto = &elf_mn10300_howto_table[r_type];
 }
 
 /* Look through the relocs for a section during the first phase.
@@ -1033,16 +680,14 @@ mn10300_do_tls_transition (bfd *         input_bfd,
    virtual table relocs for gc.  */
 
 static bfd_boolean
-mn10300_elf_check_relocs (bfd *abfd,
-			  struct bfd_link_info *info,
-			  asection *sec,
-			  const Elf_Internal_Rela *relocs)
+mn10300_elf_check_relocs (abfd, info, sec, relocs)
+     bfd *abfd;
+     struct bfd_link_info *info;
+     asection *sec;
+     const Elf_Internal_Rela *relocs;
 {
-  struct elf32_mn10300_link_hash_table * htab = elf32_mn10300_hash_table (info);
-  bfd_boolean sym_diff_reloc_seen;
   Elf_Internal_Shdr *symtab_hdr;
-  Elf_Internal_Sym * isymbuf = NULL;
-  struct elf_link_hash_entry **sym_hashes;
+  struct elf_link_hash_entry **sym_hashes, **sym_hashes_end;
   const Elf_Internal_Rela *rel;
   const Elf_Internal_Rela *rel_end;
   bfd *      dynobj;
@@ -1050,7 +695,6 @@ mn10300_elf_check_relocs (bfd *abfd,
   asection * sgot;
   asection * srelgot;
   asection * sreloc;
-  bfd_boolean result = FALSE;
 
   sgot    = NULL;
   srelgot = NULL;
@@ -1060,39 +704,29 @@ mn10300_elf_check_relocs (bfd *abfd,
     return TRUE;
 
   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
   sym_hashes = elf_sym_hashes (abfd);
+  sym_hashes_end = sym_hashes + symtab_hdr->sh_size/sizeof (Elf32_External_Sym);
+  if (!elf_bad_symtab (abfd))
+    sym_hashes_end -= symtab_hdr->sh_info;
 
   dynobj = elf_hash_table (info)->dynobj;
   local_got_offsets = elf_local_got_offsets (abfd);
   rel_end = relocs + sec->reloc_count;
-  sym_diff_reloc_seen = FALSE;
-
   for (rel = relocs; rel < rel_end; rel++)
     {
       struct elf_link_hash_entry *h;
       unsigned long r_symndx;
-      unsigned int r_type;
-      int tls_type = GOT_NORMAL;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
       if (r_symndx < symtab_hdr->sh_info)
 	h = NULL;
       else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
-
-      r_type = ELF32_R_TYPE (rel->r_info);
-      r_type = elf_mn10300_tls_transition (info, r_type, h, sec, TRUE);
+	h = sym_hashes[r_symndx - symtab_hdr->sh_info];
 
       /* Some relocs require a global offset table.  */
       if (dynobj == NULL)
 	{
-	  switch (r_type)
+	  switch (ELF32_R_TYPE (rel->r_info))
 	    {
 	    case R_MN10300_GOT32:
 	    case R_MN10300_GOT24:
@@ -1102,13 +736,9 @@ mn10300_elf_check_relocs (bfd *abfd,
 	    case R_MN10300_GOTOFF16:
 	    case R_MN10300_GOTPC32:
 	    case R_MN10300_GOTPC16:
-	    case R_MN10300_TLS_GD:
-	    case R_MN10300_TLS_LD:
-	    case R_MN10300_TLS_GOTIE:
-	    case R_MN10300_TLS_IE:
 	      elf_hash_table (info)->dynobj = dynobj = abfd;
 	      if (! _bfd_mn10300_elf_create_got_section (dynobj, info))
-		goto fail;
+		return FALSE;
 	      break;
 
 	    default:
@@ -1116,138 +746,84 @@ mn10300_elf_check_relocs (bfd *abfd,
 	    }
 	}
 
-      switch (r_type)
+      switch (ELF32_R_TYPE (rel->r_info))
 	{
 	/* This relocation describes the C++ object vtable hierarchy.
 	   Reconstruct it for later use during GC.  */
 	case R_MN10300_GNU_VTINHERIT:
 	  if (!bfd_elf_gc_record_vtinherit (abfd, sec, h, rel->r_offset))
-	    goto fail;
+	    return FALSE;
 	  break;
 
 	/* This relocation describes which C++ vtable entries are actually
 	   used.  Record for later use during GC.  */
 	case R_MN10300_GNU_VTENTRY:
-	  BFD_ASSERT (h != NULL);
-	  if (h != NULL
-	      && !bfd_elf_gc_record_vtentry (abfd, sec, h, rel->r_addend))
-	    goto fail;
+	  if (!bfd_elf_gc_record_vtentry (abfd, sec, h, rel->r_addend))
+	    return FALSE;
 	  break;
-
-	case R_MN10300_TLS_LD:
-	  htab->tls_ldm_got.refcount ++;
-	  tls_type = GOT_TLS_LD;
-
-	  if (htab->tls_ldm_got.got_allocated)
-	    break;
-	  goto create_got;
-
-	case R_MN10300_TLS_IE:
-	case R_MN10300_TLS_GOTIE:
-	  if (info->shared)
-	    info->flags |= DF_STATIC_TLS;
-	  /* Fall through */
-	  
-	case R_MN10300_TLS_GD:
 	case R_MN10300_GOT32:
 	case R_MN10300_GOT24:
 	case R_MN10300_GOT16:
-	create_got:
 	  /* This symbol requires a global offset table entry.  */
-
-	  switch (r_type)
-	    {
-	    case R_MN10300_TLS_IE:
-	    case R_MN10300_TLS_GOTIE: tls_type = GOT_TLS_IE; break;
-	    case R_MN10300_TLS_GD:    tls_type = GOT_TLS_GD; break;
-	    default:                  tls_type = GOT_NORMAL; break;
-	    }
 
 	  if (sgot == NULL)
 	    {
-	      sgot = htab->root.sgot;
+	      sgot = bfd_get_section_by_name (dynobj, ".got");
 	      BFD_ASSERT (sgot != NULL);
 	    }
 
 	  if (srelgot == NULL
 	      && (h != NULL || info->shared))
 	    {
-	      srelgot = bfd_get_linker_section (dynobj, ".rela.got");
+	      srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
 	      if (srelgot == NULL)
 		{
-		  flagword flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS
-				    | SEC_IN_MEMORY | SEC_LINKER_CREATED
-				    | SEC_READONLY);
-		  srelgot = bfd_make_section_anyway_with_flags (dynobj,
-								".rela.got",
-								flags);
+		  srelgot = bfd_make_section (dynobj, ".rela.got");
 		  if (srelgot == NULL
+		      || ! bfd_set_section_flags (dynobj, srelgot,
+						  (SEC_ALLOC
+						   | SEC_LOAD
+						   | SEC_HAS_CONTENTS
+						   | SEC_IN_MEMORY
+						   | SEC_LINKER_CREATED
+						   | SEC_READONLY))
 		      || ! bfd_set_section_alignment (dynobj, srelgot, 2))
-		    goto fail;
+		    return FALSE;
 		}
 	    }
 
-	  if (r_type == R_MN10300_TLS_LD)
+	  if (h != NULL)
 	    {
-	      htab->tls_ldm_got.offset = sgot->size;
-	      htab->tls_ldm_got.got_allocated ++;
-	    }
-	  else if (h != NULL)
-	    {
-	      if (elf_mn10300_hash_entry (h)->tls_type != tls_type
-		  && elf_mn10300_hash_entry (h)->tls_type != GOT_UNKNOWN)
-		{
-		  if (tls_type == GOT_TLS_IE
-		      && elf_mn10300_hash_entry (h)->tls_type == GOT_TLS_GD)
-		    /* No change - this is ok.  */;
-		  else if (tls_type == GOT_TLS_GD
-		      && elf_mn10300_hash_entry (h)->tls_type == GOT_TLS_IE)
-		    /* Transition GD->IE.  */
-		    tls_type = GOT_TLS_IE;
-		  else
-		    (*_bfd_error_handler)
-		      (_("%B: %s' accessed both as normal and thread local symbol"),
-		       abfd, h ? h->root.root.string : "<local>");
-		}
-
-	      elf_mn10300_hash_entry (h)->tls_type = tls_type;
-
 	      if (h->got.offset != (bfd_vma) -1)
 		/* We have already allocated space in the .got.  */
 		break;
 
 	      h->got.offset = sgot->size;
 
-	      if (ELF_ST_VISIBILITY (h->other) != STV_INTERNAL
-		  /* Make sure this symbol is output as a dynamic symbol.  */
-		  && h->dynindx == -1)
+	      /* Make sure this symbol is output as a dynamic symbol.  */
+	      if (h->dynindx == -1)
 		{
 		  if (! bfd_elf_link_record_dynamic_symbol (info, h))
-		    goto fail;
+		    return FALSE;
 		}
 
 	      srelgot->size += sizeof (Elf32_External_Rela);
-	      if (r_type == R_MN10300_TLS_GD)
-		srelgot->size += sizeof (Elf32_External_Rela);
 	    }
 	  else
 	    {
 	      /* This is a global offset table entry for a local
-		 symbol.  */
+	         symbol.  */
 	      if (local_got_offsets == NULL)
 		{
 		  size_t       size;
 		  unsigned int i;
 
-		  size = symtab_hdr->sh_info * (sizeof (bfd_vma) + sizeof (char));
-		  local_got_offsets = bfd_alloc (abfd, size);
+		  size = symtab_hdr->sh_info * sizeof (bfd_vma);
+		  local_got_offsets = (bfd_vma *) bfd_alloc (abfd, size);
 
 		  if (local_got_offsets == NULL)
-		    goto fail;
-
+		    return FALSE;
 		  elf_local_got_offsets (abfd) = local_got_offsets;
-		  elf_mn10300_local_got_tls_type (abfd)
-		      = (char *) (local_got_offsets + symtab_hdr->sh_info);
 
 		  for (i = 0; i < symtab_hdr->sh_info; i++)
 		    local_got_offsets[i] = (bfd_vma) -1;
@@ -1260,26 +836,15 @@ mn10300_elf_check_relocs (bfd *abfd,
 	      local_got_offsets[r_symndx] = sgot->size;
 
 	      if (info->shared)
-		{
-		  /* If we are generating a shared object, we need to
-		     output a R_MN10300_RELATIVE reloc so that the dynamic
-		     linker can adjust this GOT entry.  */
-		  srelgot->size += sizeof (Elf32_External_Rela);
-
-		  if (r_type == R_MN10300_TLS_GD)
-		    /* And a R_MN10300_TLS_DTPOFF reloc as well.  */
-		    srelgot->size += sizeof (Elf32_External_Rela);
-		}
-
-	      elf_mn10300_local_got_tls_type (abfd) [r_symndx] = tls_type;
+		/* If we are generating a shared object, we need to
+		   output a R_MN10300_RELATIVE reloc so that the dynamic
+		   linker can adjust this GOT entry.  */
+		srelgot->size += sizeof (Elf32_External_Rela);
 	    }
 
 	  sgot->size += 4;
-	  if (r_type == R_MN10300_TLS_GD
-	      || r_type == R_MN10300_TLS_LD)
-	    sgot->size += 4;
 
-	  goto need_shared_relocs;
+	  break;
 
 	case R_MN10300_PLT32:
 	case R_MN10300_PLT16:
@@ -1300,6 +865,7 @@ mn10300_elf_check_relocs (bfd *abfd,
 	    break;
 
 	  h->needs_plt = 1;
+
 	  break;
 
 	case R_MN10300_24:
@@ -1312,135 +878,130 @@ mn10300_elf_check_relocs (bfd *abfd,
 	    h->non_got_ref = 1;
 	  break;
 
-	case R_MN10300_SYM_DIFF:
-	  sym_diff_reloc_seen = TRUE;
-	  break;
-
 	case R_MN10300_32:
 	  if (h != NULL)
 	    h->non_got_ref = 1;
 
-	need_shared_relocs:
-	  /* If we are creating a shared library, then we
-	     need to copy the reloc into the shared library.  */
+	  /* If we are creating a shared library, then we need to copy
+	     the reloc into the shared library.  */
 	  if (info->shared
-	      && (sec->flags & SEC_ALLOC) != 0
-	      /* Do not generate a dynamic reloc for a
-		 reloc associated with a SYM_DIFF operation.  */
-	      && ! sym_diff_reloc_seen)
+	      && (sec->flags & SEC_ALLOC) != 0)
 	    {
-	      asection * sym_section = NULL;
-
-	      /* Find the section containing the
-		 symbol involved in the relocation.  */
-	      if (h == NULL)
+	      /* When creating a shared object, we must copy these
+		 reloc types into the output file.  We create a reloc
+		 section in dynobj and make room for this reloc.  */
+	      if (sreloc == NULL)
 		{
-		  Elf_Internal_Sym * isym;
+		  const char * name;
 
-		  if (isymbuf == NULL)
-		    isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr,
-						    symtab_hdr->sh_info, 0,
-						    NULL, NULL, NULL);
-		  if (isymbuf)
-		    {
-		      isym = isymbuf + r_symndx;
-		      /* All we care about is whether this local symbol is absolute.  */
-		      if (isym->st_shndx == SHN_ABS)
-			sym_section = bfd_abs_section_ptr;
-		    }
-		}
-	      else
-		{
-		  if (h->root.type == bfd_link_hash_defined
-		      || h->root.type == bfd_link_hash_defweak)
-		    sym_section = h->root.u.def.section;
-		}
+		  name = (bfd_elf_string_from_elf_section
+			  (abfd,
+			   elf_elfheader (abfd)->e_shstrndx,
+			   elf_section_data (sec)->rel_hdr.sh_name));
+		  if (name == NULL)
+		    return FALSE;
 
-	      /* If the symbol is absolute then the relocation can
-		 be resolved during linking and there is no need for
-		 a dynamic reloc.  */
-	      if (sym_section != bfd_abs_section_ptr)
-		{
-		  /* When creating a shared object, we must copy these
-		     reloc types into the output file.  We create a reloc
-		     section in dynobj and make room for this reloc.  */
+		  BFD_ASSERT (strncmp (name, ".rela", 5) == 0
+			      && strcmp (bfd_get_section_name (abfd, sec),
+					 name + 5) == 0);
+
+		  sreloc = bfd_get_section_by_name (dynobj, name);
 		  if (sreloc == NULL)
 		    {
-		      sreloc = _bfd_elf_make_dynamic_reloc_section
-			(sec, dynobj, 2, abfd, /*rela?*/ TRUE);
-		      if (sreloc == NULL)
-			goto fail;
-		    }
+		      flagword flags;
 
-		  sreloc->size += sizeof (Elf32_External_Rela);
+		      sreloc = bfd_make_section (dynobj, name);
+		      flags = (SEC_HAS_CONTENTS | SEC_READONLY
+			       | SEC_IN_MEMORY | SEC_LINKER_CREATED);
+		      if ((sec->flags & SEC_ALLOC) != 0)
+			flags |= SEC_ALLOC | SEC_LOAD;
+		      if (sreloc == NULL
+			  || ! bfd_set_section_flags (dynobj, sreloc, flags)
+			  || ! bfd_set_section_alignment (dynobj, sreloc, 2))
+			return FALSE;
+		    }
 		}
+
+	      sreloc->size += sizeof (Elf32_External_Rela);
 	    }
 
 	  break;
 	}
-
-      if (ELF32_R_TYPE (rel->r_info) != R_MN10300_SYM_DIFF)
-	sym_diff_reloc_seen = FALSE;
     }
 
-  result = TRUE;
- fail:
-  if (isymbuf != NULL)
-    free (isymbuf);
-
-  return result;
+  return TRUE;
 }
 
 /* Return the section that should be marked against GC for a given
    relocation.  */
 
 static asection *
-mn10300_elf_gc_mark_hook (asection *sec,
-			  struct bfd_link_info *info,
-			  Elf_Internal_Rela *rel,
-			  struct elf_link_hash_entry *h,
-			  Elf_Internal_Sym *sym)
+mn10300_elf_gc_mark_hook (sec, info, rel, h, sym)
+     asection *sec;
+     struct bfd_link_info *info ATTRIBUTE_UNUSED;
+     Elf_Internal_Rela *rel;
+     struct elf_link_hash_entry *h;
+     Elf_Internal_Sym *sym;
 {
   if (h != NULL)
-    switch (ELF32_R_TYPE (rel->r_info))
-      {
-      case R_MN10300_GNU_VTINHERIT:
-      case R_MN10300_GNU_VTENTRY:
-	return NULL;
-      }
+    {
+      switch (ELF32_R_TYPE (rel->r_info))
+	{
+	case R_MN10300_GNU_VTINHERIT:
+	case R_MN10300_GNU_VTENTRY:
+	  break;
 
-  return _bfd_elf_gc_mark_hook (sec, info, rel, h, sym);
+	default:
+	  switch (h->root.type)
+	    {
+	    case bfd_link_hash_defined:
+	    case bfd_link_hash_defweak:
+	      return h->root.u.def.section;
+
+	    case bfd_link_hash_common:
+	      return h->root.u.c.p->section;
+
+	    default:
+	      break;
+	    }
+	}
+    }
+  else
+    return bfd_section_from_elf_index (sec->owner, sym->st_shndx);
+
+  return NULL;
 }
 
 /* Perform a relocation as part of a final link.  */
-
 static bfd_reloc_status_type
-mn10300_elf_final_link_relocate (reloc_howto_type *howto,
-				 bfd *input_bfd,
-				 bfd *output_bfd ATTRIBUTE_UNUSED,
-				 asection *input_section,
-				 bfd_byte *contents,
-				 bfd_vma offset,
-				 bfd_vma value,
-				 bfd_vma addend,
-				 struct elf_link_hash_entry * h,
-				 unsigned long symndx,
-				 struct bfd_link_info *info,
-				 asection *sym_sec ATTRIBUTE_UNUSED,
-				 int is_local ATTRIBUTE_UNUSED)
+mn10300_elf_final_link_relocate (howto, input_bfd, output_bfd,
+				 input_section, contents, offset, value,
+				 addend, h, symndx, info, sym_sec, is_local)
+     reloc_howto_type *howto;
+     bfd *input_bfd;
+     bfd *output_bfd ATTRIBUTE_UNUSED;
+     asection *input_section;
+     bfd_byte *contents;
+     bfd_vma offset;
+     bfd_vma value;
+     bfd_vma addend;
+     struct elf_link_hash_entry * h;
+     unsigned long symndx;
+     struct bfd_link_info *info;
+     asection *sym_sec ATTRIBUTE_UNUSED;
+     int is_local ATTRIBUTE_UNUSED;
 {
-  struct elf32_mn10300_link_hash_table * htab = elf32_mn10300_hash_table (info);
-  static asection *  sym_diff_section;
-  static bfd_vma     sym_diff_value;
-  bfd_boolean is_sym_diff_reloc;
   unsigned long r_type = howto->type;
-  bfd_byte * hit_data = contents + offset;
+  bfd_byte *hit_data = contents + offset;
   bfd *      dynobj;
+  bfd_vma *  local_got_offsets;
   asection * sgot;
   asection * splt;
   asection * sreloc;
 
   dynobj = elf_hash_table (info)->dynobj;
+  local_got_offsets = elf_local_got_offsets (input_bfd);
+
   sgot   = NULL;
   splt   = NULL;
   sreloc = NULL;
@@ -1461,79 +1022,15 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 	  && h != NULL
 	  && ! SYMBOL_REFERENCES_LOCAL (info, h))
 	return bfd_reloc_dangerous;
-    case R_MN10300_GOT32:
-      /* Issue 2052223:
-	 Taking the address of a protected function in a shared library
-	 is illegal.  Issue an error message here.  */
-      if (info->shared
-	  && (input_section->flags & SEC_ALLOC) != 0
-	  && h != NULL
-	  && ELF_ST_VISIBILITY (h->other) == STV_PROTECTED
-	  && (h->type == STT_FUNC || h->type == STT_GNU_IFUNC)
-	  && ! SYMBOL_REFERENCES_LOCAL (info, h))
-	return bfd_reloc_dangerous;
-    }
-
-  is_sym_diff_reloc = FALSE;
-  if (sym_diff_section != NULL)
-    {
-      BFD_ASSERT (sym_diff_section == input_section);
-
-      switch (r_type)
-	{
-	case R_MN10300_32:
-	case R_MN10300_24:
-	case R_MN10300_16:
-	case R_MN10300_8:
-	  value -= sym_diff_value;
-	  /* If we are computing a 32-bit value for the location lists
-	     and the result is 0 then we add one to the value.  A zero
-	     value can result because of linker relaxation deleteing
-	     prologue instructions and using a value of 1 (for the begin
-	     and end offsets in the location list entry) results in a
-	     nul entry which does not prevent the following entries from
-	     being parsed.  */
-	  if (r_type == R_MN10300_32
-	      && value == 0
-	      && strcmp (input_section->name, ".debug_loc") == 0)
-	    value = 1;
-	  sym_diff_section = NULL;
-	  is_sym_diff_reloc = TRUE;
-	  break;
-
-	default:
-	  sym_diff_section = NULL;
-	  break;
-	}
     }
 
   switch (r_type)
     {
-    case R_MN10300_SYM_DIFF:
-      BFD_ASSERT (addend == 0);
-      /* Cache the input section and value.
-	 The offset is unreliable, since relaxation may
-	 have reduced the following reloc's offset.  */
-      sym_diff_section = input_section;
-      sym_diff_value = value;
-      return bfd_reloc_ok;
-
-    case R_MN10300_ALIGN:
     case R_MN10300_NONE:
       return bfd_reloc_ok;
 
     case R_MN10300_32:
       if (info->shared
-	  /* Do not generate relocs when an R_MN10300_32 has been used
-	     with an R_MN10300_SYM_DIFF to compute a difference of two
-	     symbols.  */
-	  && is_sym_diff_reloc == FALSE
-	  /* Also, do not generate a reloc when the symbol associated
-	     with the R_MN10300_32 reloc is absolute - there is no
-	     need for a run time computation in this case.  */
-	  && sym_sec != bfd_abs_section_ptr
-	  /* If the section is not going to be allocated at load time
-	     then there is no need to generate relocs for it.  */
 	  && (input_section->flags & SEC_ALLOC) != 0)
 	{
 	  Elf_Internal_Rela outrel;
@@ -1544,10 +1041,22 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 	     time.  */
 	  if (sreloc == NULL)
 	    {
-	      sreloc = _bfd_elf_get_dynamic_reloc_section
-		(input_bfd, input_section, /*rela?*/ TRUE);
-	      if (sreloc == NULL)
+	      const char * name;
+
+	      name = (bfd_elf_string_from_elf_section
+		      (input_bfd,
+		       elf_elfheader (input_bfd)->e_shstrndx,
+		       elf_section_data (input_section)->rel_hdr.sh_name));
+	      if (name == NULL)
 		return FALSE;
+
+	      BFD_ASSERT (strncmp (name, ".rela", 5) == 0
+			  && strcmp (bfd_get_section_name (input_bfd,
+							   input_section),
+				     name + 5) == 0);
+
+	      sreloc = bfd_get_section_by_name (dynobj, name);
+	      BFD_ASSERT (sreloc != NULL);
 	    }
 
 	  skip = FALSE;
@@ -1636,7 +1145,7 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
       value -= offset;
       value += addend;
 
-      if ((long) value > 0x7f || (long) value < -0x80)
+      if ((long) value > 0xff || (long) value < -0x100)
 	return bfd_reloc_overflow;
 
       bfd_put_8 (input_bfd, value, hit_data);
@@ -1648,7 +1157,7 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
       value -= offset;
       value += addend;
 
-      if ((long) value > 0x7fff || (long) value < -0x8000)
+      if ((long) value > 0xffff || (long) value < -0x10000)
 	return bfd_reloc_overflow;
 
       bfd_put_16 (input_bfd, value, hit_data);
@@ -1668,11 +1177,10 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
       return bfd_reloc_ok;
 
     case R_MN10300_GOTPC32:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
-
       /* Use global offset table as symbol value.  */
-      value = htab->root.sgot->output_section->vma;
+
+      value = bfd_get_section_by_name (dynobj,
+				       ".got")->output_section->vma;
       value -= (input_section->output_section->vma
 		+ input_section->output_offset);
       value -= offset;
@@ -1680,41 +1188,36 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 
       bfd_put_32 (input_bfd, value, hit_data);
       return bfd_reloc_ok;
-
+      
     case R_MN10300_GOTPC16:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
-
       /* Use global offset table as symbol value.  */
-      value = htab->root.sgot->output_section->vma;
+
+      value = bfd_get_section_by_name (dynobj,
+				       ".got")->output_section->vma;
       value -= (input_section->output_section->vma
 		+ input_section->output_offset);
       value -= offset;
       value += addend;
 
-      if ((long) value > 0x7fff || (long) value < -0x8000)
+      if ((long) value > 0xffff || (long) value < -0x10000)
 	return bfd_reloc_overflow;
 
       bfd_put_16 (input_bfd, value, hit_data);
       return bfd_reloc_ok;
 
     case R_MN10300_GOTOFF32:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
-
-      value -= htab->root.sgot->output_section->vma;
+      value -= bfd_get_section_by_name (dynobj,
+					".got")->output_section->vma;
       value += addend;
-
+      
       bfd_put_32 (input_bfd, value, hit_data);
       return bfd_reloc_ok;
 
     case R_MN10300_GOTOFF24:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
-
-      value -= htab->root.sgot->output_section->vma;
+      value -= bfd_get_section_by_name (dynobj,
+					".got")->output_section->vma;
       value += addend;
-
+      
       if ((long) value > 0x7fffff || (long) value < -0x800000)
 	return bfd_reloc_overflow;
 
@@ -1724,13 +1227,11 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
       return bfd_reloc_ok;
 
     case R_MN10300_GOTOFF16:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
-
-      value -= htab->root.sgot->output_section->vma;
+      value -= bfd_get_section_by_name (dynobj,
+					".got")->output_section->vma;
       value += addend;
-
-      if ((long) value > 0x7fff || (long) value < -0x8000)
+      
+      if ((long) value > 0xffff || (long) value < -0x10000)
 	return bfd_reloc_overflow;
 
       bfd_put_16 (input_bfd, value, hit_data);
@@ -1742,10 +1243,10 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 	  && ELF_ST_VISIBILITY (h->other) != STV_HIDDEN
 	  && h->plt.offset != (bfd_vma) -1)
 	{
-	  if (dynobj == NULL)
-	    return bfd_reloc_dangerous;
+	  asection * splt;
 
-	  splt = htab->root.splt;
+	  splt = bfd_get_section_by_name (dynobj, ".plt");
+	  
 	  value = (splt->output_section->vma
 		   + splt->output_offset
 		   + h->plt.offset) - value;
@@ -1765,10 +1266,10 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 	  && ELF_ST_VISIBILITY (h->other) != STV_HIDDEN
 	  && h->plt.offset != (bfd_vma) -1)
 	{
-	  if (dynobj == NULL)
-	    return bfd_reloc_dangerous;
+	  asection * splt;
 
-	  splt = htab->root.splt;
+	  splt = bfd_get_section_by_name (dynobj, ".plt");
+	  
 	  value = (splt->output_section->vma
 		   + splt->output_offset
 		   + h->plt.offset) - value;
@@ -1779,106 +1280,49 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
       value -= offset;
       value += addend;
 
-      if ((long) value > 0x7fff || (long) value < -0x8000)
+      if ((long) value > 0xffff || (long) value < -0x10000)
 	return bfd_reloc_overflow;
 
       bfd_put_16 (input_bfd, value, hit_data);
       return bfd_reloc_ok;
 
-    case R_MN10300_TLS_LDO:
-      value = dtpoff (info, value);
-      bfd_put_32 (input_bfd, value + addend, hit_data);
-      return bfd_reloc_ok;
-
-    case R_MN10300_TLS_LE:
-      value = tpoff (info, value);
-      bfd_put_32 (input_bfd, value + addend, hit_data);
-      return bfd_reloc_ok;
-
-    case R_MN10300_TLS_LD:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
-
-      sgot = htab->root.sgot;
-      BFD_ASSERT (sgot != NULL);
-      value = htab->tls_ldm_got.offset + sgot->output_offset;
-      bfd_put_32 (input_bfd, value, hit_data);
-
-      if (!htab->tls_ldm_got.rel_emitted)
-	{
-	  asection * srelgot = bfd_get_linker_section (dynobj, ".rela.got");
-	  Elf_Internal_Rela rel;
-
-	  BFD_ASSERT (srelgot != NULL);
-	  htab->tls_ldm_got.rel_emitted ++;
-	  rel.r_offset = (sgot->output_section->vma
-			  + sgot->output_offset
-			  + htab->tls_ldm_got.offset);
-	  bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + htab->tls_ldm_got.offset);
-	  bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + htab->tls_ldm_got.offset+4);
-	  rel.r_info = ELF32_R_INFO (0, R_MN10300_TLS_DTPMOD);
-	  rel.r_addend = 0;
-	  bfd_elf32_swap_reloca_out (output_bfd, & rel,
-				     (bfd_byte *) ((Elf32_External_Rela *) srelgot->contents
-						   + srelgot->reloc_count));
-	  ++ srelgot->reloc_count;
-	}
-
-      return bfd_reloc_ok;
-
-    case R_MN10300_TLS_GOTIE:
-      value = tpoff (info, value);
-      /* Fall Through.  */
-
-    case R_MN10300_TLS_GD:
-    case R_MN10300_TLS_IE:
     case R_MN10300_GOT32:
     case R_MN10300_GOT24:
     case R_MN10300_GOT16:
-      if (dynobj == NULL)
-	return bfd_reloc_dangerous;
+      {
+	asection * sgot;
 
-      sgot = htab->root.sgot;
-      if (r_type == R_MN10300_TLS_GD)
-	value = dtpoff (info, value);
+	sgot = bfd_get_section_by_name (dynobj, ".got");
+	
+	  if (h != NULL)
+	    {
+	      bfd_vma off;
 
-      if (h != NULL)
-	{
-	  bfd_vma off;
+	      off = h->got.offset;
+	      BFD_ASSERT (off != (bfd_vma) -1);
 
-	  off = h->got.offset;
-	  /* Offsets in the GOT are allocated in check_relocs
-	     which is not called for shared libraries... */
-	  if (off == (bfd_vma) -1)
-	    off = 0;
+	      if (! elf_hash_table (info)->dynamic_sections_created
+		  || SYMBOL_REFERENCES_LOCAL (info, h))
+		/* This is actually a static link, or it is a
+		   -Bsymbolic link and the symbol is defined
+		   locally, or the symbol was forced to be local
+		   because of a version file.  We must initialize
+		   this entry in the global offset table.
 
-	  if (sgot->contents != NULL
-	      && (! elf_hash_table (info)->dynamic_sections_created
-		  || SYMBOL_REFERENCES_LOCAL (info, h)))
-	    /* This is actually a static link, or it is a
-	       -Bsymbolic link and the symbol is defined
-	       locally, or the symbol was forced to be local
-	       because of a version file.  We must initialize
-	       this entry in the global offset table.
+		   When doing a dynamic link, we create a .rela.got
+		   relocation entry to initialize the value.  This
+		   is done in the finish_dynamic_symbol routine.  */
+		bfd_put_32 (output_bfd, value,
+			    sgot->contents + off);
 
-	       When doing a dynamic link, we create a .rela.got
-	       relocation entry to initialize the value.  This
-	       is done in the finish_dynamic_symbol routine.  */
-	    bfd_put_32 (output_bfd, value,
-			sgot->contents + off);
-
-	  value = sgot->output_offset + off;
-	}
-      else
-	{
-	  bfd_vma off;
-
-	  off = elf_local_got_offsets (input_bfd)[symndx];
-
-	  if (off & 1)
-	    bfd_put_32 (output_bfd, value, sgot->contents + (off & ~ 1));
+	      value = sgot->output_offset + off;
+	    }
 	  else
 	    {
+	      bfd_vma off;
+
+	      off = elf_local_got_offsets (input_bfd)[symndx];
+
 	      bfd_put_32 (output_bfd, value, sgot->contents + off);
 
 	      if (info->shared)
@@ -1886,64 +1330,28 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 		  asection * srelgot;
 		  Elf_Internal_Rela outrel;
 
-		  srelgot = bfd_get_linker_section (dynobj, ".rela.got");
+		  srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
 		  BFD_ASSERT (srelgot != NULL);
 
 		  outrel.r_offset = (sgot->output_section->vma
 				     + sgot->output_offset
 				     + off);
-		  switch (r_type)
-		    {
-		    case R_MN10300_TLS_GD:
-		      outrel.r_info = ELF32_R_INFO (0, R_MN10300_TLS_DTPOFF);
-		      outrel.r_offset = (sgot->output_section->vma
-					 + sgot->output_offset
-					 + off + 4);
-		      bfd_elf32_swap_reloca_out (output_bfd, & outrel,
-						 (bfd_byte *) (((Elf32_External_Rela *)
-								srelgot->contents)
-							       + srelgot->reloc_count));
-		      ++ srelgot->reloc_count;
-		      outrel.r_info = ELF32_R_INFO (0, R_MN10300_TLS_DTPMOD);
-		      break;
-		    case R_MN10300_TLS_GOTIE:
-		    case R_MN10300_TLS_IE:
-		      outrel.r_info = ELF32_R_INFO (0, R_MN10300_TLS_TPOFF);
-		      break;
-		    default:
-		      outrel.r_info = ELF32_R_INFO (0, R_MN10300_RELATIVE);
-		      break;
-		    }
-
+		  outrel.r_info = ELF32_R_INFO (0, R_MN10300_RELATIVE);
 		  outrel.r_addend = value;
 		  bfd_elf32_swap_reloca_out (output_bfd, &outrel,
 					     (bfd_byte *) (((Elf32_External_Rela *)
 							    srelgot->contents)
 							   + srelgot->reloc_count));
 		  ++ srelgot->reloc_count;
-		  elf_local_got_offsets (input_bfd)[symndx] |= 1;
 		}
 
-	      value = sgot->output_offset + (off & ~(bfd_vma) 1);
+	      value = sgot->output_offset + off;
 	    }
-	}
+      }
 
       value += addend;
 
-      if (r_type == R_MN10300_TLS_IE)
-	{
-	  value += sgot->output_section->vma;
-	  bfd_put_32 (input_bfd, value, hit_data);
-	  return bfd_reloc_ok;
-	}
-      else if (r_type == R_MN10300_TLS_GOTIE
-	       || r_type == R_MN10300_TLS_GD
-	       || r_type == R_MN10300_TLS_LD)
-	{
-	  bfd_put_32 (input_bfd, value, hit_data);
-	  return bfd_reloc_ok;
-	}
-      else if (r_type == R_MN10300_GOT32)
+      if (r_type == R_MN10300_GOT32)
 	{
 	  bfd_put_32 (input_bfd, value, hit_data);
 	  return bfd_reloc_ok;
@@ -1960,35 +1368,38 @@ mn10300_elf_final_link_relocate (reloc_howto_type *howto,
 	}
       else if (r_type == R_MN10300_GOT16)
 	{
-	  if ((long) value > 0x7fff || (long) value < -0x8000)
+	  if ((long) value > 0xffff || (long) value < -0x10000)
 	    return bfd_reloc_overflow;
 
 	  bfd_put_16 (input_bfd, value, hit_data);
 	  return bfd_reloc_ok;
 	}
       /* Fall through.  */
-
+      
     default:
       return bfd_reloc_notsupported;
     }
 }
 
 /* Relocate an MN10300 ELF section.  */
-
 static bfd_boolean
-mn10300_elf_relocate_section (bfd *output_bfd,
-			      struct bfd_link_info *info,
-			      bfd *input_bfd,
-			      asection *input_section,
-			      bfd_byte *contents,
-			      Elf_Internal_Rela *relocs,
-			      Elf_Internal_Sym *local_syms,
-			      asection **local_sections)
+mn10300_elf_relocate_section (output_bfd, info, input_bfd, input_section,
+			      contents, relocs, local_syms, local_sections)
+     bfd *output_bfd;
+     struct bfd_link_info *info;
+     bfd *input_bfd;
+     asection *input_section;
+     bfd_byte *contents;
+     Elf_Internal_Rela *relocs;
+     Elf_Internal_Sym *local_syms;
+     asection **local_sections;
 {
   Elf_Internal_Shdr *symtab_hdr;
   struct elf_link_hash_entry **sym_hashes;
   Elf_Internal_Rela *rel, *relend;
-  Elf_Internal_Rela * trel;
+
+  if (info->relocatable)
+    return TRUE;
 
   symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
   sym_hashes = elf_sym_hashes (input_bfd);
@@ -2005,12 +1416,7 @@ mn10300_elf_relocate_section (bfd *output_bfd,
       struct elf32_mn10300_link_hash_entry *h;
       bfd_vma relocation;
       bfd_reloc_status_type r;
-      int tls_r_type;
-      bfd_boolean unresolved_reloc = FALSE;
-      bfd_boolean warned;
-      struct elf_link_hash_entry * hh;
 
-      relocation = 0;
       r_symndx = ELF32_R_SYM (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);
       howto = elf_mn10300_howto_table + r_type;
@@ -2024,35 +1430,6 @@ mn10300_elf_relocate_section (bfd *output_bfd,
       sym = NULL;
       sec = NULL;
       if (r_symndx < symtab_hdr->sh_info)
-	hh = NULL;
-      else
-	{
-	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
-				   r_symndx, symtab_hdr, sym_hashes,
-				   hh, sec, relocation,
-				   unresolved_reloc, warned);
-	}
-      h = elf_mn10300_hash_entry (hh);
-
-      tls_r_type = elf_mn10300_tls_transition (info, r_type, hh, input_section, 0);
-      if (tls_r_type != r_type)
-	{
-	  bfd_boolean had_plt;
-
-	  had_plt = mn10300_do_tls_transition (input_bfd, r_type, tls_r_type,
-					       contents, rel->r_offset);
-	  r_type = tls_r_type;
-	  howto = elf_mn10300_howto_table + r_type;
-
-	  if (had_plt)
-	    for (trel = rel+1; trel < relend; trel++)
-	      if ((ELF32_R_TYPE (trel->r_info) == R_MN10300_PLT32
-		   || ELF32_R_TYPE (trel->r_info) == R_MN10300_PCREL32)
-		  && rel->r_offset + had_plt == trel->r_offset)
-		trel->r_info = ELF32_R_INFO (0, R_MN10300_NONE);
-	}
-
-      if (r_symndx < symtab_hdr->sh_info)
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
@@ -2060,6 +1437,17 @@ mn10300_elf_relocate_section (bfd *output_bfd,
 	}
       else
 	{
+	  bfd_boolean unresolved_reloc;
+	  bfd_boolean warned;
+	  struct elf_link_hash_entry *hh;
+
+	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
+				   r_symndx, symtab_hdr, sym_hashes,
+				   hh, sec, relocation,
+				   unresolved_reloc, warned);
+
+	  h = (struct elf32_mn10300_link_hash_entry *) hh;
+
 	  if ((h->root.root.type == bfd_link_hash_defined
 	      || h->root.root.type == bfd_link_hash_defweak)
 	      && (   r_type == R_MN10300_GOTPC32
@@ -2071,18 +1459,10 @@ mn10300_elf_relocate_section (bfd *output_bfd,
 		      && h->root.plt.offset != (bfd_vma) -1)
 		  || ((   r_type == R_MN10300_GOT32
 		       || r_type == R_MN10300_GOT24
-		       || r_type == R_MN10300_TLS_GD
-		       || r_type == R_MN10300_TLS_LD
-		       || r_type == R_MN10300_TLS_GOTIE
-		       || r_type == R_MN10300_TLS_IE
 		       || r_type == R_MN10300_GOT16)
 		      && elf_hash_table (info)->dynamic_sections_created
 		      && !SYMBOL_REFERENCES_LOCAL (info, hh))
 		  || (r_type == R_MN10300_32
-		      /* _32 relocs in executables force _COPY relocs,
-			 such that the address of the symbol ends up
-			 being local.  */
-		      && !info->executable
 		      && !SYMBOL_REFERENCES_LOCAL (info, hh)
 		      && ((input_section->flags & SEC_ALLOC) != 0
 			  /* DWARF will emit R_MN10300_32 relocations
@@ -2096,38 +1476,25 @@ mn10300_elf_relocate_section (bfd *output_bfd,
 	       obscure cases sec->output_section will be NULL.  */
 	    relocation = 0;
 
-	  else if (!info->relocatable && unresolved_reloc
-		   && _bfd_elf_section_offset (output_bfd, info, input_section,
-					       rel->r_offset) != (bfd_vma) -1)
-
+	  else if (unresolved_reloc)
 	    (*_bfd_error_handler)
-	      (_("%B(%A+0x%lx): unresolvable %s relocation against symbol `%s'"),
-	       input_bfd,
-	       input_section,
-	       (long) rel->r_offset,
-	       howto->name,
-	       h->root.root.root.string);
+	      (_("%s: warning: unresolvable relocation against symbol `%s' from %s section"),
+	       bfd_get_filename (input_bfd), h->root.root.root.string,
+	       bfd_get_section_name (input_bfd, input_section));
 	}
-
-      if (sec != NULL && discarded_section (sec))
-	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, 1, relend, howto, 0, contents);
-
-      if (info->relocatable)
-	continue;
 
       r = mn10300_elf_final_link_relocate (howto, input_bfd, output_bfd,
 					   input_section,
 					   contents, rel->r_offset,
 					   relocation, rel->r_addend,
-					   (struct elf_link_hash_entry *) h,
+					   (struct elf_link_hash_entry *)h,
 					   r_symndx,
 					   info, sec, h == NULL);
 
       if (r != bfd_reloc_ok)
 	{
 	  const char *name;
-	  const char *msg = NULL;
+	  const char *msg = (const char *) 0;
 
 	  if (h != NULL)
 	    name = h->root.root.root.string;
@@ -2165,25 +1532,19 @@ mn10300_elf_relocate_section (bfd *output_bfd,
 	      goto common_error;
 
 	    case bfd_reloc_dangerous:
-	      if (r_type == R_MN10300_PCREL32)
-		msg = _("error: inappropriate relocation type for shared"
-			" library (did you forget -fpic?)");
-	      else if (r_type == R_MN10300_GOT32)
-		msg = _("%B: taking the address of protected function"
-			" '%s' cannot be done when making a shared library");
-	      else
-		msg = _("internal error: suspicious relocation type used"
-			" in shared library");
+	      msg = _("internal error: dangerous error");
 	      goto common_error;
 
 	    default:
 	      msg = _("internal error: unknown error");
-	      /* Fall through.  */
+	      /* fall through */
 
 	    common_error:
-	      _bfd_error_handler (msg, input_bfd, name);
-	      bfd_set_error (bfd_error_bad_value);
-	      return FALSE;
+	      if (!((*info->callbacks->warning)
+		    (info, msg, name, input_bfd, input_section,
+		     rel->r_offset)))
+		return FALSE;
+	      break;
 	    }
 	}
     }
@@ -2192,16 +1553,19 @@ mn10300_elf_relocate_section (bfd *output_bfd,
 }
 
 /* Finish initializing one hash table entry.  */
-
 static bfd_boolean
-elf32_mn10300_finish_hash_table_entry (struct bfd_hash_entry *gen_entry,
-				       void * in_args)
+elf32_mn10300_finish_hash_table_entry (gen_entry, in_args)
+     struct bfd_hash_entry *gen_entry;
+     PTR in_args;
 {
   struct elf32_mn10300_link_hash_entry *entry;
-  struct bfd_link_info *link_info = (struct bfd_link_info *) in_args;
+  struct bfd_link_info *link_info = (struct bfd_link_info *)in_args;
   unsigned int byte_count = 0;
 
   entry = (struct elf32_mn10300_link_hash_entry *) gen_entry;
+
+  if (entry->root.root.type == bfd_link_hash_warning)
+    entry = (struct elf32_mn10300_link_hash_entry *) entry->root.root.u.i.link;
 
   /* If we already know we want to convert "call" to "calls" for calls
      to this symbol, then return now.  */
@@ -2252,356 +1616,6 @@ elf32_mn10300_finish_hash_table_entry (struct bfd_hash_entry *gen_entry,
   return TRUE;
 }
 
-/* Used to count hash table entries.  */
-
-static bfd_boolean
-elf32_mn10300_count_hash_table_entries (struct bfd_hash_entry *gen_entry ATTRIBUTE_UNUSED,
-					void * in_args)
-{
-  int *count = (int *) in_args;
-
-  (*count) ++;
-  return TRUE;
-}
-
-/* Used to enumerate hash table entries into a linear array.  */
-
-static bfd_boolean
-elf32_mn10300_list_hash_table_entries (struct bfd_hash_entry *gen_entry,
-				       void * in_args)
-{
-  struct bfd_hash_entry ***ptr = (struct bfd_hash_entry ***) in_args;
-
-  **ptr = gen_entry;
-  (*ptr) ++;
-  return TRUE;
-}
-
-/* Used to sort the array created by the above.  */
-
-static int
-sort_by_value (const void *va, const void *vb)
-{
-  struct elf32_mn10300_link_hash_entry *a
-    = *(struct elf32_mn10300_link_hash_entry **) va;
-  struct elf32_mn10300_link_hash_entry *b
-    = *(struct elf32_mn10300_link_hash_entry **) vb;
-
-  return a->value - b->value;
-}
-
-/* Compute the stack size and movm arguments for the function
-   referred to by HASH at address ADDR in section with
-   contents CONTENTS, store the information in the hash table.  */
-
-static void
-compute_function_info (bfd *abfd,
-		       struct elf32_mn10300_link_hash_entry *hash,
-		       bfd_vma addr,
-		       unsigned char *contents)
-{
-  unsigned char byte1, byte2;
-  /* We only care about a very small subset of the possible prologue
-     sequences here.  Basically we look for:
-
-     movm [d2,d3,a2,a3],sp (optional)
-     add <size>,sp (optional, and only for sizes which fit in an unsigned
-		    8 bit number)
-
-     If we find anything else, we quit.  */
-
-  /* Look for movm [regs],sp.  */
-  byte1 = bfd_get_8 (abfd, contents + addr);
-  byte2 = bfd_get_8 (abfd, contents + addr + 1);
-
-  if (byte1 == 0xcf)
-    {
-      hash->movm_args = byte2;
-      addr += 2;
-      byte1 = bfd_get_8 (abfd, contents + addr);
-      byte2 = bfd_get_8 (abfd, contents + addr + 1);
-    }
-
-  /* Now figure out how much stack space will be allocated by the movm
-     instruction.  We need this kept separate from the function's normal
-     stack space.  */
-  if (hash->movm_args)
-    {
-      /* Space for d2.  */
-      if (hash->movm_args & 0x80)
-	hash->movm_stack_size += 4;
-
-      /* Space for d3.  */
-      if (hash->movm_args & 0x40)
-	hash->movm_stack_size += 4;
-
-      /* Space for a2.  */
-      if (hash->movm_args & 0x20)
-	hash->movm_stack_size += 4;
-
-      /* Space for a3.  */
-      if (hash->movm_args & 0x10)
-	hash->movm_stack_size += 4;
-
-      /* "other" space.  d0, d1, a0, a1, mdr, lir, lar, 4 byte pad.  */
-      if (hash->movm_args & 0x08)
-	hash->movm_stack_size += 8 * 4;
-
-      if (bfd_get_mach (abfd) == bfd_mach_am33
-	  || bfd_get_mach (abfd) == bfd_mach_am33_2)
-	{
-	  /* "exother" space.  e0, e1, mdrq, mcrh, mcrl, mcvf */
-	  if (hash->movm_args & 0x1)
-	    hash->movm_stack_size += 6 * 4;
-
-	  /* exreg1 space.  e4, e5, e6, e7 */
-	  if (hash->movm_args & 0x2)
-	    hash->movm_stack_size += 4 * 4;
-
-	  /* exreg0 space.  e2, e3  */
-	  if (hash->movm_args & 0x4)
-	    hash->movm_stack_size += 2 * 4;
-	}
-    }
-
-  /* Now look for the two stack adjustment variants.  */
-  if (byte1 == 0xf8 && byte2 == 0xfe)
-    {
-      int temp = bfd_get_8 (abfd, contents + addr + 2);
-      temp = ((temp & 0xff) ^ (~0x7f)) + 0x80;
-
-      hash->stack_size = -temp;
-    }
-  else if (byte1 == 0xfa && byte2 == 0xfe)
-    {
-      int temp = bfd_get_16 (abfd, contents + addr + 2);
-      temp = ((temp & 0xffff) ^ (~0x7fff)) + 0x8000;
-      temp = -temp;
-
-      if (temp < 255)
-	hash->stack_size = temp;
-    }
-
-  /* If the total stack to be allocated by the call instruction is more
-     than 255 bytes, then we can't remove the stack adjustment by using
-     "call" (we might still be able to remove the "movm" instruction.  */
-  if (hash->stack_size + hash->movm_stack_size > 255)
-    hash->stack_size = 0;
-}
-
-/* Delete some bytes from a section while relaxing.  */
-
-static bfd_boolean
-mn10300_elf_relax_delete_bytes (bfd *abfd,
-				asection *sec,
-				bfd_vma addr,
-				int count)
-{
-  Elf_Internal_Shdr *symtab_hdr;
-  unsigned int sec_shndx;
-  bfd_byte *contents;
-  Elf_Internal_Rela *irel, *irelend;
-  Elf_Internal_Rela *irelalign;
-  bfd_vma toaddr;
-  Elf_Internal_Sym *isym, *isymend;
-  struct elf_link_hash_entry **sym_hashes;
-  struct elf_link_hash_entry **end_hashes;
-  unsigned int symcount;
-
-  sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
-
-  contents = elf_section_data (sec)->this_hdr.contents;
-
-  irelalign = NULL;
-  toaddr = sec->size;
-
-  irel = elf_section_data (sec)->relocs;
-  irelend = irel + sec->reloc_count;
-
-  if (sec->reloc_count > 0)
-    {
-      /* If there is an align reloc at the end of the section ignore it.
-	 GAS creates these relocs for reasons of its own, and they just
-	 serve to keep the section artifically inflated.  */
-      if (ELF32_R_TYPE ((irelend - 1)->r_info) == (int) R_MN10300_ALIGN)
-	--irelend;
-      
-      /* The deletion must stop at the next ALIGN reloc for an aligment
-	 power larger than, or not a multiple of, the number of bytes we
-	 are deleting.  */
-      for (; irel < irelend; irel++)
-	{
-	  int alignment = 1 << irel->r_addend;
-
-	  if (ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_ALIGN
-	      && irel->r_offset > addr
-	      && irel->r_offset < toaddr
-	      && (count < alignment
-		  || alignment % count != 0))
-	    {
-	      irelalign = irel;
-	      toaddr = irel->r_offset;
-	      break;
-	    }
-	}
-    }
-
-  /* Actually delete the bytes.  */
-  memmove (contents + addr, contents + addr + count,
-	   (size_t) (toaddr - addr - count));
-
-  /* Adjust the section's size if we are shrinking it, or else
-     pad the bytes between the end of the shrunken region and
-     the start of the next region with NOP codes.  */
-  if (irelalign == NULL)
-    {
-      sec->size -= count;
-      /* Include symbols at the end of the section, but
-	 not at the end of a sub-region of the section.  */
-      toaddr ++;
-    }
-  else
-    {
-      int i;
-
-#define NOP_OPCODE 0xcb
-
-      for (i = 0; i < count; i ++)
-	bfd_put_8 (abfd, (bfd_vma) NOP_OPCODE, contents + toaddr - count + i);
-    }
-
-  /* Adjust all the relocs.  */
-  for (irel = elf_section_data (sec)->relocs; irel < irelend; irel++)
-    {
-      /* Get the new reloc address.  */
-      if ((irel->r_offset > addr
-	   && irel->r_offset < toaddr)
-	  || (ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_ALIGN
-	      && irel->r_offset == toaddr))
-	irel->r_offset -= count;
-    }
-
-  /* Adjust the local symbols in the section, reducing their value
-     by the number of bytes deleted.  Note - symbols within the deleted
-     region are moved to the address of the start of the region, which
-     actually means that they will address the byte beyond the end of
-     the region once the deletion has been completed.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  isym = (Elf_Internal_Sym *) symtab_hdr->contents;
-  for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
-    {
-      if (isym->st_shndx == sec_shndx
-	  && isym->st_value > addr
-	  && isym->st_value < toaddr)
-	{
-	  if (isym->st_value < addr + count)
-	    isym->st_value = addr;
-	  else
-	    isym->st_value -= count;
-	}
-      /* Adjust the function symbol's size as well.  */
-      else if (isym->st_shndx == sec_shndx
-	       && ELF_ST_TYPE (isym->st_info) == STT_FUNC
-	       && isym->st_value + isym->st_size > addr
-	       && isym->st_value + isym->st_size < toaddr)
-	isym->st_size -= count;
-    }
-
-  /* Now adjust the global symbols defined in this section.  */
-  symcount = (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)
-	      - symtab_hdr->sh_info);
-  sym_hashes = elf_sym_hashes (abfd);
-  end_hashes = sym_hashes + symcount;
-  for (; sym_hashes < end_hashes; sym_hashes++)
-    {
-      struct elf_link_hash_entry *sym_hash = *sym_hashes;
-
-      if ((sym_hash->root.type == bfd_link_hash_defined
-	   || sym_hash->root.type == bfd_link_hash_defweak)
-	  && sym_hash->root.u.def.section == sec
-	  && sym_hash->root.u.def.value > addr
-	  && sym_hash->root.u.def.value < toaddr)
-	{
-	  if (sym_hash->root.u.def.value < addr + count)
-	    sym_hash->root.u.def.value = addr;
-	  else
-	    sym_hash->root.u.def.value -= count;
-	}
-      /* Adjust the function symbol's size as well.  */
-      else if (sym_hash->root.type == bfd_link_hash_defined
-	       && sym_hash->root.u.def.section == sec
-	       && sym_hash->type == STT_FUNC
-	       && sym_hash->root.u.def.value + sym_hash->size > addr
-	       && sym_hash->root.u.def.value + sym_hash->size < toaddr)
-	sym_hash->size -= count;
-    }
-
-  /* See if we can move the ALIGN reloc forward.
-     We have adjusted r_offset for it already.  */
-  if (irelalign != NULL)
-    {
-      bfd_vma alignto, alignaddr;
-
-      if ((int) irelalign->r_addend > 0)
-	{
-	  /* This is the old address.  */
-	  alignto = BFD_ALIGN (toaddr, 1 << irelalign->r_addend);
-	  /* This is where the align points to now.  */
-	  alignaddr = BFD_ALIGN (irelalign->r_offset,
-				 1 << irelalign->r_addend);
-	  if (alignaddr < alignto)
-	    /* Tail recursion.  */
-	    return mn10300_elf_relax_delete_bytes (abfd, sec, alignaddr,
-						   (int) (alignto - alignaddr));
-	}
-    }
-
-  return TRUE;
-}
-
-/* Return TRUE if a symbol exists at the given address, else return
-   FALSE.  */
-
-static bfd_boolean
-mn10300_elf_symbol_address_p (bfd *abfd,
-			      asection *sec,
-			      Elf_Internal_Sym *isym,
-			      bfd_vma addr)
-{
-  Elf_Internal_Shdr *symtab_hdr;
-  unsigned int sec_shndx;
-  Elf_Internal_Sym *isymend;
-  struct elf_link_hash_entry **sym_hashes;
-  struct elf_link_hash_entry **end_hashes;
-  unsigned int symcount;
-
-  sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
-
-  /* Examine all the symbols.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
-  for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
-    if (isym->st_shndx == sec_shndx
-	&& isym->st_value == addr)
-      return TRUE;
-
-  symcount = (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)
-	      - symtab_hdr->sh_info);
-  sym_hashes = elf_sym_hashes (abfd);
-  end_hashes = sym_hashes + symcount;
-  for (; sym_hashes < end_hashes; sym_hashes++)
-    {
-      struct elf_link_hash_entry *sym_hash = *sym_hashes;
-
-      if ((sym_hash->root.type == bfd_link_hash_defined
-	   || sym_hash->root.type == bfd_link_hash_defweak)
-	  && sym_hash->root.u.def.section == sec
-	  && sym_hash->root.u.def.value == addr)
-	return TRUE;
-    }
-
-  return FALSE;
-}
-
 /* This function handles relaxing for the mn10300.
 
    There are quite a few relaxing opportunities available on the mn10300:
@@ -2642,10 +1656,11 @@ mn10300_elf_symbol_address_p (bfd *abfd,
 	and somewhat more difficult to support.  */
 
 static bfd_boolean
-mn10300_elf_relax_section (bfd *abfd,
-			   asection *sec,
-			   struct bfd_link_info *link_info,
-			   bfd_boolean *again)
+mn10300_elf_relax_section (abfd, sec, link_info, again)
+     bfd *abfd;
+     asection *sec;
+     struct bfd_link_info *link_info;
+     bfd_boolean *again;
 {
   Elf_Internal_Shdr *symtab_hdr;
   Elf_Internal_Rela *internal_relocs = NULL;
@@ -2654,19 +1669,12 @@ mn10300_elf_relax_section (bfd *abfd,
   Elf_Internal_Sym *isymbuf = NULL;
   struct elf32_mn10300_link_hash_table *hash_table;
   asection *section = sec;
-  bfd_vma align_gap_adjustment;
-
-  if (link_info->relocatable)
-    (*link_info->callbacks->einfo)
-      (_("%P%F: --relax and -r may not be used together\n"));
 
   /* Assume nothing changes.  */
   *again = FALSE;
 
   /* We need a pointer to the mn10300 specific hash table.  */
   hash_table = elf32_mn10300_hash_table (link_info);
-  if (hash_table == NULL)
-    return FALSE;
 
   /* Initialize fields in each hash table entry the first time through.  */
   if ((hash_table->flags & MN10300_HASH_ENTRIES_INITIALIZED) == 0)
@@ -2697,15 +1705,15 @@ mn10300_elf_relax_section (bfd *abfd,
 	       section = section->next)
 	    {
 	      struct elf32_mn10300_link_hash_entry *hash;
+	      Elf_Internal_Sym *sym;
 	      asection *sym_sec = NULL;
 	      const char *sym_name;
 	      char *new_name;
 
 	      /* If there's nothing to do in this section, skip it.  */
-	      if (! ((section->flags & SEC_RELOC) != 0
-		     && section->reloc_count != 0))
-		continue;
-	      if ((section->flags & SEC_ALLOC) == 0)
+	      if (! (((section->flags & SEC_RELOC) != 0
+		      && section->reloc_count != 0)
+		     || (section->flags & SEC_CODE) != 0))
 		continue;
 
 	      /* Get cached copy of section contents if it exists.  */
@@ -2725,10 +1733,12 @@ mn10300_elf_relax_section (bfd *abfd,
 	      if ((section->flags & SEC_RELOC) != 0
 		  && section->reloc_count != 0)
 		{
+
 		  /* Get a copy of the native relocations.  */
-		  internal_relocs = _bfd_elf_link_read_relocs (input_bfd, section,
-							       NULL, NULL,
-							       link_info->keep_memory);
+		  internal_relocs = (_bfd_elf_link_read_relocs
+				     (input_bfd, section, (PTR) NULL,
+				      (Elf_Internal_Rela *) NULL,
+				      link_info->keep_memory));
 		  if (internal_relocs == NULL)
 		    goto error_return;
 
@@ -2750,6 +1760,7 @@ mn10300_elf_relax_section (bfd *abfd,
 		      /* We need the name and hash table entry of the target
 			 symbol!  */
 		      hash = NULL;
+		      sym = NULL;
 		      sym_sec = NULL;
 
 		      if (r_index < symtab_hdr->sh_info)
@@ -2786,7 +1797,7 @@ mn10300_elf_relax_section (bfd *abfd,
 			     local symbol in the global hash table.  */
 			  amt = strlen (sym_name) + 10;
 			  new_name = bfd_malloc (amt);
-			  if (new_name == NULL)
+			  if (new_name == 0)
 			    goto error_return;
 
 			  sprintf (new_name, "%s_%08x", sym_name, sym_sec->id);
@@ -2805,17 +1816,13 @@ mn10300_elf_relax_section (bfd *abfd,
 				   elf_sym_hashes (input_bfd)[r_index];
 			}
 
-		      sym_name = hash->root.root.root.string;
-		      if ((section->flags & SEC_CODE) != 0)
-			{
-			  /* If this is not a "call" instruction, then we
-			     should convert "call" instructions to "calls"
-			     instructions.  */
-			  code = bfd_get_8 (input_bfd,
-					    contents + irel->r_offset - 1);
-			  if (code != 0xdd && code != 0xcd)
-			    hash->flags |= MN10300_CONVERT_CALL_TO_CALLS;
-			}
+		      /* If this is not a "call" instruction, then we
+			 should convert "call" instructions to "calls"
+			 instructions.  */
+		      code = bfd_get_8 (input_bfd,
+					contents + irel->r_offset - 1);
+		      if (code != 0xdd && code != 0xcd)
+			hash->flags |= MN10300_CONVERT_CALL_TO_CALLS;
 
 		      /* If this is a jump/call, then bump the
 			 direct_calls counter.  Else force "call" to
@@ -2895,7 +1902,7 @@ mn10300_elf_relax_section (bfd *abfd,
 			     local symbol in the global hash table.  */
 			  amt = strlen (sym_name) + 10;
 			  new_name = bfd_malloc (amt);
-			  if (new_name == NULL)
+			  if (new_name == 0)
 			    goto error_return;
 
 			  sprintf (new_name, "%s_%08x", sym_name, sym_sec->id);
@@ -2908,7 +1915,6 @@ mn10300_elf_relax_section (bfd *abfd,
 			  free (new_name);
 			  compute_function_info (input_bfd, hash,
 						 isym->st_value, contents);
-			  hash->value = isym->st_value;
 			}
 		    }
 
@@ -2970,46 +1976,6 @@ mn10300_elf_relax_section (bfd *abfd,
 					elf32_mn10300_finish_hash_table_entry,
 					link_info);
 
-      {
-	/* This section of code collects all our local symbols, sorts
-	   them by value, and looks for multiple symbols referring to
-	   the same address.  For those symbols, the flags are merged.
-	   At this point, the only flag that can be set is
-	   MN10300_CONVERT_CALL_TO_CALLS, so we simply OR the flags
-	   together.  */
-	int static_count = 0, i;
-	struct elf32_mn10300_link_hash_entry **entries;
-	struct elf32_mn10300_link_hash_entry **ptr;
-
-	elf32_mn10300_link_hash_traverse (hash_table->static_hash_table,
-					  elf32_mn10300_count_hash_table_entries,
-					  &static_count);
-
-	entries = bfd_malloc (static_count * sizeof (* ptr));
-
-	ptr = entries;
-	elf32_mn10300_link_hash_traverse (hash_table->static_hash_table,
-					  elf32_mn10300_list_hash_table_entries,
-					  & ptr);
-
-	qsort (entries, static_count, sizeof (entries[0]), sort_by_value);
-
-	for (i = 0; i < static_count - 1; i++)
-	  if (entries[i]->value && entries[i]->value == entries[i+1]->value)
-	    {
-	      int v = entries[i]->flags;
-	      int j;
-
-	      for (j = i + 1; j < static_count && entries[j]->value == entries[i]->value; j++)
-		v |= entries[j]->flags;
-
-	      for (j = i; j < static_count && entries[j]->value == entries[i]->value; j++)
-		entries[j]->flags = v;
-
-	      i = j - 1;
-	    }
-      }
-
       /* All entries in the hash table are fully initialized.  */
       hash_table->flags |= MN10300_HASH_ENTRIES_INITIALIZED;
 
@@ -3052,9 +2018,10 @@ mn10300_elf_relax_section (bfd *abfd,
 	      if (section->reloc_count != 0)
 		{
 		  /* Get a copy of the native relocations.  */
-		  internal_relocs = _bfd_elf_link_read_relocs (input_bfd, section,
-							       NULL, NULL,
-							       link_info->keep_memory);
+		  internal_relocs = (_bfd_elf_link_read_relocs
+				     (input_bfd, section, (PTR) NULL,
+				      (Elf_Internal_Rela *) NULL,
+				      link_info->keep_memory));
 		  if (internal_relocs == NULL)
 		    goto error_return;
 		}
@@ -3107,15 +2074,15 @@ mn10300_elf_relax_section (bfd *abfd,
 		     local symbol in the global hash table.  */
 		  amt = strlen (sym_name) + 10;
 		  new_name = bfd_malloc (amt);
-		  if (new_name == NULL)
+		  if (new_name == 0)
 		    goto error_return;
 		  sprintf (new_name, "%s_%08x", sym_name, sym_sec->id);
 		  sym_name = new_name;
 
-		  elftab = & hash_table->static_hash_table->root;
-		  sym_hash = (struct elf32_mn10300_link_hash_entry *)
-		    elf_link_hash_lookup (elftab, sym_name,
-					  FALSE, FALSE, FALSE);
+		  elftab = &hash_table->static_hash_table->root;
+		  sym_hash = ((struct elf32_mn10300_link_hash_entry *)
+			      elf_link_hash_lookup (elftab, sym_name,
+						    FALSE, FALSE, FALSE));
 
 		  free (new_name);
 		  if (sym_hash == NULL)
@@ -3179,7 +2146,6 @@ mn10300_elf_relax_section (bfd *abfd,
 		    {
 		      int bytes = 0;
 		      bfd_vma symval;
-		      struct elf_link_hash_entry **hh;
 
 		      /* Note that we've changed things.  */
 		      elf_section_data (section)->relocs = internal_relocs;
@@ -3210,25 +2176,6 @@ mn10300_elf_relax_section (bfd *abfd,
 							   bytes))
 			goto error_return;
 
-		      /* There may be other C++ functions symbols with the same
-			 address.  If so then mark these as having had their
-			 prologue bytes deleted as well.  */
-		      for (hh = elf_sym_hashes (input_bfd); hh < end_hashes; hh++)
-			{
-			  struct elf32_mn10300_link_hash_entry *h;
-
-			  h = (struct elf32_mn10300_link_hash_entry *) * hh;
-
-			  if (h != sym_hash
-			      && (h->root.root.type == bfd_link_hash_defined
-				  || h->root.root.type == bfd_link_hash_defweak)
-			      && h->root.root.u.def.section == section
-			      && ! (h->flags & MN10300_CONVERT_CALL_TO_CALLS)
-			      && h->root.root.u.def.value == symval
-			      && h->root.type == STT_FUNC)
-			    h->flags |= MN10300_DELETED_PROLOGUE_BYTES;
-			}
-
 		      /* Something changed.  Not strictly necessary, but
 			 may lead to more relaxing opportunities.  */
 		      *again = TRUE;
@@ -3248,8 +2195,10 @@ mn10300_elf_relax_section (bfd *abfd,
 		  if (! link_info->keep_memory)
 		    free (contents);
 		  else
-		    /* Cache the section contents for elf_link_input_bfd.  */
-		    elf_section_data (section)->this_hdr.contents = contents;
+		    {
+		      /* Cache the section contents for elf_link_input_bfd.  */
+		      elf_section_data (section)->this_hdr.contents = contents;
+		    }
 		}
 	      contents = NULL;
 	    }
@@ -3261,8 +2210,10 @@ mn10300_elf_relax_section (bfd *abfd,
 	      if (! link_info->keep_memory)
 		free (isymbuf);
 	      else
-		/* Cache the symbols for elf_link_input_bfd.  */
-		symtab_hdr->contents = (unsigned char *) isymbuf;
+		{
+		  /* Cache the symbols for elf_link_input_bfd.  */
+		  symtab_hdr->contents = (unsigned char *) isymbuf;
+		}
 	    }
 	  isymbuf = NULL;
 	}
@@ -3287,45 +2238,17 @@ mn10300_elf_relax_section (bfd *abfd,
   symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
-					       link_info->keep_memory);
+  internal_relocs = (_bfd_elf_link_read_relocs
+		     (abfd, sec, (PTR) NULL, (Elf_Internal_Rela *) NULL,
+		      link_info->keep_memory));
   if (internal_relocs == NULL)
     goto error_return;
-
-  /* Scan for worst case alignment gap changes.  Note that this logic
-     is not ideal; what we should do is run this scan for every
-     opcode/address range and adjust accordingly, but that's
-     expensive.  Worst case is that for an alignment of N bytes, we
-     move by 2*N-N-1 bytes, assuming we have aligns of 1, 2, 4, 8, etc
-     all before it.  Plus, this still doesn't cover cross-section
-     jumps with section alignment.  */
-  irelend = internal_relocs + sec->reloc_count;
-  align_gap_adjustment = 0;
-  for (irel = internal_relocs; irel < irelend; irel++)
-    {
-      if (ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_ALIGN)
-	{
-	  bfd_vma adj = 1 << irel->r_addend;
-	  bfd_vma aend = irel->r_offset;
-
-	  aend = BFD_ALIGN (aend, 1 << irel->r_addend);
-	  adj = 2 * adj - adj - 1;
-
-	  /* Record the biggest adjustmnet.  Skip any alignment at the
-	     end of our section.  */
-	  if (align_gap_adjustment < adj
-	      && aend < sec->output_section->vma + sec->output_offset + sec->size)
-	    align_gap_adjustment = adj;
-	}
-    }
 
   /* Walk through them looking for relaxing opportunities.  */
   irelend = internal_relocs + sec->reloc_count;
   for (irel = internal_relocs; irel < irelend; irel++)
     {
       bfd_vma symval;
-      bfd_signed_vma jump_offset;
-      asection *sym_sec = NULL;
       struct elf32_mn10300_link_hash_entry *h = NULL;
 
       /* If this isn't something that can be relaxed, then ignore
@@ -3365,8 +2288,10 @@ mn10300_elf_relax_section (bfd *abfd,
       if (ELF32_R_SYM (irel->r_info) < symtab_hdr->sh_info)
 	{
 	  Elf_Internal_Sym *isym;
+	  asection *sym_sec = NULL;
 	  const char *sym_name;
 	  char *new_name;
+	  bfd_vma saved_addend;
 
 	  /* A local symbol.  */
 	  isym = isymbuf + ELF32_R_SYM (irel->r_info);
@@ -3384,42 +2309,24 @@ mn10300_elf_relax_section (bfd *abfd,
 						      isym->st_name);
 
 	  if ((sym_sec->flags & SEC_MERGE)
-	      && sym_sec->sec_info_type == SEC_INFO_TYPE_MERGE)
+	      && ELF_ST_TYPE (isym->st_info) == STT_SECTION
+	      && sym_sec->sec_info_type == ELF_INFO_TYPE_MERGE)
 	    {
-	      symval = isym->st_value;
-
-	      /* GAS may reduce relocations against symbols in SEC_MERGE
-		 sections to a relocation against the section symbol when
-		 the original addend was zero.  When the reloc is against
-		 a section symbol we should include the addend in the
-		 offset passed to _bfd_merged_section_offset, since the
-		 location of interest is the original symbol.  On the
-		 other hand, an access to "sym+addend" where "sym" is not
-		 a section symbol should not include the addend;  Such an
-		 access is presumed to be an offset from "sym";  The
-		 location of interest is just "sym".  */
-	      if (ELF_ST_TYPE (isym->st_info) == STT_SECTION)
-		symval += irel->r_addend;
-
-	      symval = _bfd_merged_section_offset (abfd, & sym_sec,
-						   elf_section_data (sym_sec)->sec_info,
-						   symval);
-
-	      if (ELF_ST_TYPE (isym->st_info) != STT_SECTION)
-		symval += irel->r_addend;
-
-	      symval += sym_sec->output_section->vma
-		+ sym_sec->output_offset - irel->r_addend;
+	      saved_addend = irel->r_addend;
+	      symval = _bfd_elf_rela_local_sym (abfd, isym, &sym_sec, irel);
+	      symval += irel->r_addend;
+	      irel->r_addend = saved_addend;
 	    }
 	  else
-	    symval = (isym->st_value
-		      + sym_sec->output_section->vma
-		      + sym_sec->output_offset);
-
+	    {
+	      symval = (isym->st_value
+			+ sym_sec->output_section->vma
+			+ sym_sec->output_offset);
+	    }
 	  /* Tack on an ID so we can uniquely identify this
 	     local symbol in the global hash table.  */
 	  new_name = bfd_malloc ((bfd_size_type) strlen (sym_name) + 10);
-	  if (new_name == NULL)
+	  if (new_name == 0)
 	    goto error_return;
 	  sprintf (new_name, "%s_%08x", sym_name, sym_sec->id);
 	  sym_name = new_name;
@@ -3440,16 +2347,12 @@ mn10300_elf_relax_section (bfd *abfd,
 	  BFD_ASSERT (h != NULL);
 	  if (h->root.root.type != bfd_link_hash_defined
 	      && h->root.root.type != bfd_link_hash_defweak)
-	    /* This appears to be a reference to an undefined
-	       symbol.  Just ignore it--it will be caught by the
-	       regular reloc processing.  */
-	    continue;
-
-	  /* Check for a reference to a discarded symbol and ignore it.  */
-	  if (h->root.root.u.def.section->output_section == NULL)
-	    continue;
-
-	  sym_sec = h->root.root.u.def.section->output_section;
+	    {
+	      /* This appears to be a reference to an undefined
+ 		symbol.  Just ignore it--it will be caught by the
+ 		regular reloc processing.  */
+	      continue;
+	    }
 
 	  symval = (h->root.root.u.def.value
 		    + h->root.root.u.def.section->output_section->vma
@@ -3480,7 +2383,9 @@ mn10300_elf_relax_section (bfd *abfd,
 	    {
 	      asection * splt;
 
-	      splt = hash_table->root.splt;
+	      splt = bfd_get_section_by_name (elf_hash_table (link_info)
+					      ->dynobj, ".plt");
+	  
 	      value = ((splt->output_section->vma
 			+ splt->output_offset
 			+ h->root.plt.offset)
@@ -3551,16 +2456,8 @@ mn10300_elf_relax_section (bfd *abfd,
 
 	  /* See if the value will fit in 16 bits, note the high value is
 	     0x7fff + 2 as the target will be two bytes closer if we are
-	     able to relax, if it's in the same section.  */
-	  if (sec->output_section == sym_sec->output_section)
-	    jump_offset = 0x8001;
-	  else
-	    jump_offset = 0x7fff;
-
-	  /* Account for jumps across alignment boundaries using
-	     align_gap_adjustment.  */
-	  if ((bfd_signed_vma) value < jump_offset - (bfd_signed_vma) align_gap_adjustment
-	      && ((bfd_signed_vma) value > -0x8000 + (bfd_signed_vma) align_gap_adjustment))
+	     able to relax.  */
+	  if ((long) value < 0x8001 && (long) value > -0x8000)
 	    {
 	      unsigned char code;
 
@@ -3865,16 +2762,16 @@ mn10300_elf_relax_section (bfd *abfd,
 
 		  /* We can not relax 0x6b, 0x7b, 0x8b, 0x9b as no 24bit
 		     equivalent instructions exists.  */
-		  if (code != 0x6b && code != 0x7b
+	          if (code != 0x6b && code != 0x7b
 		      && code != 0x8b && code != 0x9b
 		      && ((code & 0x0f) == 0x09 || (code & 0x0f) == 0x08
 			  || (code & 0x0f) == 0x0a || (code & 0x0f) == 0x0b
 			  || (code & 0x0f) == 0x0e))
 		    {
 		      /* Not safe if the high bit is on as relaxing may
-			 move the value out of high mem and thus not fit
-			 in a signed 8bit value.  This is currently over
-			 conservative.  */
+		         move the value out of high mem and thus not fit
+		         in a signed 8bit value.  This is currently over
+		         conservative.  */
 		      if ((value & 0x80) == 0)
 			{
 			  /* Note that we've changed the relocation contents,
@@ -3912,7 +2809,8 @@ mn10300_elf_relax_section (bfd *abfd,
 	 into a 16bit immediate, displacement or absolute address.  */
       if (ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_32
 	  || ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_GOT32
-	  || ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_GOTOFF32)
+	  || ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_GOTOFF32
+	  || ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_GOTPC32)
 	{
 	  bfd_vma value = symval;
 
@@ -3920,7 +2818,9 @@ mn10300_elf_relax_section (bfd *abfd,
 	    {
 	      asection * sgot;
 
-	      sgot = hash_table->root.sgot;
+	      sgot = bfd_get_section_by_name (elf_hash_table (link_info)
+					      ->dynobj, ".got");
+
 	      if (ELF32_R_TYPE (irel->r_info) == (int) R_MN10300_GOT32)
 		{
 		  value = sgot->output_offset;
@@ -3959,8 +2859,8 @@ mn10300_elf_relax_section (bfd *abfd,
 
 	      if (code == 0xfe)
 		{
-		  /* Get the second opcode.  */
-		  code = bfd_get_8 (abfd, contents + irel->r_offset - 2);
+	          /* Get the second opcode.  */
+	          code = bfd_get_8 (abfd, contents + irel->r_offset - 2);
 
 		  /* All the am33 32 -> 24 relaxing possibilities.  */
 		  /* We can not relax 0x6b, 0x7b, 0x8b, 0x9b as no 24bit
@@ -3974,9 +2874,9 @@ mn10300_elf_relax_section (bfd *abfd,
 			  || (code & 0x0f) == 0x0e))
 		    {
 		      /* Not safe if the high bit is on as relaxing may
-			 move the value out of high mem and thus not fit
-			 in a signed 16bit value.  This is currently over
-			 conservative.  */
+		         move the value out of high mem and thus not fit
+		         in a signed 16bit value.  This is currently over
+		         conservative.  */
 		      if ((value & 0x8000) == 0)
 			{
 			  /* Note that we've changed the relocation contents,
@@ -4163,7 +3063,7 @@ mn10300_elf_relax_section (bfd *abfd,
 		  case 0x93:
 		    /* sp-based offsets are zero-extended.  */
 		    if (code >= 0x90 && code <= 0x93
-			&& (long) value < 0)
+			&& (long)value < 0)
 		      continue;
 
 		    /* Note that we've changed the relocation contents, etc.  */
@@ -4218,9 +3118,9 @@ mn10300_elf_relax_section (bfd *abfd,
 			&& (value & 0x8000))
 		      continue;
 
-		    /* "mov imm16, an" zero-extends the immediate.  */
-		    if ((code & 0xfc) == 0xdc
-			&& (long) value < 0)
+		    /* mov imm16, an zero-extends the immediate.  */
+		    if (code == 0xdc
+			&& (long)value < 0)
 		      continue;
 
 		    /* Note that we've changed the relocation contents, etc.  */
@@ -4301,12 +3201,12 @@ mn10300_elf_relax_section (bfd *abfd,
 		  case 0xe3:
 		    /* cmp imm16, an zero-extends the immediate.  */
 		    if (code == 0xdc
-			&& (long) value < 0)
+			&& (long)value < 0)
 		      continue;
 
 		    /* So do sp-based offsets.  */
 		    if (code >= 0xb0 && code <= 0xb3
-			&& (long) value < 0)
+			&& (long)value < 0)
 		      continue;
 
 		    /* Note that we've changed the relocation contents, etc.  */
@@ -4425,16 +3325,242 @@ mn10300_elf_relax_section (bfd *abfd,
   return FALSE;
 }
 
+/* Compute the stack size and movm arguments for the function
+   referred to by HASH at address ADDR in section with
+   contents CONTENTS, store the information in the hash table.  */
+static void
+compute_function_info (abfd, hash, addr, contents)
+     bfd *abfd;
+     struct elf32_mn10300_link_hash_entry *hash;
+     bfd_vma addr;
+     unsigned char *contents;
+{
+  unsigned char byte1, byte2;
+  /* We only care about a very small subset of the possible prologue
+     sequences here.  Basically we look for:
+
+     movm [d2,d3,a2,a3],sp (optional)
+     add <size>,sp (optional, and only for sizes which fit in an unsigned
+		    8 bit number)
+
+     If we find anything else, we quit.  */
+
+  /* Look for movm [regs],sp */
+  byte1 = bfd_get_8 (abfd, contents + addr);
+  byte2 = bfd_get_8 (abfd, contents + addr + 1);
+
+  if (byte1 == 0xcf)
+    {
+      hash->movm_args = byte2;
+      addr += 2;
+      byte1 = bfd_get_8 (abfd, contents + addr);
+      byte2 = bfd_get_8 (abfd, contents + addr + 1);
+    }
+
+  /* Now figure out how much stack space will be allocated by the movm
+     instruction.  We need this kept separate from the function's normal
+     stack space.  */
+  if (hash->movm_args)
+    {
+      /* Space for d2.  */
+      if (hash->movm_args & 0x80)
+	hash->movm_stack_size += 4;
+
+      /* Space for d3.  */
+      if (hash->movm_args & 0x40)
+	hash->movm_stack_size += 4;
+
+      /* Space for a2.  */
+      if (hash->movm_args & 0x20)
+	hash->movm_stack_size += 4;
+
+      /* Space for a3.  */
+      if (hash->movm_args & 0x10)
+	hash->movm_stack_size += 4;
+
+      /* "other" space.  d0, d1, a0, a1, mdr, lir, lar, 4 byte pad.  */
+      if (hash->movm_args & 0x08)
+	hash->movm_stack_size += 8 * 4;
+
+      if (bfd_get_mach (abfd) == bfd_mach_am33
+	  || bfd_get_mach (abfd) == bfd_mach_am33_2)
+	{
+	  /* "exother" space.  e0, e1, mdrq, mcrh, mcrl, mcvf */
+	  if (hash->movm_args & 0x1)
+	    hash->movm_stack_size += 6 * 4;
+
+	  /* exreg1 space.  e4, e5, e6, e7 */
+	  if (hash->movm_args & 0x2)
+	    hash->movm_stack_size += 4 * 4;
+
+	  /* exreg0 space.  e2, e3  */
+	  if (hash->movm_args & 0x4)
+	    hash->movm_stack_size += 2 * 4;
+	}
+    }
+
+  /* Now look for the two stack adjustment variants.  */
+  if (byte1 == 0xf8 && byte2 == 0xfe)
+    {
+      int temp = bfd_get_8 (abfd, contents + addr + 2);
+      temp = ((temp & 0xff) ^ (~0x7f)) + 0x80;
+
+      hash->stack_size = -temp;
+    }
+  else if (byte1 == 0xfa && byte2 == 0xfe)
+    {
+      int temp = bfd_get_16 (abfd, contents + addr + 2);
+      temp = ((temp & 0xffff) ^ (~0x7fff)) + 0x8000;
+      temp = -temp;
+
+      if (temp < 255)
+	hash->stack_size = temp;
+    }
+
+  /* If the total stack to be allocated by the call instruction is more
+     than 255 bytes, then we can't remove the stack adjustment by using
+     "call" (we might still be able to remove the "movm" instruction.  */
+  if (hash->stack_size + hash->movm_stack_size > 255)
+    hash->stack_size = 0;
+
+  return;
+}
+
+/* Delete some bytes from a section while relaxing.  */
+
+static bfd_boolean
+mn10300_elf_relax_delete_bytes (abfd, sec, addr, count)
+     bfd *abfd;
+     asection *sec;
+     bfd_vma addr;
+     int count;
+{
+  Elf_Internal_Shdr *symtab_hdr;
+  unsigned int sec_shndx;
+  bfd_byte *contents;
+  Elf_Internal_Rela *irel, *irelend;
+  Elf_Internal_Rela *irelalign;
+  bfd_vma toaddr;
+  Elf_Internal_Sym *isym, *isymend;
+  struct elf_link_hash_entry **sym_hashes;
+  struct elf_link_hash_entry **end_hashes;
+  unsigned int symcount;
+
+  sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
+
+  contents = elf_section_data (sec)->this_hdr.contents;
+
+  /* The deletion must stop at the next ALIGN reloc for an aligment
+     power larger than the number of bytes we are deleting.  */
+
+  irelalign = NULL;
+  toaddr = sec->size;
+
+  irel = elf_section_data (sec)->relocs;
+  irelend = irel + sec->reloc_count;
+
+  /* Actually delete the bytes.  */
+  memmove (contents + addr, contents + addr + count,
+	   (size_t) (toaddr - addr - count));
+  sec->size -= count;
+
+  /* Adjust all the relocs.  */
+  for (irel = elf_section_data (sec)->relocs; irel < irelend; irel++)
+    {
+      /* Get the new reloc address.  */
+      if ((irel->r_offset > addr
+	   && irel->r_offset < toaddr))
+	irel->r_offset -= count;
+    }
+
+  /* Adjust the local symbols defined in this section.  */
+  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  isym = (Elf_Internal_Sym *) symtab_hdr->contents;
+  for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
+    {
+      if (isym->st_shndx == sec_shndx
+	  && isym->st_value > addr
+	  && isym->st_value < toaddr)
+	isym->st_value -= count;
+    }
+
+  /* Now adjust the global symbols defined in this section.  */
+  symcount = (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)
+	      - symtab_hdr->sh_info);
+  sym_hashes = elf_sym_hashes (abfd);
+  end_hashes = sym_hashes + symcount;
+  for (; sym_hashes < end_hashes; sym_hashes++)
+    {
+      struct elf_link_hash_entry *sym_hash = *sym_hashes;
+      if ((sym_hash->root.type == bfd_link_hash_defined
+	   || sym_hash->root.type == bfd_link_hash_defweak)
+	  && sym_hash->root.u.def.section == sec
+	  && sym_hash->root.u.def.value > addr
+	  && sym_hash->root.u.def.value < toaddr)
+	{
+	  sym_hash->root.u.def.value -= count;
+	}
+    }
+
+  return TRUE;
+}
+
+/* Return TRUE if a symbol exists at the given address, else return
+   FALSE.  */
+static bfd_boolean
+mn10300_elf_symbol_address_p (abfd, sec, isym, addr)
+     bfd *abfd;
+     asection *sec;
+     Elf_Internal_Sym *isym;
+     bfd_vma addr;
+{
+  Elf_Internal_Shdr *symtab_hdr;
+  unsigned int sec_shndx;
+  Elf_Internal_Sym *isymend;
+  struct elf_link_hash_entry **sym_hashes;
+  struct elf_link_hash_entry **end_hashes;
+  unsigned int symcount;
+
+  sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
+
+  /* Examine all the symbols.  */
+  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
+    {
+      if (isym->st_shndx == sec_shndx
+	  && isym->st_value == addr)
+	return TRUE;
+    }
+
+  symcount = (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)
+	      - symtab_hdr->sh_info);
+  sym_hashes = elf_sym_hashes (abfd);
+  end_hashes = sym_hashes + symcount;
+  for (; sym_hashes < end_hashes; sym_hashes++)
+    {
+      struct elf_link_hash_entry *sym_hash = *sym_hashes;
+      if ((sym_hash->root.type == bfd_link_hash_defined
+	   || sym_hash->root.type == bfd_link_hash_defweak)
+	  && sym_hash->root.u.def.section == sec
+	  && sym_hash->root.u.def.value == addr)
+	return TRUE;
+    }
+
+  return FALSE;
+}
+
 /* This is a version of bfd_generic_get_relocated_section_contents
    which uses mn10300_elf_relocate_section.  */
 
 static bfd_byte *
-mn10300_elf_get_relocated_section_contents (bfd *output_bfd,
-					    struct bfd_link_info *link_info,
-					    struct bfd_link_order *link_order,
-					    bfd_byte *data,
-					    bfd_boolean relocatable,
-					    asymbol **symbols)
+mn10300_elf_get_relocated_section_contents (output_bfd, link_info, link_order,
+					    data, relocatable, symbols)
+     bfd *output_bfd;
+     struct bfd_link_info *link_info;
+     struct bfd_link_order *link_order;
+     bfd_byte *data;
+     bfd_boolean relocatable;
+     asymbol **symbols;
 {
   Elf_Internal_Shdr *symtab_hdr;
   asection *input_section = link_order->u.indirect.section;
@@ -4464,8 +3590,9 @@ mn10300_elf_get_relocated_section_contents (bfd *output_bfd,
       Elf_Internal_Sym *isym, *isymend;
       bfd_size_type amt;
 
-      internal_relocs = _bfd_elf_link_read_relocs (input_bfd, input_section,
-						   NULL, NULL, FALSE);
+      internal_relocs = (_bfd_elf_link_read_relocs
+			 (input_bfd, input_section, (PTR) NULL,
+			  (Elf_Internal_Rela *) NULL, FALSE));
       if (internal_relocs == NULL)
 	goto error_return;
 
@@ -4482,7 +3609,7 @@ mn10300_elf_get_relocated_section_contents (bfd *output_bfd,
 
       amt = symtab_hdr->sh_info;
       amt *= sizeof (asection *);
-      sections = bfd_malloc (amt);
+      sections = (asection **) bfd_malloc (amt);
       if (sections == NULL && amt != 0)
 	goto error_return;
 
@@ -4504,8 +3631,8 @@ mn10300_elf_get_relocated_section_contents (bfd *output_bfd,
 	}
 
       if (! mn10300_elf_relocate_section (output_bfd, link_info, input_bfd,
-					  input_section, data, internal_relocs,
-					  isymbuf, sections))
+				     input_section, data, internal_relocs,
+				     isymbuf, sections))
 	goto error_return;
 
       if (sections != NULL)
@@ -4536,116 +3663,84 @@ mn10300_elf_get_relocated_section_contents (bfd *output_bfd,
 /* Create an entry in an MN10300 ELF linker hash table.  */
 
 static struct bfd_hash_entry *
-elf32_mn10300_link_hash_newfunc (struct bfd_hash_entry *entry,
-				 struct bfd_hash_table *table,
-				 const char *string)
+elf32_mn10300_link_hash_newfunc (entry, table, string)
+     struct bfd_hash_entry *entry;
+     struct bfd_hash_table *table;
+     const char *string;
 {
   struct elf32_mn10300_link_hash_entry *ret =
     (struct elf32_mn10300_link_hash_entry *) entry;
 
   /* Allocate the structure if it has not already been allocated by a
      subclass.  */
-  if (ret == NULL)
-    ret = (struct elf32_mn10300_link_hash_entry *)
-	   bfd_hash_allocate (table, sizeof (* ret));
-  if (ret == NULL)
+  if (ret == (struct elf32_mn10300_link_hash_entry *) NULL)
+    ret = ((struct elf32_mn10300_link_hash_entry *)
+	   bfd_hash_allocate (table,
+			      sizeof (struct elf32_mn10300_link_hash_entry)));
+  if (ret == (struct elf32_mn10300_link_hash_entry *) NULL)
     return (struct bfd_hash_entry *) ret;
 
   /* Call the allocation method of the superclass.  */
-  ret = (struct elf32_mn10300_link_hash_entry *)
+  ret = ((struct elf32_mn10300_link_hash_entry *)
 	 _bfd_elf_link_hash_newfunc ((struct bfd_hash_entry *) ret,
-				     table, string);
-  if (ret != NULL)
+				     table, string));
+  if (ret != (struct elf32_mn10300_link_hash_entry *) NULL)
     {
       ret->direct_calls = 0;
       ret->stack_size = 0;
       ret->movm_args = 0;
       ret->movm_stack_size = 0;
       ret->flags = 0;
-      ret->value = 0;
-      ret->tls_type = GOT_UNKNOWN;
     }
 
   return (struct bfd_hash_entry *) ret;
 }
 
-static void
-_bfd_mn10300_copy_indirect_symbol (struct bfd_link_info *        info,
-				   struct elf_link_hash_entry *  dir,
-				   struct elf_link_hash_entry *  ind)
-{
-  struct elf32_mn10300_link_hash_entry * edir;
-  struct elf32_mn10300_link_hash_entry * eind;
-
-  edir = elf_mn10300_hash_entry (dir);
-  eind = elf_mn10300_hash_entry (ind);
-
-  if (ind->root.type == bfd_link_hash_indirect
-      && dir->got.refcount <= 0)
-    {
-      edir->tls_type = eind->tls_type;
-      eind->tls_type = GOT_UNKNOWN;
-    }
-  edir->direct_calls = eind->direct_calls;
-  edir->stack_size = eind->stack_size;
-  edir->movm_args = eind->movm_args;
-  edir->movm_stack_size = eind->movm_stack_size;
-  edir->flags = eind->flags;
-
-  _bfd_elf_link_hash_copy_indirect (info, dir, ind);
-}
-
 /* Create an mn10300 ELF linker hash table.  */
 
 static struct bfd_link_hash_table *
-elf32_mn10300_link_hash_table_create (bfd *abfd)
+elf32_mn10300_link_hash_table_create (abfd)
+     bfd *abfd;
 {
   struct elf32_mn10300_link_hash_table *ret;
-  bfd_size_type amt = sizeof (* ret);
+  bfd_size_type amt = sizeof (struct elf32_mn10300_link_hash_table);
 
-  ret = bfd_malloc (amt);
-  if (ret == NULL)
+  ret = (struct elf32_mn10300_link_hash_table *) bfd_malloc (amt);
+  if (ret == (struct elf32_mn10300_link_hash_table *) NULL)
     return NULL;
 
-  if (!_bfd_elf_link_hash_table_init (&ret->root, abfd,
-				      elf32_mn10300_link_hash_newfunc,
-				      sizeof (struct elf32_mn10300_link_hash_entry),
-				      MN10300_ELF_DATA))
+  if (! _bfd_elf_link_hash_table_init (&ret->root, abfd,
+				       elf32_mn10300_link_hash_newfunc))
     {
       free (ret);
       return NULL;
     }
 
   ret->flags = 0;
-  ret->tls_ldm_got.refcount = 0;
-  ret->tls_ldm_got.offset = -1;
-  ret->tls_ldm_got.got_allocated = 0;
-  ret->tls_ldm_got.rel_emitted = 0;
-
   amt = sizeof (struct elf_link_hash_table);
-  ret->static_hash_table = bfd_malloc (amt);
+  ret->static_hash_table
+    = (struct elf32_mn10300_link_hash_table *) bfd_malloc (amt);
   if (ret->static_hash_table == NULL)
     {
       free (ret);
       return NULL;
     }
 
-  if (!_bfd_elf_link_hash_table_init (&ret->static_hash_table->root, abfd,
-				      elf32_mn10300_link_hash_newfunc,
-				      sizeof (struct elf32_mn10300_link_hash_entry),
-				      MN10300_ELF_DATA))
+  if (! _bfd_elf_link_hash_table_init (&ret->static_hash_table->root, abfd,
+				       elf32_mn10300_link_hash_newfunc))
     {
       free (ret->static_hash_table);
       free (ret);
       return NULL;
     }
-  return & ret->root.root;
+  return &ret->root.root;
 }
 
 /* Free an mn10300 ELF linker hash table.  */
 
 static void
-elf32_mn10300_link_hash_table_free (struct bfd_link_hash_table *hash)
+elf32_mn10300_link_hash_table_free (hash)
+     struct bfd_link_hash_table *hash;
 {
   struct elf32_mn10300_link_hash_table *ret
     = (struct elf32_mn10300_link_hash_table *) hash;
@@ -4657,7 +3752,8 @@ elf32_mn10300_link_hash_table_free (struct bfd_link_hash_table *hash)
 }
 
 static unsigned long
-elf_mn10300_mach (flagword flags)
+elf_mn10300_mach (flags)
+     flagword flags;
 {
   switch (flags & EF_MN10300_MACH)
     {
@@ -4677,9 +3773,10 @@ elf_mn10300_mach (flagword flags)
    file.  This gets the MN10300 architecture right based on the machine
    number.  */
 
-static void
-_bfd_mn10300_elf_final_write_processing (bfd *abfd,
-					 bfd_boolean linker ATTRIBUTE_UNUSED)
+void
+_bfd_mn10300_elf_final_write_processing (abfd, linker)
+     bfd *abfd;
+     bfd_boolean linker ATTRIBUTE_UNUSED;
 {
   unsigned long val;
 
@@ -4703,8 +3800,9 @@ _bfd_mn10300_elf_final_write_processing (bfd *abfd,
   elf_elfheader (abfd)->e_flags |= val;
 }
 
-static bfd_boolean
-_bfd_mn10300_elf_object_p (bfd *abfd)
+bfd_boolean
+_bfd_mn10300_elf_object_p (abfd)
+     bfd *abfd;
 {
   bfd_default_set_arch_mach (abfd, bfd_arch_mn10300,
 			     elf_mn10300_mach (elf_elfheader (abfd)->e_flags));
@@ -4714,8 +3812,10 @@ _bfd_mn10300_elf_object_p (bfd *abfd)
 /* Merge backend specific data from an object file to the output
    object file when linking.  */
 
-static bfd_boolean
-_bfd_mn10300_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
+bfd_boolean
+_bfd_mn10300_elf_merge_private_bfd_data (ibfd, obfd)
+     bfd *ibfd;
+     bfd *obfd;
 {
   if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
       || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
@@ -4725,16 +3825,16 @@ _bfd_mn10300_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
       && bfd_get_mach (obfd) < bfd_get_mach (ibfd))
     {
       if (! bfd_set_arch_mach (obfd, bfd_get_arch (ibfd),
-			       bfd_get_mach (ibfd)))
-	return FALSE;
+                               bfd_get_mach (ibfd)))
+        return FALSE;
     }
 
   return TRUE;
 }
 
-#define PLT0_ENTRY_SIZE     15
-#define PLT_ENTRY_SIZE      20
-#define PIC_PLT_ENTRY_SIZE  24
+#define PLT0_ENTRY_SIZE 15
+#define PLT_ENTRY_SIZE 20
+#define PIC_PLT_ENTRY_SIZE 24
 
 static const bfd_byte elf_mn10300_plt0_entry[PLT0_ENTRY_SIZE] =
 {
@@ -4778,7 +3878,7 @@ static const bfd_byte elf_mn10300_pic_plt_entry[PIC_PLT_ENTRY_SIZE] =
 /* Return offset of the GOT id in PLT0 entry.  */
 #define elf_mn10300_plt0_gotid_offset(info) 9
 
-/* Return offset of the temporary in PLT entry.  */
+/* Return offset of the temporary in PLT entry */
 #define elf_mn10300_plt_temp_offset(info) 8
 
 /* Return offset of the symbol in PLT entry.  */
@@ -4795,12 +3895,13 @@ static const bfd_byte elf_mn10300_pic_plt_entry[PIC_PLT_ENTRY_SIZE] =
 /* Create dynamic sections when linking against a dynamic object.  */
 
 static bfd_boolean
-_bfd_mn10300_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
+_bfd_mn10300_elf_create_dynamic_sections (abfd, info)
+     bfd *abfd;
+     struct bfd_link_info *info;
 {
   flagword   flags;
   asection * s;
   const struct elf_backend_data * bed = get_elf_backend_data (abfd);
-  struct elf32_mn10300_link_hash_table *htab = elf32_mn10300_hash_table (info);
   int ptralign = 0;
 
   switch (bed->s->arch_size)
@@ -4820,20 +3921,45 @@ _bfd_mn10300_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 
   /* We need to create .plt, .rel[a].plt, .got, .got.plt, .dynbss, and
      .rel[a].bss sections.  */
+
   flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS | SEC_IN_MEMORY
 	   | SEC_LINKER_CREATED);
 
-  s = bfd_make_section_anyway_with_flags (abfd,
-					  (bed->default_use_rela_p
-					   ? ".rela.plt" : ".rel.plt"),
-					  flags | SEC_READONLY);
-  htab->root.srelplt = s;
+  s = bfd_make_section (abfd,
+			bed->default_use_rela_p ? ".rela.plt" : ".rel.plt");
   if (s == NULL
+      || ! bfd_set_section_flags (abfd, s, flags | SEC_READONLY)
       || ! bfd_set_section_alignment (abfd, s, ptralign))
     return FALSE;
 
   if (! _bfd_mn10300_elf_create_got_section (abfd, info))
     return FALSE;
+
+  {
+    const char * secname;
+    char *       relname;
+    flagword     secflags;
+    asection *   sec;
+
+    for (sec = abfd->sections; sec; sec = sec->next)
+      {
+	secflags = bfd_get_section_flags (abfd, sec);
+	if ((secflags & (SEC_DATA | SEC_LINKER_CREATED))
+	    || ((secflags & SEC_HAS_CONTENTS) != SEC_HAS_CONTENTS))
+	  continue;
+
+	secname = bfd_get_section_name (abfd, sec);
+	relname = (char *) bfd_malloc (strlen (secname) + 6);
+	strcpy (relname, ".rela");
+	strcat (relname, secname);
+
+	s = bfd_make_section (abfd, relname);
+	if (s == NULL
+	    || ! bfd_set_section_flags (abfd, s, flags | SEC_READONLY)
+	    || ! bfd_set_section_alignment (abfd, s, ptralign))
+	  return FALSE;
+      }
+  }
 
   if (bed->want_dynbss)
     {
@@ -4843,9 +3969,9 @@ _bfd_mn10300_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 	 image and use a R_*_COPY reloc to tell the dynamic linker to
 	 initialize them at run time.  The linker script puts the .dynbss
 	 section into the .bss section of the final image.  */
-      s = bfd_make_section_anyway_with_flags (abfd, ".dynbss",
-					      SEC_ALLOC | SEC_LINKER_CREATED);
-      if (s == NULL)
+      s = bfd_make_section (abfd, ".dynbss");
+      if (s == NULL
+	  || ! bfd_set_section_flags (abfd, s, SEC_ALLOC))
 	return FALSE;
 
       /* The .rel[a].bss section holds copy relocs.  This section is not
@@ -4861,11 +3987,11 @@ _bfd_mn10300_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 	 copy relocs.  */
       if (! info->shared)
 	{
-	  s = bfd_make_section_anyway_with_flags (abfd,
-						  (bed->default_use_rela_p
-						   ? ".rela.bss" : ".rel.bss"),
-						  flags | SEC_READONLY);
+	  s = bfd_make_section (abfd,
+				(bed->default_use_rela_p
+				 ? ".rela.bss" : ".rel.bss"));
 	  if (s == NULL
+	      || ! bfd_set_section_flags (abfd, s, flags | SEC_READONLY)
 	      || ! bfd_set_section_alignment (abfd, s, ptralign))
 	    return FALSE;
 	}
@@ -4881,14 +4007,15 @@ _bfd_mn10300_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
    understand.  */
 
 static bfd_boolean
-_bfd_mn10300_elf_adjust_dynamic_symbol (struct bfd_link_info * info,
-					struct elf_link_hash_entry * h)
+_bfd_mn10300_elf_adjust_dynamic_symbol (info, h)
+     struct bfd_link_info * info;
+     struct elf_link_hash_entry * h;
 {
-  struct elf32_mn10300_link_hash_table *htab = elf32_mn10300_hash_table (info);
   bfd * dynobj;
   asection * s;
+  unsigned int power_of_two;
 
-  dynobj = htab->root.dynobj;
+  dynobj = elf_hash_table (info)->dynobj;
 
   /* Make sure we know what is going on here.  */
   BFD_ASSERT (dynobj != NULL
@@ -4924,7 +4051,7 @@ _bfd_mn10300_elf_adjust_dynamic_symbol (struct bfd_link_info * info,
 	    return FALSE;
 	}
 
-      s = htab->root.splt;
+      s = bfd_get_section_by_name (dynobj, ".plt");
       BFD_ASSERT (s != NULL);
 
       /* If this is the first .plt entry, make room for the special
@@ -4951,12 +4078,14 @@ _bfd_mn10300_elf_adjust_dynamic_symbol (struct bfd_link_info * info,
 
       /* We also need to make an entry in the .got.plt section, which
 	 will be placed in the .got section by the linker script.  */
-      s = htab->root.sgotplt;
+
+      s = bfd_get_section_by_name (dynobj, ".got.plt");
       BFD_ASSERT (s != NULL);
       s->size += 4;
 
       /* We also need to make an entry in the .rela.plt section.  */
-      s = bfd_get_linker_section (dynobj, ".rela.plt");
+
+      s = bfd_get_section_by_name (dynobj, ".rela.plt");
       BFD_ASSERT (s != NULL);
       s->size += sizeof (Elf32_External_Rela);
 
@@ -5000,40 +4129,61 @@ _bfd_mn10300_elf_adjust_dynamic_symbol (struct bfd_link_info * info,
      both the dynamic object and the regular object will refer to the
      same memory location for the variable.  */
 
-  s = bfd_get_linker_section (dynobj, ".dynbss");
+  s = bfd_get_section_by_name (dynobj, ".dynbss");
   BFD_ASSERT (s != NULL);
 
   /* We must generate a R_MN10300_COPY reloc to tell the dynamic linker to
      copy the initial value out of the dynamic object and into the
      runtime process image.  We need to remember the offset into the
      .rela.bss section we are going to use.  */
-  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0 && h->size != 0)
+  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0)
     {
       asection * srel;
 
-      srel = bfd_get_linker_section (dynobj, ".rela.bss");
+      srel = bfd_get_section_by_name (dynobj, ".rela.bss");
       BFD_ASSERT (srel != NULL);
       srel->size += sizeof (Elf32_External_Rela);
       h->needs_copy = 1;
     }
 
-  return _bfd_elf_adjust_dynamic_copy (h, s);
+  /* We need to figure out the alignment required for this symbol.  I
+     have no idea how ELF linkers handle this.  */
+  power_of_two = bfd_log2 (h->size);
+  if (power_of_two > 3)
+    power_of_two = 3;
+
+  /* Apply the required alignment.  */
+  s->size = BFD_ALIGN (s->size, (bfd_size_type) (1 << power_of_two));
+  if (power_of_two > bfd_get_section_alignment (dynobj, s))
+    {
+      if (! bfd_set_section_alignment (dynobj, s, power_of_two))
+	return FALSE;
+    }
+
+  /* Define the symbol as being at this point in the section.  */
+  h->root.u.def.section = s;
+  h->root.u.def.value = s->size;
+
+  /* Increment the section size to make room for the symbol.  */
+  s->size += h->size;
+
+  return TRUE;
 }
 
 /* Set the sizes of the dynamic sections.  */
 
 static bfd_boolean
-_bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
-					struct bfd_link_info * info)
+_bfd_mn10300_elf_size_dynamic_sections (output_bfd, info)
+     bfd * output_bfd;
+     struct bfd_link_info * info;
 {
-  struct elf32_mn10300_link_hash_table *htab = elf32_mn10300_hash_table (info);
   bfd * dynobj;
   asection * s;
   bfd_boolean plt;
   bfd_boolean relocs;
   bfd_boolean reltext;
 
-  dynobj = htab->root.dynobj;
+  dynobj = elf_hash_table (info)->dynobj;
   BFD_ASSERT (dynobj != NULL);
 
   if (elf_hash_table (info)->dynamic_sections_created)
@@ -5041,7 +4191,7 @@ _bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
       /* Set the contents of the .interp section to the interpreter.  */
       if (info->executable)
 	{
-	  s = bfd_get_linker_section (dynobj, ".interp");
+	  s = bfd_get_section_by_name (dynobj, ".interp");
 	  BFD_ASSERT (s != NULL);
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
@@ -5054,16 +4204,9 @@ _bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
 	 not actually use these entries.  Reset the size of .rela.got,
 	 which will cause it to get stripped from the output file
 	 below.  */
-      s = htab->root.sgot;
+      s = bfd_get_section_by_name (dynobj, ".rela.got");
       if (s != NULL)
 	s->size = 0;
-    }
-
-  if (htab->tls_ldm_got.refcount > 0)
-    {
-      s = bfd_get_linker_section (dynobj, ".rela.got");
-      BFD_ASSERT (s != NULL);
-      s->size += sizeof (Elf32_External_Rela);
     }
 
   /* The check_relocs and adjust_dynamic_symbol entry points have
@@ -5075,6 +4218,7 @@ _bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
   for (s = dynobj->sections; s != NULL; s = s->next)
     {
       const char * name;
+      bfd_boolean strip;
 
       if ((s->flags & SEC_LINKER_CREATED) == 0)
 	continue;
@@ -5083,20 +4227,40 @@ _bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
 	 of the dynobj section names depend upon the input files.  */
       name = bfd_get_section_name (dynobj, s);
 
-      if (streq (name, ".plt"))
+      strip = FALSE;
+
+      if (strcmp (name, ".plt") == 0)
 	{
-	  /* Remember whether there is a PLT.  */
-	  plt = s->size != 0;
+	  if (s->size == 0)
+	    /* Strip this section if we don't need it; see the
+	       comment below.  */
+	    strip = TRUE;
+	  else
+	    /* Remember whether there is a PLT.  */
+	    plt = TRUE;
 	}
-      else if (CONST_STRNEQ (name, ".rela"))
+      else if (strncmp (name, ".rela", 5) == 0)
 	{
-	  if (s->size != 0)
+	  if (s->size == 0)
+	    {
+	      /* If we don't need this section, strip it from the
+		 output file.  This is mostly to handle .rela.bss and
+		 .rela.plt.  We must create both sections in
+		 create_dynamic_sections, because they must be created
+		 before the linker maps input sections to output
+		 sections.  The linker does that before
+		 adjust_dynamic_symbol is called, and it is that
+		 function which decides whether anything needs to go
+		 into these sections.  */
+	      strip = TRUE;
+	    }
+	  else
 	    {
 	      asection * target;
 
 	      /* Remember whether there are any reloc sections other
 		 than .rela.plt.  */
-	      if (! streq (name, ".rela.plt"))
+	      if (strcmp (name, ".rela.plt") != 0)
 		{
 		  const char * outname;
 
@@ -5121,36 +4285,23 @@ _bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
 	      s->reloc_count = 0;
 	    }
 	}
-      else if (! CONST_STRNEQ (name, ".got")
-	       && ! streq (name, ".dynbss"))
+      else if (strncmp (name, ".got", 4) != 0)
 	/* It's not one of our sections, so don't allocate space.  */
 	continue;
 
-      if (s->size == 0)
+      if (strip)
 	{
-	  /* If we don't need this section, strip it from the
-	     output file.  This is mostly to handle .rela.bss and
-	     .rela.plt.  We must create both sections in
-	     create_dynamic_sections, because they must be created
-	     before the linker maps input sections to output
-	     sections.  The linker does that before
-	     adjust_dynamic_symbol is called, and it is that
-	     function which decides whether anything needs to go
-	     into these sections.  */
-	  s->flags |= SEC_EXCLUDE;
+	  _bfd_strip_section_from_output (info, s);
 	  continue;
 	}
-
-	if ((s->flags & SEC_HAS_CONTENTS) == 0)
-	  continue;
 
       /* Allocate memory for the section contents.  We use bfd_zalloc
 	 here in case unused entries are not reclaimed before the
 	 section's contents are written out.  This should not happen,
 	 but this way if it does, we get a R_MN10300_NONE reloc
 	 instead of garbage.  */
-      s->contents = bfd_zalloc (dynobj, s->size);
-      if (s->contents == NULL)
+      s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
+      if (s->contents == NULL && s->size != 0)
 	return FALSE;
     }
 
@@ -5199,15 +4350,15 @@ _bfd_mn10300_elf_size_dynamic_sections (bfd * output_bfd,
    dynamic sections here.  */
 
 static bfd_boolean
-_bfd_mn10300_elf_finish_dynamic_symbol (bfd * output_bfd,
-					struct bfd_link_info * info,
-					struct elf_link_hash_entry * h,
-					Elf_Internal_Sym * sym)
+_bfd_mn10300_elf_finish_dynamic_symbol (output_bfd, info, h, sym)
+     bfd * output_bfd;
+     struct bfd_link_info * info;
+     struct elf_link_hash_entry * h;
+     Elf_Internal_Sym * sym;
 {
-  struct elf32_mn10300_link_hash_table *htab = elf32_mn10300_hash_table (info);
   bfd * dynobj;
 
-  dynobj = htab->root.dynobj;
+  dynobj = elf_hash_table (info)->dynobj;
 
   if (h->plt.offset != (bfd_vma) -1)
     {
@@ -5223,9 +4374,9 @@ _bfd_mn10300_elf_finish_dynamic_symbol (bfd * output_bfd,
 
       BFD_ASSERT (h->dynindx != -1);
 
-      splt = htab->root.splt;
-      sgot = htab->root.sgotplt;
-      srel = bfd_get_linker_section (dynobj, ".rela.plt");
+      splt = bfd_get_section_by_name (dynobj, ".plt");
+      sgot = bfd_get_section_by_name (dynobj, ".got.plt");
+      srel = bfd_get_section_by_name (dynobj, ".rela.plt");
       BFD_ASSERT (splt != NULL && sgot != NULL && srel != NULL);
 
       /* Get the index in the procedure linkage table which
@@ -5302,72 +4453,40 @@ _bfd_mn10300_elf_finish_dynamic_symbol (bfd * output_bfd,
       Elf_Internal_Rela rel;
 
       /* This symbol has an entry in the global offset table.  Set it up.  */
-      sgot = htab->root.sgot;
-      srel = bfd_get_linker_section (dynobj, ".rela.got");
+
+      sgot = bfd_get_section_by_name (dynobj, ".got");
+      srel = bfd_get_section_by_name (dynobj, ".rela.got");
       BFD_ASSERT (sgot != NULL && srel != NULL);
 
       rel.r_offset = (sgot->output_section->vma
 		      + sgot->output_offset
-		      + (h->got.offset & ~1));
+		      + (h->got.offset &~ 1));
 
-      switch (elf_mn10300_hash_entry (h)->tls_type)
+      /* If this is a -Bsymbolic link, and the symbol is defined
+	 locally, we just want to emit a RELATIVE reloc.  Likewise if
+	 the symbol was forced to be local because of a version file.
+	 The entry in the global offset table will already have been
+	 initialized in the relocate_section function.  */
+      if (info->shared
+	  && (info->symbolic || h->dynindx == -1)
+	  && h->def_regular)
 	{
-	case GOT_TLS_GD:
+	  rel.r_info = ELF32_R_INFO (0, R_MN10300_RELATIVE);
+	  rel.r_addend = (h->root.u.def.value
+			  + h->root.u.def.section->output_section->vma
+			  + h->root.u.def.section->output_offset);
+	}
+      else
+	{
 	  bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + h->got.offset);
-	  bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + h->got.offset + 4);
-	  rel.r_info = ELF32_R_INFO (h->dynindx, R_MN10300_TLS_DTPMOD);
+	  rel.r_info = ELF32_R_INFO (h->dynindx, R_MN10300_GLOB_DAT);
 	  rel.r_addend = 0;
-	  bfd_elf32_swap_reloca_out (output_bfd, & rel,
-				     (bfd_byte *) ((Elf32_External_Rela *) srel->contents
-						   + srel->reloc_count));
-	  ++ srel->reloc_count;
-	  rel.r_info = ELF32_R_INFO (h->dynindx, R_MN10300_TLS_DTPOFF);
-	  rel.r_offset += 4;
-	  rel.r_addend = 0;
-	  break;
-
-	case GOT_TLS_IE:
-	  /* We originally stored the addend in the GOT, but at this
-	     point, we want to move it to the reloc instead as that's
-	     where the dynamic linker wants it.  */
-	  rel.r_addend = bfd_get_32 (output_bfd, sgot->contents + h->got.offset);
-	  bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + h->got.offset);
-	  if (h->dynindx == -1)
-	    rel.r_info = ELF32_R_INFO (0, R_MN10300_TLS_TPOFF);
-	  else
-	    rel.r_info = ELF32_R_INFO (h->dynindx, R_MN10300_TLS_TPOFF);
-	  break;
-
-	default:
-	  /* If this is a -Bsymbolic link, and the symbol is defined
-	     locally, we just want to emit a RELATIVE reloc.  Likewise if
-	     the symbol was forced to be local because of a version file.
-	     The entry in the global offset table will already have been
-	     initialized in the relocate_section function.  */
-	  if (info->shared
-	      && (info->symbolic || h->dynindx == -1)
-	      && h->def_regular)
-	    {
-	      rel.r_info = ELF32_R_INFO (0, R_MN10300_RELATIVE);
-	      rel.r_addend = (h->root.u.def.value
-			      + h->root.u.def.section->output_section->vma
-			      + h->root.u.def.section->output_offset);
-	    }
-	  else
-	    {
-	      bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + h->got.offset);
-	      rel.r_info = ELF32_R_INFO (h->dynindx, R_MN10300_GLOB_DAT);
-	      rel.r_addend = 0;
-	    }
 	}
 
-      if (ELF32_R_TYPE (rel.r_info) != R_MN10300_NONE)
-	{
-	  bfd_elf32_swap_reloca_out (output_bfd, &rel,
-				     (bfd_byte *) ((Elf32_External_Rela *) srel->contents
-						   + srel->reloc_count));
-	  ++ srel->reloc_count;
-	}
+      bfd_elf32_swap_reloca_out (output_bfd, &rel,
+				 (bfd_byte *) ((Elf32_External_Rela *) srel->contents
+					       + srel->reloc_count));
+      ++ srel->reloc_count;
     }
 
   if (h->needs_copy)
@@ -5380,7 +4499,8 @@ _bfd_mn10300_elf_finish_dynamic_symbol (bfd * output_bfd,
 		  && (h->root.type == bfd_link_hash_defined
 		      || h->root.type == bfd_link_hash_defweak));
 
-      s = bfd_get_linker_section (dynobj, ".rela.bss");
+      s = bfd_get_section_by_name (h->root.u.def.section->owner,
+				   ".rela.bss");
       BFD_ASSERT (s != NULL);
 
       rel.r_offset = (h->root.u.def.value
@@ -5388,15 +4508,15 @@ _bfd_mn10300_elf_finish_dynamic_symbol (bfd * output_bfd,
 		      + h->root.u.def.section->output_offset);
       rel.r_info = ELF32_R_INFO (h->dynindx, R_MN10300_COPY);
       rel.r_addend = 0;
-      bfd_elf32_swap_reloca_out (output_bfd, & rel,
+      bfd_elf32_swap_reloca_out (output_bfd, &rel,
 				 (bfd_byte *) ((Elf32_External_Rela *) s->contents
 					       + s->reloc_count));
       ++ s->reloc_count;
     }
 
   /* Mark _DYNAMIC and _GLOBAL_OFFSET_TABLE_ as absolute.  */
-  if (streq (h->root.root.string, "_DYNAMIC")
-      || h == elf_hash_table (info)->hgot)
+  if (strcmp (h->root.root.string, "_DYNAMIC") == 0
+      || strcmp (h->root.root.string, "_GLOBAL_OFFSET_TABLE_") == 0)
     sym->st_shndx = SHN_ABS;
 
   return TRUE;
@@ -5405,18 +4525,19 @@ _bfd_mn10300_elf_finish_dynamic_symbol (bfd * output_bfd,
 /* Finish up the dynamic sections.  */
 
 static bfd_boolean
-_bfd_mn10300_elf_finish_dynamic_sections (bfd * output_bfd,
-					  struct bfd_link_info * info)
+_bfd_mn10300_elf_finish_dynamic_sections (output_bfd, info)
+     bfd * output_bfd;
+     struct bfd_link_info * info;
 {
   bfd *      dynobj;
   asection * sgot;
   asection * sdyn;
-  struct elf32_mn10300_link_hash_table *htab = elf32_mn10300_hash_table (info);
 
-  dynobj = htab->root.dynobj;
-  sgot = htab->root.sgotplt;
+  dynobj = elf_hash_table (info)->dynobj;
+
+  sgot = bfd_get_section_by_name (dynobj, ".got.plt");
   BFD_ASSERT (sgot != NULL);
-  sdyn = bfd_get_linker_section (dynobj, ".dynamic");
+  sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
 
   if (elf_hash_table (info)->dynamic_sections_created)
     {
@@ -5481,7 +4602,7 @@ _bfd_mn10300_elf_finish_dynamic_sections (bfd * output_bfd,
 	}
 
       /* Fill in the first entry in the procedure linkage table.  */
-      splt = htab->root.splt;
+      splt = bfd_get_section_by_name (dynobj, ".plt");
       if (splt && splt->size > 0)
 	{
 	  if (info->shared)
@@ -5503,14 +4624,6 @@ _bfd_mn10300_elf_finish_dynamic_sections (bfd * output_bfd,
 	  /* UnixWare sets the entsize of .plt to 4, although that doesn't
 	     really seem like the right value.  */
 	  elf_section_data (splt->output_section)->this_hdr.sh_entsize = 4;
-
-	  /* UnixWare sets the entsize of .plt to 4, but this is incorrect
-	     as it means that the size of the PLT0 section (15 bytes) is not
-	     a multiple of the sh_entsize.  Some ELF tools flag this as an
-	     error.  We could pad PLT0 to 16 bytes, but that would introduce
-	     compatibilty issues with previous toolchains, so instead we
-	     just set the entry size to 1.  */
-	  elf_section_data (splt->output_section)->this_hdr.sh_entsize = 1;
 	}
     }
 
@@ -5540,29 +4653,21 @@ _bfd_mn10300_elf_reloc_type_class (const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
-    case R_MN10300_RELATIVE:	return reloc_class_relative;
-    case R_MN10300_JMP_SLOT:	return reloc_class_plt;
-    case R_MN10300_COPY:	return reloc_class_copy;
-    default:			return reloc_class_normal;
+    case R_MN10300_RELATIVE:
+      return reloc_class_relative;
+    case R_MN10300_JMP_SLOT:
+      return reloc_class_plt;
+    case R_MN10300_COPY:
+      return reloc_class_copy;
+    default:
+      return reloc_class_normal;
     }
 }
-
-/* Allocate space for an MN10300 extension to the bfd elf data structure.  */
-
-static bfd_boolean
-mn10300_elf_mkobject (bfd *abfd)
-{
-  return bfd_elf_allocate_object (abfd, sizeof (struct elf_mn10300_obj_tdata),
-				  MN10300_ELF_DATA);
-}
-
-#define bfd_elf32_mkobject	mn10300_elf_mkobject
 
 #ifndef ELF_ARCH
 #define TARGET_LITTLE_SYM	bfd_elf32_mn10300_vec
 #define TARGET_LITTLE_NAME	"elf32-mn10300"
 #define ELF_ARCH		bfd_arch_mn10300
-#define ELF_TARGET_ID		MN10300_ELF_DATA
 #define ELF_MACHINE_CODE	EM_MN10300
 #define ELF_MACHINE_ALT1	EM_CYGNUS_MN10300
 #define ELF_MAXPAGESIZE		0x1000
@@ -5589,11 +4694,11 @@ mn10300_elf_mkobject (bfd *abfd)
 
 /* So we can set bits in e_flags.  */
 #define elf_backend_final_write_processing \
-					_bfd_mn10300_elf_final_write_processing
-#define elf_backend_object_p		_bfd_mn10300_elf_object_p
+                                        _bfd_mn10300_elf_final_write_processing
+#define elf_backend_object_p            _bfd_mn10300_elf_object_p
 
 #define bfd_elf32_bfd_merge_private_bfd_data \
-					_bfd_mn10300_elf_merge_private_bfd_data
+                                        _bfd_mn10300_elf_merge_private_bfd_data
 
 #define elf_backend_can_gc_sections	1
 #define elf_backend_create_dynamic_sections \
@@ -5602,14 +4707,11 @@ mn10300_elf_mkobject (bfd *abfd)
   _bfd_mn10300_elf_adjust_dynamic_symbol
 #define elf_backend_size_dynamic_sections \
   _bfd_mn10300_elf_size_dynamic_sections
-#define elf_backend_omit_section_dynsym \
-  ((bfd_boolean (*) (bfd *, struct bfd_link_info *, asection *)) bfd_true)
 #define elf_backend_finish_dynamic_symbol \
   _bfd_mn10300_elf_finish_dynamic_symbol
 #define elf_backend_finish_dynamic_sections \
   _bfd_mn10300_elf_finish_dynamic_sections
-#define elf_backend_copy_indirect_symbol \
-  _bfd_mn10300_copy_indirect_symbol
+
 #define elf_backend_reloc_type_class \
   _bfd_mn10300_elf_reloc_type_class
 

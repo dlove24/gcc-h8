@@ -1,101 +1,78 @@
-2012-08-16  Ian Bolton  <ian.bolton@arm.com>
-            Laurent Desnogues  <laurent.desnogues@arm.com>
-            Jim MacArthur  <jim.macarthur@arm.com>
-            Marcus Shawcroft  <marcus.shawcroft@arm.com>
-            Nigel Stephens  <nigel.stephens@arm.com>
-            Ramana Radhakrishnan  <ramana.radhakrishnan@arm.com>
-            Richard Earnshaw  <rearnsha@arm.com>
-            Sofiane Naci  <sofiane.naci@arm.com>
-            Tejas Belagod  <tejas.belagod@arm.com>
-            Yufeng Zhang  <yufeng.zhang@arm.com>
+2005-03-08  Ben Elliston  <bje@au.ibm.com>
 
-	* objdump.exp: Add AArch64.
+       * config/default.exp: Remove send_user call for stray output.
 
-2012-07-03  H.J. Lu  <hongjiu.lu@intel.com>
+2005-01-04  Martin Koegler  <mkoegler@auto.tuwien.ac.at>
 
-	PR binutils/14319
-	* binutils-all/compress.exp: Test compress empty debug sections.
+	* binutils-all/testprog.c: Add prototype for printf() and make
+	type of "string" array be "char" in order to avoid compile time
+	warnings.
 
-	* binutils-all/dw2-empty.S: New file.
+2004-12-31  Alan Modra  <amodra@bigpond.net.au>
 
-2012-06-07  Thomas Schwinge  <thomas@codesourcery.com>
+	* binutils-all/readelf.ss: Allow for both .rel and .rela sections.
 
-	* binutils-all/i386/i386.exp: Don't skip for x86_64-*-linux*.
+2004-11-04  Hans-Peter Nilsson  <hp@axis.com>
 
-2012-05-17  H.J. Lu  <hongjiu.lu@intel.com>
+	* binutils-all/objdump.exp (cpus_expected): Append cris.
 
-	* binutils-all/hppa/objdump.exp: Expect addend as signed.
+2004-10-28  H.J. Lu  <hongjiu.lu@intel.com>
 
-2012-05-17  Alan Modra  <amodra@gmail.com>
+	* binutils-all/dlltool.exp: Set XFAIL if $target_xfail is yes.
 
-	* binutils-all/objdump.W: Update.
-	* binutils-all/readelf.wa: Update.
-	* binutils-all/i386/compressed-1a.d: Update.
-	* binutils-all/x86-64/compressed-1a.d: Update.
+2004-10-23  Aaron W. LaFramboise  <aaron98wiridge9@aaronwl.com>
 
-2012-05-16  Meador Inge  <meadori@codesourcery.com>
+	* binutils-all/alias.def: New file.
+	* binutils-all/dlltool.exp: Two new -p tests.
+	* config/default.exp (dlltool_gas_flag): New variable.
+	Copy gas and lds executables into tmpdir/gas directory rather than
+	making symlinks which might not be supported by the host OS.
+	Attempt to handle the case where the host OS does not use the .exe
+	extension but the target OS does.
+	* lib/utils-lib.exp (exe_ext): New procedure.
 
-	* binutils-all/arm/objdump.exp:
-	STMFD/LDMIA sp!, {reg} don't disassemble to PUSH/POP {reg} any longer.
+2004-07-12  Nick Clifton  <nickc@redhat.com>
 
-2012-04-12  H.J. Lu  <hongjiu.lu@intel.com>
+	* binutils-all/dlltool.exp: Check that the -p switch is not
+	rejected.
 
-	PR binutils/13947
-	* binutils-all/i386/compressed-1b.d: Remove empty REL section.
-	* binutils-all/i386/compressed-1c.d: Likewise.
+2004-07-09  Andreas Schwab  <schwab@suse.de>
 
-	* binutils-all/x86-64/compressed-1b.d: Remove empty RELA
-	section.
-	* binutils-all/x86-64/compressed-1c.d: Likewise.
+	* binutils-all/m68k/movem.s: New file.
 
-2012-04-03  Roland McGrath  <mcgrathr@google.com>
+	* binutils-all/m68k/objdump.exp: New file.
 
-	* lib/binutils-common.exp (is_elf_format): Consider *-*-nacl* to
-	be ELF too.
+2004-05-15  Nick Clifton  <nickc@redhat.com>
 
-	* binutils-all/elfedit-4.d: Add "#as: --64" option.
+	* binutils-all/readelf.ss: Allow for ARM mapping symbols.
 
-	* binutils-all/i386/i386.exp: Accept nacl targets too.
-	* binutils-all/x86-64/x86-64.exp: Likewise.
+2004-05-12  Ben Elliston  <bje@au.ibm.com>
 
-2012-03-13  Hans-Peter Nilsson  <hp@axis.com>
+	* binutils-all/ar.exp: Remove stray semicolons.
+	* binutils-all/dlltool.exp: Likewise.
+	* binutils-all/objcopy.exp: Likewise.
+	* binutils-all/readelf.exp: Likewise.
+	* binutils-all/windres/windres.exp: Likewise.
+	* lib/utils-lib.exp: Likewise.
 
-	PR binutils/3807
-	* binutils-all/objcopy.exp (localize-hidden-1): Correct xfailed
-	mips-targets.
+2004-04-14  Richard Sandiford  <rsandifo@redhat.com>
 
-2012-02-25  Walter Lee  <walt@tilera.com>
+	* binutils-all/readelf.ss-mips: Allow named section symbols.
 
-	* binutils-all/objdump.exp (cpus_expected): Add tilegx.
+2004-03-30  Jakub Jelinek  <jakub@redhat.com>
 
-2012-02-14  Alan Modra  <amodra@gmail.com>
+	* binutils-all/objcopy.exp: Accept main as a data symbol as well.
 
-	* binutils-all/dlltool.exp: Add setup_xfail.
+2004-02-27  Andreas Schwab  <schwab@suse.de>
 
-	* binutils-all/dw2-decodedline.S: Always have whitespace before
-	directives.
-	* binutils-all/version.s: Likewise.
-	* binutils-all/objdump.exp (dw2-decodedline): Don't run for
-	hppa64*-*-hpux*, i370-*-*, i960-*-*.
+	* binutils-all/ar.exp (argument_parsing): New test.
 
-2012-02-11  Kai Tietz  <ktietz@redhat.com>
+2004-02-20  Nathan Sidwell  <nathan@codesourcery.com>
 
-	* binutils-all/version.def: New file.
-	* binutils-all/dlltool.exp: Add version-dll test.
+	* binutils-all/objcopy.exp: Reorder arguments for POSIXLY_CORRECT
+	systems.
 
-2012-02-02  Nick Clifton  <nickc@redhat.com>
-
-	* binutils-all/readelf.n: Add #pass to cope with targets that add
-	their own notes.
-
-2012-02-01  Nick Clifton  <nickc@redhat.com>
-
-	PR binutils/13482
-	* binutils-all/version.s: New test source file.
-	* binutils-all/readelf.n: New file: expected readelf output.
-	* binutils-all/readelf.exp: Add test of .note section contents.
-
-For older changes see ChangeLog-0411
+For older changes see ChangeLog-9303
 
 Local Variables:
 mode: change-log

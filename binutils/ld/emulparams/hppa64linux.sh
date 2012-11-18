@@ -1,10 +1,13 @@
+# If you change this file, please also look at files which source this one:
+# elf64hppa.sh
+
 SCRIPT_NAME=elf
 ELFSIZE=64
+# FIXME: this output format is for hpux.
 OUTPUT_FORMAT="elf64-hppa-linux"
-NO_REL_RELOCS=yes
 TEXT_START_ADDR=0x10000
 TARGET_PAGE_SIZE=0x10000
-MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
+MAXPAGESIZE=0x10000
 ARCH=hppa
 MACHINE=hppa2.0w
 ENTRY="main"
@@ -24,11 +27,15 @@ OTHER_READWRITE_SECTIONS="
   .plt          ${RELOCATING-0} : { *(.plt) }
   .dlt          ${RELOCATING-0} : { *(.dlt) }"
 
-# The PA64 ELF port has an additional huge bss section.
-OTHER_BSS_SECTIONS=".hbss         ${RELOCATING-0} : { *(.hbss) }"
-
-#OTHER_SYMBOLS='PROVIDE (__TLS_SIZE = SIZEOF (.tbss));'
-OTHER_SYMBOLS='
+# The PA64 ELF port has two additional bss sections. huge bss and thread bss.
+# Make sure they end up in the appropriate location.  We also have to set
+# __TLS_SIZE to the size of the thread bss section.
+OTHER_BSS_SECTIONS="
+  .hbss         ${RELOCATING-0} : { *(.hbss) }
+  .tbss         ${RELOCATING-0} : { *(.tbss) }
+"
+#OTHER_BSS_END_SYMBOLS='PROVIDE (__TLS_SIZE = SIZEOF (.tbss));'
+OTHER_BSS_END_SYMBOLS='
   PROVIDE (__TLS_SIZE = 0);
   PROVIDE (__TLS_INIT_SIZE = 0);
   PROVIDE (__TLS_INIT_START = 0);

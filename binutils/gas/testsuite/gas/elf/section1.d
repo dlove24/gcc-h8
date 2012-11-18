@@ -1,8 +1,5 @@
 #objdump: -s
 #name: elf section1
-# The h8300 port issues a warning message for
-# new sections created without atrributes.
-#skip: h8300-*
 
 .*: +file format .*
 
@@ -16,5 +13,3 @@ Contents of section B:
  0+000 02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02 ?02.*
 Contents of section C:
  0+000 03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03 ?03.*
-# Arm includes a .ARM.attributes section here
-#...

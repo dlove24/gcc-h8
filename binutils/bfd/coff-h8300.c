@@ -1,6 +1,6 @@
 /* BFD back-end for Renesas H8/300 COFF binaries.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2012
+   2000, 2001, 2002, 2003, 2004, 2005
    Free Software Foundation, Inc.
    Written by Steve Chamberlain, <sac@cygnus.com>.
 
@@ -8,7 +8,7 @@
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -18,11 +18,10 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "libbfd.h"
 #include "bfdlink.h"
 #include "genlink.h"
@@ -60,6 +59,35 @@ struct funcvec_hash_table
     unsigned int offset;
   };
 
+static struct bfd_hash_entry *
+funcvec_hash_newfunc
+  (struct bfd_hash_entry *, struct bfd_hash_table *, const char *);
+
+static bfd_boolean
+funcvec_hash_table_init
+  (struct funcvec_hash_table *, bfd *,
+   struct bfd_hash_entry *(*) (struct bfd_hash_entry *,
+			       struct bfd_hash_table *,
+			       const char *));
+
+static bfd_reloc_status_type special
+  (bfd *, arelent *, asymbol *, PTR, asection *, bfd *, char **);
+static int select_reloc
+  (reloc_howto_type *);
+static void rtype2howto
+  (arelent *, struct internal_reloc *);
+static void reloc_processing
+  (arelent *, struct internal_reloc *, asymbol **, bfd *, asection *);
+static bfd_boolean h8300_symbol_address_p
+  (bfd *, asection *, bfd_vma);
+static int h8300_reloc16_estimate
+  (bfd *, asection *, arelent *, unsigned int,
+   struct bfd_link_info *);
+static void h8300_reloc16_extra_cases
+  (bfd *, struct bfd_link_info *, struct bfd_link_order *, arelent *,
+   bfd_byte *, unsigned int *, unsigned int *);
+static bfd_boolean h8300_bfd_link_add_symbols
+  (bfd *, struct bfd_link_info *);
 
 /* To lookup a value in the function vector hash table.  */
 #define funcvec_hash_lookup(table, string, create, copy) \
@@ -153,14 +181,13 @@ funcvec_hash_table_init (struct funcvec_hash_table *table,
 			 struct bfd_hash_entry *(*newfunc)
 			   (struct bfd_hash_entry *,
 			    struct bfd_hash_table *,
-			    const char *),
-			 unsigned int entsize)
+			    const char *))
 {
   /* Initialize our local fields, then call the generic initialization
      routine.  */
   table->offset = 0;
   table->abfd = abfd;
-  return (bfd_hash_table_init (&table->root, newfunc, entsize));
+  return (bfd_hash_table_init (&table->root, newfunc));
 }
 
 /* Create the derived linker hash table.  We use a derived hash table
@@ -177,8 +204,7 @@ h8300_coff_link_hash_table_create (bfd *abfd)
   if (ret == NULL)
     return NULL;
   if (!_bfd_link_hash_table_init (&ret->root.root, abfd,
-				  _bfd_generic_link_hash_newfunc,
-				  sizeof (struct generic_link_hash_entry)))
+				  _bfd_generic_link_hash_newfunc))
     {
       free (ret);
       return NULL;
@@ -202,13 +228,13 @@ h8300_coff_link_hash_table_create (bfd *abfd)
    the addend until the final link.  */
 
 static bfd_reloc_status_type
-special (bfd *      abfd ATTRIBUTE_UNUSED,
-	 arelent *  reloc_entry ATTRIBUTE_UNUSED,
-	 asymbol *  symbol ATTRIBUTE_UNUSED,
-	 void *     data ATTRIBUTE_UNUSED,
-	 asection * input_section ATTRIBUTE_UNUSED,
-	 bfd *      output_bfd,
-	 char **    error_message ATTRIBUTE_UNUSED)
+special (bfd *abfd ATTRIBUTE_UNUSED,
+	 arelent *reloc_entry ATTRIBUTE_UNUSED,
+	 asymbol *symbol ATTRIBUTE_UNUSED,
+	 PTR data ATTRIBUTE_UNUSED,
+	 asection *input_section ATTRIBUTE_UNUSED,
+	 bfd *output_bfd,
+	 char **error_message ATTRIBUTE_UNUSED)
 {
   if (output_bfd == (bfd *) NULL)
     return bfd_reloc_continue;
@@ -218,8 +244,7 @@ special (bfd *      abfd ATTRIBUTE_UNUSED,
   return bfd_reloc_ok;
 }
 
-static reloc_howto_type howto_table[] =
-{
+static reloc_howto_type howto_table[] = {
   HOWTO (R_RELBYTE, 0, 0, 8, FALSE, 0, complain_overflow_bitfield, special, "8", FALSE, 0x000000ff, 0x000000ff, FALSE),
   HOWTO (R_RELWORD, 0, 1, 16, FALSE, 0, complain_overflow_bitfield, special, "16", FALSE, 0x0000ffff, 0x0000ffff, FALSE),
   HOWTO (R_RELLONG, 0, 2, 32, FALSE, 0, complain_overflow_bitfield, special, "32", FALSE, 0xffffffff, 0xffffffff, FALSE),
@@ -646,7 +671,7 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
       /* Get the address of the target of this branch.  */
       value = bfd_coff_reloc16_get_value (reloc, link_info, input_section);
 
-      dot = (input_section->output_offset
+      dot = (link_order->offset
 	     + dst_address
 	     + link_order->u.indirect.section->output_section->vma);
 
@@ -678,7 +703,7 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
       value = bfd_coff_reloc16_get_value (reloc, link_info, input_section);
 
       /* Get the address of the instruction (not the reloc).  */
-      dot = (input_section->output_offset
+      dot = (link_order->offset
 	     + dst_address
 	     + link_order->u.indirect.section->output_section->vma + 1);
 
@@ -792,7 +817,7 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
       value = bfd_coff_reloc16_get_value (reloc, link_info, input_section);
 
       /* Get the address of the next instruction.  */
-      dot = (input_section->output_offset
+      dot = (link_order->offset
 	     + dst_address
 	     + link_order->u.indirect.section->output_section->vma + 1);
 
@@ -839,7 +864,7 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
       value = bfd_coff_reloc16_get_value (reloc, link_info, input_section);
 
       /* Get the address of the instruction (not the reloc).  */
-      dot = (input_section->output_offset
+      dot = (link_order->offset
 	     + dst_address
 	     + link_order->u.indirect.section->output_section->vma - 1);
 
@@ -900,7 +925,7 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
       value = bfd_coff_reloc16_get_value (reloc, link_info, input_section);
 
       /* Get the address of the instruction (not the reloc).  */
-      dot = (input_section->output_offset
+      dot = (link_order->offset
 	     + dst_address
 	     + link_order->u.indirect.section->output_section->vma + 2);
 
@@ -1039,7 +1064,7 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
       /* Get the address of the target of this branch.  */
       value = bfd_coff_reloc16_get_value (reloc, link_info, input_section);
 
-      dot = (input_section->output_offset
+      dot = (link_order->offset
 	     + dst_address
 	     + link_order->u.indirect.section->output_section->vma) + 1;
 
@@ -1095,11 +1120,11 @@ h8300_reloc16_extra_cases (bfd *abfd, struct bfd_link_info *link_info,
 	struct h8300_coff_link_hash_table *htab;
 	asection *vectors_sec;
 
-	if (link_info->output_bfd->xvec != abfd->xvec)
+	if (link_info->hash->creator != abfd->xvec)
 	  {
 	    (*_bfd_error_handler)
 	      (_("cannot handle R_MEM_INDIRECT reloc when using %s output"),
-	       link_info->output_bfd->xvec->name);
+	       link_info->hash->creator->name);
 
 	    /* What else can we do?  This function doesn't allow return
 	       of an error, and we don't want to call abort as that
@@ -1243,7 +1268,7 @@ h8300_bfd_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
   /* Add the symbols using the generic code.  */
   _bfd_generic_link_add_symbols (abfd, info);
 
-  if (info->output_bfd->xvec != abfd->xvec)
+  if (info->hash->creator != abfd->xvec)
     return TRUE;
 
   htab = h8300_coff_hash_table (info);
@@ -1256,12 +1281,12 @@ h8300_bfd_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
       /* Make sure the appropriate flags are set, including SEC_IN_MEMORY.  */
       flags = (SEC_ALLOC | SEC_LOAD
 	       | SEC_HAS_CONTENTS | SEC_IN_MEMORY | SEC_READONLY);
-      htab->vectors_sec = bfd_make_section_with_flags (abfd, ".vectors",
-						       flags);
+      htab->vectors_sec = bfd_make_section (abfd, ".vectors");
 
       /* If the section wasn't created, or we couldn't set the flags,
 	 quit quickly now, rather than dying a painful death later.  */
-      if (!htab->vectors_sec)
+      if (!htab->vectors_sec
+	  || !bfd_set_section_flags (abfd, htab->vectors_sec, flags))
 	return FALSE;
 
       /* Also create the vector hash table.  */
@@ -1273,8 +1298,7 @@ h8300_bfd_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 
       /* And initialize the funcvec hash table.  */
       if (!funcvec_hash_table_init (funcvec_hash_table, abfd,
-				    funcvec_hash_newfunc,
-				    sizeof (struct funcvec_hash_entry)))
+				    funcvec_hash_newfunc))
 	{
 	  bfd_release (abfd, funcvec_hash_table);
 	  return FALSE;
@@ -1408,11 +1432,6 @@ h8300_bfd_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 #define coff_bfd_link_hash_table_create h8300_coff_link_hash_table_create
 
 #define COFF_LONG_FILENAMES
-
-#ifndef bfd_pe_print_pdata
-#define bfd_pe_print_pdata	NULL
-#endif
-
 #include "coffcode.h"
 
 #undef coff_bfd_get_relocated_section_contents

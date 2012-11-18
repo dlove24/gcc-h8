@@ -1,4 +1,6 @@
-sinclude([../config/zlib.m4])
+sinclude(../config/accross.m4)
+sinclude(../config/acx.m4)
+sinclude(../bfd/bfd.m4)
 
 dnl See whether we need to use fopen-bin.h rather than fopen-same.h.
 AC_DEFUN([BFD_BINARY_FOPEN],
@@ -43,6 +45,22 @@ else
 fi
 AC_SUBST(EXEEXT_FOR_BUILD)])dnl
 
+sinclude(../libtool.m4)
+dnl The lines below arrange for aclocal not to bring libtool.m4
+dnl AM_PROG_LIBTOOL into aclocal.m4, while still arranging for automake
+dnl to add a definition of LIBTOOL to Makefile.in.
+ifelse(yes,no,[
+AC_DEFUN([AM_PROG_LIBTOOL],)
+AC_DEFUN([AM_DISABLE_SHARED],)
+AC_SUBST(LIBTOOL)
+])
+
+sinclude(../gettext.m4)
+ifelse(yes,no,[
+AC_DEFUN([CY_WITH_NLS],)
+AC_SUBST(INTLLIBS)
+])
+
 AC_DEFUN([AM_INSTALL_LIBBFD],
 [AC_MSG_CHECKING([whether to install libbfd])
   AC_ARG_ENABLE(install-libbfd,
@@ -66,8 +84,6 @@ AC_DEFUN([AM_INSTALL_LIBBFD],
     bfdincludedir='$(exec_prefix)/$(host_noncanonical)/$(target_noncanonical)/include'
   fi
   AC_SUBST(bfdlibdir)
-  AM_SUBST_NOTMAKE(bfdlibdir)
   AC_SUBST(bfdincludedir)
-  AM_SUBST_NOTMAKE(bfdincludedir)
 ]
 )

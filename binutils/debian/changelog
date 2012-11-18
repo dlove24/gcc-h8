@@ -1,0 +1,133 @@
+binutils-h8300-hms (2.16.1-8ubuntu1) oneiric; urgency=low
+
+  * Build with -U_FORTIFY_SOURCE. LP: #755975.
+
+ -- Matthias Klose <doko@ubuntu.com>  Mon, 29 Aug 2011 10:49:45 +0200
+
+binutils-h8300-hms (2.16.1-8) unstable; urgency=low
+
+  * Fixed incompatible use of sprintf (thanks Kees Cook)
+  * Updated standards version to 3.8.0 (no changes)
+  * No need to depend on specific gcc version anymore
+  * Dropped linda override
+
+ -- Michael Tautschnig <mt@debian.org>  Tue, 06 Jan 2009 08:41:14 +0000
+
+binutils-h8300-hms (2.16.1-7) unstable; urgency=low
+
+  * Fixed bug in debian/rules to allow for parallel builds
+
+ -- Michael Tautschnig <mt@debian.org>  Thu, 06 Dec 2007 21:31:33 +0100
+
+binutils-h8300-hms (2.16.1-6) unstable; urgency=low
+
+  * New maintainer address
+
+ -- Michael Tautschnig <mt@debian.org>  Thu, 06 Dec 2007 17:15:03 +0100
+
+binutils-h8300-hms (2.16.1-5) unstable; urgency=low
+
+  * don't symlink config.{guess,sub} (closes: #424143)
+  * fixed watch file
+
+ -- Michael Tautschnig <tautschn@model.in.tum.de>  Wed, 16 May 2007 23:50:04 +0200
+
+binutils-h8300-hms (2.16.1-4) unstable; urgency=medium
+
+  * added 130_coff_arm.dpatch to fix alignment error, which caused FTBFS of
+    gcc-h8300-hms on ARM (closes: #402821)
+
+ -- Michael Tautschnig <tautschn@model.in.tum.de>  Tue, 12 Dec 2006 22:16:28 +0100
+
+binutils-h8300-hms (2.16.1-3) unstable; urgency=low
+
+  * Bumped standards version to 3.7.2.2 (no changes needed)
+  * Suggests: binutils-doc is now unversioned as we do not provide
+    binutils-doc
+  * added 129_gas_h8300.dpatch to fix warnings on 64bit archs
+  * re-added ldscripts, dropped 001_ld_makefile_patch
+
+ -- Michael Tautschnig <tautschn@model.in.tum.de>  Thu, 23 Nov 2006 21:59:46 +0100
+
+binutils-h8300-hms (2.16.1-2) unstable; urgency=high
+
+  * Removed unneeded build dependencies
+  * make relative symlinks (closes: #396961)
+
+ -- Michael Tautschnig <tautschn@model.in.tum.de>  Sat, 04 Nov 2006 10:58:47 +0100
+
+binutils-h8300-hms (2.16.1-1) unstable; urgency=medium
+
+  * New maintainer (closes: #387772)
+  * Complete rebuild based on version 2.16.1 of binutils
+  * The debian/ directory is based on the version 2.17 of the binutils Debian
+    binutils package and binutils-m68hc1x-2.15+3.1. Thanks!
+  * Use symbolic links instead of hardlinks from /usr/h8300-hitachi-coff/bin
+    to /usr/bin
+  * ln -s to /usr/share/misc/config.{sub,guess} and build-depend on
+    autotools-dev
+  * added override as this is cross-compiler package and thus
+    /usr/h8300-hitachi-coff/ is acceptable 
+
+ -- Michael Tautschnig <tautschn@model.in.tum.de>  Mon, 30 Oct 2006 00:11:42 +0100
+
+binutils-h8300-hms (2.9.5.0.37.ds-1) unstable; urgency=low
+
+  * QA upload orphaning the package (see #387772).
+  * Repack source to have an .orig.tar.gz.
+  * Bump Standards-Version and debhelper level.
+
+ -- Christoph Berg <myon@debian.org>  Wed, 25 Oct 2006 11:52:27 +0200
+
+binutils-h8300-hms (2.9.5.0.37.5.2) unstable; urgency=low
+
+  * NMU.
+  * Update config.{sub,guess} from autotools-dev at build time (closes:
+    bug#251648).
+  * Fixed the host argument given to configure (closes: bug#324553).
+
+ -- Aurelien Jarno <aurel32@debian.org>  Mon, 12 Sep 2005 21:34:05 +0200
+
+binutils-h8300-hms (2.9.5.0.37.5.1) unstable; urgency=low
+
+  * NMU (RC bug more than 6 months old).
+  * debian/control:
+    + Set policy to 3.5.10.
+    + Changed flex build dependency to flex-old (Closes: #166897).
+    + Short description is no longer a full sentence.
+
+ -- Sam Hocevar (Debian packages) <sam+deb@zoy.org>  Thu,  5 Jun 2003 13:25:24 +0200
+
+binutils-h8300-hms (2.9.5.0.37.5) unstable; urgency=low
+
+  * Update to latest policy version
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon,  7 Oct 2002 20:55:44 -0600
+
+binutils-h8300-hms (2.9.5.0.37.4) unstable; urgency=low
+
+  * Add bison/flex to build depends (Closes: Bug#102282)
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon, 25 Jun 2001 21:02:30 -0600
+
+binutils-h8300-hms (2.9.5.0.37.3) unstable; urgency=low
+
+  * Fix build-depends (Closes: Bug#101423)
+  * Fix lintian warn: removed use of dh_testversion
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat, 23 Jun 2001 16:36:07 -0600
+
+binutils-h8300-hms (2.9.5.0.37.2) unstable; urgency=low
+
+  * Repair package numbering, normal debian package
+  * Move to extra from optional
+  * Remove suggest of task (we are not doing task pkg)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat, 27 Jan 2001 21:05:04 -0700
+
+binutils-h8300-hms (2.9.5.0.37.1) unstable; urgency=low
+
+  * Initial Release; feedback appreciated.
+
+ -- Stephen M Moraco <stephen@debian.org>  Fri, 22 Dec 2000 21:04:31 -0700
+

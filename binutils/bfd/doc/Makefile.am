@@ -8,8 +8,7 @@ DOCFILES = aoutx.texi  archive.texi archures.texi \
 	libbfd.texi bfdwin.texi bfdio.texi \
 	opncls.texi  reloc.texi  section.texi  \
 	syms.texi  targets.texi init.texi hash.texi linker.texi \
-	mmo.texi \
-	bfdver.texi
+	mmo.texi
 
 PROTOS = archive.p archures.p bfd.p \
 	 core.p format.p \
@@ -52,19 +51,24 @@ SRCIPROT = $(srcdir)/../cache.c $(srcdir)/../libbfd.c \
 TEXIDIR = $(srcdir)/../../texinfo/fsf
 
 info_TEXINFOS = bfd.texinfo
-bfd_TEXINFOS = $(DOCFILES) bfdsumm.texi
 
 MKDOC = chew$(EXEEXT_FOR_BUILD)
 
-AM_CPPFLAGS = -I.. -I$(srcdir)/.. -I$(srcdir)/../../include \
+INCLUDES = -I.. -I$(srcdir)/.. -I$(srcdir)/../../include \
 	-I$(srcdir)/../../intl -I../../intl
 
 $(MKDOC): $(srcdir)/chew.c
-	$(CC_FOR_BUILD) -o chew.$$$$ $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) \
-	  $(H_CFLAGS) $(AM_CPPFLAGS) $(srcdir)/chew.c; \
+	$(CC_FOR_BUILD) -o chew.$$$$ $(srcdir)/chew.c \
+	  $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) $(H_CFLAGS) \
+	  $(INCLUDES); \
 	$(SHELL) $(srcdir)/../../move-if-change chew.$$$$ $(MKDOC)
 
+chew.o: chew.c
+	$(CC_FOR_BUILD) -c $(INCLUDES) $(H_CFLAGS) $(CFLAGS_FOR_BUILD) $(srcdir)/chew.c
+
 protos: libbfd.h libcoff.h bfd.h
+
+$(srcdir)/bfd.info bfd.dvi: $(DOCFILES) bfdsumm.texi bfd.texinfo
 
 # We can't replace these rules with an implicit rule, because
 # makes without VPATH support couldn't find the .h files in `..'.
@@ -249,7 +253,6 @@ BFD_H_DEP = \
 	$(srcdir)/../format.c		\
 	$(srcdir)/../linker.c		\
 	$(srcdir)/../simple.c		\
-	$(srcdir)/../compress.c		\
 	$(srcdir)/header.sed		\
 	$(srcdir)/proto.str		\
 	$(srcdir)/../version.h		\
@@ -271,17 +274,6 @@ bfd.h: $(BFD_H_DEP)
 	echo "#endif" >> $@
 	echo "#endif" >> $@
 
-bfdver.texi: $(srcdir)/Makefile.in
-	@echo "creating $@"; \
-	echo "@set VERSION $(VERSION)" > bfdver.texi; \
-	if [ -n "$(PKGVERSION)" ]; then \
-	  echo "@set VERSION_PACKAGE $(PKGVERSION)" >> bfdver.texi; \
-	fi; \
-	echo "@set UPDATED `date '+%B %Y'`" >> bfdver.texi; \
-	if [ -n "$(REPORT_BUGS_TEXI)" ]; then \
-	  echo "@set BUGURL $(REPORT_BUGS_TEXI)" >> bfdver.texi; \
-	fi
-
 noinst_TEXINFOS = bfdint.texi
 
 MOSTLYCLEANFILES = $(MKDOC) *.o
@@ -295,12 +287,3 @@ MAINTAINERCLEANFILES = $(DOCFILES)
 # We want install to imply install-info as per GNU standards, despite the
 # cygnus option.
 install: install-info
-
-MAINTAINERCLEANFILES += bfd.info
-
-# Automake 1.9 will only build info files in the objdir if they are
-# mentioned in DISTCLEANFILES.  It doesn't have to be unconditional,
-# though, so we use a bogus condition.
-if GENINSRC_NEVER
-DISTCLEANFILES += bfd.info
-endif

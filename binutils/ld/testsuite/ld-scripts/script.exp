@@ -1,24 +1,21 @@
 # Test basic linker script functionality
 # By Ian Lance Taylor, Cygnus Support
-#   Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2009, 2010
+#   Copyright 1999, 2000, 2001, 2002, 2004
 #   Free Software Foundation, Inc.
 #
-# This file is part of the GNU Binutils.
-#
-# This program is free software; you can redistribute it and/or modify
+# This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
+# 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
+# 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-# MA 02110-1301, USA.
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 set testname "script"
 
@@ -98,7 +95,7 @@ proc check_script { } {
 set flags ""
 if {[istarget "*-*-pe*"] \
     || [istarget "*-*-cygwin*"] \
-    || [istarget "*-*-mingw*"] \
+    || [istarget "*-*-mingw32*"] \
     || [istarget "*-*-winnt*"] \
     || [istarget "*-*-nt"] \
     || [istarget "*-*-interix*"] } then {
@@ -127,13 +124,4 @@ if ![ld_simple_link $ld tmpdir/script "$flags -T $srcdir/$subdir/memory.t tmpdir
     check_script
 }
 
-set test_script_list [lsort [glob $srcdir/$subdir/region-alias-*.t]]
 
-foreach test_script $test_script_list {
-    set testname [file tail $test_script]
-    if ![ld_simple_link $ld tmpdir/script "$flags -T $test_script tmpdir/script.o"] {
-        xfail "REGION_ALIAS: $testname"
-    } else {
-        xpass "REGION_ALIAS: $testname"
-    }
-}

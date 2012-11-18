@@ -11,7 +11,7 @@ public:
     static void init_foo ();
     static int nb_foos() { return foos; }
     Foo();
-    Foo(const char* message);
+    Foo( char* message);
     Foo(const Foo&);
     Foo & operator= (const Foo&);
     ~Foo ();
@@ -93,7 +93,7 @@ Foo::Foo ()
   i = ++foos;
 }
 
-Foo::Foo (const char*)
+Foo::Foo (char*)
 {
   i = ++foos;
 }

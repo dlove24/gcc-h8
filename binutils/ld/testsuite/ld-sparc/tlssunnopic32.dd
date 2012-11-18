@@ -3,7 +3,7 @@
 #as: --32
 #ld: -shared -melf32_sparc
 #objdump: -drj.text
-#target: sparc*-*-*
+#target: isparc-*-*
 
 .*: +file format elf32-sparc
 

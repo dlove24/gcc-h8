@@ -1,0 +1,8 @@
+binutils-h8300-hms (2.16.1-1) unstable; urgency=medium
+
+  The target this package is build for is now h8300-hitachi-coff, thus the
+  binaries are now named h8300-hitachi-coff-*. For convenience, symlinks are
+  provided.
+
+ -- Michael Tautschnig <tautschn@model.in.tum.de>  Mon, 30 Oct 2006 00:11:42 +0100
+

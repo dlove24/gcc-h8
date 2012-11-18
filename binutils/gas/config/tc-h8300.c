@@ -1,13 +1,12 @@
 /* tc-h8300.c -- Assemble code for the Renesas H8/300
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2012
-   Free Software Foundation, Inc.
+   2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -17,14 +16,19 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 /* Written By Steve Chamberlain <sac@cygnus.com>.  */
 
+#include <stdio.h>
 #include "as.h"
 #include "subsegs.h"
+#include "bfd.h"
+
+#ifdef BFD_ASSEMBLER
 #include "dwarf2dbg.h"
+#endif
 
 #define DEFINE_TABLE
 #define h8_opcodes ops
@@ -73,8 +77,10 @@ h8300hmode (int arg ATTRIBUTE_UNUSED)
 {
   Hmode = 1;
   Smode = 0;
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300h))
     as_warn (_("could not set architecture and machine"));
+#endif
 }
 
 static void
@@ -82,8 +88,10 @@ h8300smode (int arg ATTRIBUTE_UNUSED)
 {
   Smode = 1;
   Hmode = 1;
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300s))
     as_warn (_("could not set architecture and machine"));
+#endif
 }
 
 static void
@@ -92,8 +100,10 @@ h8300hnmode (int arg ATTRIBUTE_UNUSED)
   Hmode = 1;
   Smode = 0;
   Nmode = 1;
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300hn))
     as_warn (_("could not set architecture and machine"));
+#endif
 }
 
 static void
@@ -102,8 +112,10 @@ h8300snmode (int arg ATTRIBUTE_UNUSED)
   Smode = 1;
   Hmode = 1;
   Nmode = 1;
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300sn))
     as_warn (_("could not set architecture and machine"));
+#endif
 }
 
 static void
@@ -112,8 +124,10 @@ h8300sxmode (int arg ATTRIBUTE_UNUSED)
   Smode = 1;
   Hmode = 1;
   SXmode = 1;
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300sx))
     as_warn (_("could not set architecture and machine"));
+#endif
 }
 
 static void
@@ -123,8 +137,10 @@ h8300sxnmode (int arg ATTRIBUTE_UNUSED)
   Hmode = 1;
   SXmode = 1;
   Nmode = 1;
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300sxn))
     as_warn (_("could not set architecture and machine"));
+#endif
 }
 
 static void
@@ -137,48 +153,6 @@ static void
 pint (int arg ATTRIBUTE_UNUSED)
 {
   cons (Hmode ? 4 : 2);
-}
-
-/* Like obj_elf_section, but issues a warning for new
-   sections which do not have an attribute specification.  */
-
-static void
-h8300_elf_section (int push)
-{
-  static const char * known_data_sections [] = { ".rodata", ".tdata", ".tbss" };
-  static const char * known_data_prefixes [] = { ".debug", ".zdebug", ".gnu.warning" };
-  char * saved_ilp = input_line_pointer;
-  char * name;
-
-  name = obj_elf_section_name ();
-  if (name == NULL)
-    return;
-
-  if (* input_line_pointer != ','
-      && bfd_get_section_by_name (stdoutput, name) == NULL)
-    {
-      signed int i;
-
-      /* Ignore this warning for well known data sections.  */
-      for (i = ARRAY_SIZE (known_data_sections); i--;)
-	if (strcmp (name, known_data_sections[i]) == 0)
-	  break;
-
-      if (i < 0)
-	for (i = ARRAY_SIZE (known_data_prefixes); i--;)
-	  if (strncmp (name, known_data_prefixes[i],
-		       strlen (known_data_prefixes[i])) == 0)
-	    break;
-
-      if (i < 0)
-	as_warn (_("new section '%s' defined without attributes - this might cause problems"), name);
-    }
-
-  /* FIXME: We ought to free the memory allocated by obj_elf_section_name()
-     for 'name', but we do not know if it was taken from the obstack, via
-     demand_copy_C_string(), or xmalloc()ed.  */
-  input_line_pointer = saved_ilp;
-  obj_elf_section (push);
 }
 
 /* This table describes all the machine specific pseudo-ops the assembler
@@ -207,16 +181,10 @@ const pseudo_typeS md_pseudo_table[] =
   {"import",  s_ignore, 0},
   {"page",    listing_eject, 0},
   {"program", s_ignore, 0},
-
-#ifdef OBJ_ELF
-  {"section",   h8300_elf_section, 0},
-  {"section.s", h8300_elf_section, 0},
-  {"sect",      h8300_elf_section, 0},
-  {"sect.s",    h8300_elf_section, 0},
-#endif
-
   {0, 0, 0}
 };
+
+const int md_reloc_size;
 
 const char EXP_CHARS[] = "eE";
 
@@ -240,8 +208,10 @@ md_begin (void)
   char prev_buffer[100];
   int idx = 0;
 
+#ifdef BFD_ASSEMBLER
   if (!bfd_set_arch_mach (stdoutput, bfd_arch_h8300, bfd_mach_h8300))
     as_warn (_("could not set architecture and machine"));
+#endif
 
   opcode_hash_control = hash_new ();
   prev_buffer[0] = 0;
@@ -350,7 +320,7 @@ struct h8_op
 static void clever_message (const struct h8_instruction *, struct h8_op *);
 static void fix_operand_size (struct h8_op *, int);
 static void build_bytes (const struct h8_instruction *, struct h8_op *);
-static void do_a_fix_imm (int, int, struct h8_op *, int, const struct h8_instruction *);
+static void do_a_fix_imm (int, int, struct h8_op *, int);
 static void check_operand (struct h8_op *, unsigned int, char *);
 static const struct h8_instruction * get_specific (const struct h8_instruction *, struct h8_op *, int) ;
 static char *get_operands (unsigned, char *, struct h8_op *);
@@ -359,6 +329,7 @@ static int parse_reg (char *, op_type *, unsigned *, int);
 static char *skip_colonthing (char *, int *);
 static char *parse_exp (char *, struct h8_op *);
 
+static int constant_fits_width_p (struct h8_op *, unsigned int);
 static int constant_fits_size_p (struct h8_op *, int, int);
 
 /*
@@ -555,23 +526,19 @@ skip_colonthing (char *src, int *mode)
    @@aa[:8]		memory indirect.  */
 
 static int
-constant_fits_width_p (struct h8_op *operand, offsetT width)
+constant_fits_width_p (struct h8_op *operand, unsigned int width)
 {
-  offsetT num;
-
-  num = ((operand->exp.X_add_number & 0xffffffff) ^ 0x80000000) - 0x80000000;
-  return (num & ~width) == 0 || (num | width) == ~0;
+  return ((operand->exp.X_add_number & ~width) == 0
+	  || (operand->exp.X_add_number | width) == (unsigned)(~0));
 }
 
 static int
 constant_fits_size_p (struct h8_op *operand, int size, int no_symbols)
 {
-  offsetT num;
-
+  offsetT num = operand->exp.X_add_number;
   if (no_symbols
       && (operand->exp.X_add_symbol != 0 || operand->exp.X_op_symbol != 0))
     return 0;
-  num = operand->exp.X_add_number & 0xffffffff;
   switch (size)
     {
     case L_2:
@@ -585,13 +552,11 @@ constant_fits_size_p (struct h8_op *operand, int size, int no_symbols)
     case L_5:
       return num >= 1 && num < 32;
     case L_8:
-      num = (num ^ 0x80000000) - 0x80000000;
-      return (num & ~0xFF) == 0 || (num | 0x7F) == ~0;
+      return (num & ~0xFF) == 0 || ((unsigned)num | 0x7F) == ~0u;
     case L_8U:
       return (num & ~0xFF) == 0;
     case L_16:
-      num = (num ^ 0x80000000) - 0x80000000;
-      return (num & ~0xFFFF) == 0 || (num | 0x7FFF) == ~0;
+      return (num & ~0xFFFF) == 0 || ((unsigned)num | 0x7FFF) == ~0u;
     case L_16U:
       return (num & ~0xFFFF) == 0;
     case L_32:
@@ -679,7 +644,7 @@ get_operand (char **ptr, struct h8_op *op, int direction)
 	      op->mode = (op->mode & ~SIZE) | L_8;
 	      break;
 	    default:
-	      as_warn (_("invalid suffix after register."));
+	      as_warn ("invalid suffix after register.");
 	      break;
 	    }
 	  src += 2;
@@ -1189,7 +1154,7 @@ get_specific (const struct h8_instruction *instruction,
 		}
 	      else if (x_mode == IMM && op_mode != IMM)
 		{
-		  offsetT num = operands[i].exp.X_add_number & 0xffffffff;
+		  offsetT num = operands[i].exp.X_add_number;
 		  if (op_mode == KBIT || op_mode == DBIT)
 		    /* This is ok if the immediate value is sensible.  */;
 		  else if (op_mode == CONST_2)
@@ -1329,7 +1294,7 @@ check_operand (struct h8_op *operand, unsigned int width, char *string)
      (may relax into an 8bit absolute address).  */
 
 static void
-do_a_fix_imm (int offset, int nibble, struct h8_op *operand, int relaxmode, const struct h8_instruction *this_try)
+do_a_fix_imm (int offset, int nibble, struct h8_op *operand, int relaxmode)
 {
   int idx;
   int size;
@@ -1369,17 +1334,6 @@ do_a_fix_imm (int offset, int nibble, struct h8_op *operand, int relaxmode, cons
 	  check_operand (operand, 0xffff, t);
 	  bytes[0] |= operand->exp.X_add_number >> 8;
 	  bytes[1] |= operand->exp.X_add_number >> 0;
-#ifdef OBJ_ELF
-	  /* MOVA needs both relocs to relax the second operand properly.  */
-	  if (relaxmode != 0
-	      && (OP_KIND(this_try->opcode->how) == O_MOVAB
-		  || OP_KIND(this_try->opcode->how) == O_MOVAW
-		  || OP_KIND(this_try->opcode->how) == O_MOVAL))
-	    {
-	      idx = BFD_RELOC_16;
-	      fix_new_exp (frag_now, offset, 2, &operand->exp, 0, idx);
-	    }
-#endif
 	  break;
 	case L_24:
 	  check_operand (operand, 0xffffff, t);
@@ -1456,7 +1410,7 @@ build_bytes (const struct h8_instruction *this_try, struct h8_op *operand)
 {
   int i;
   char *output = frag_more (this_try->length);
-  const op_type *nibble_ptr = this_try->opcode->data.nib;
+  op_type *nibble_ptr = this_try->opcode->data.nib;
   op_type c;
   unsigned int nibble_count = 0;
   int op_at[3];
@@ -1643,14 +1597,12 @@ build_bytes (const struct h8_instruction *this_try, struct h8_op *operand)
 
       if (x_mode == IMM || x_mode == DISP)
 	do_a_fix_imm (output - frag_now->fr_literal + op_at[i] / 2,
-		      op_at[i] & 1, operand + i, (x & MEMRELAX) != 0,
-		      this_try);
+		      op_at[i] & 1, operand + i, (x & MEMRELAX) != 0);
 
       else if (x_mode == ABS)
 	do_a_fix_imm (output - frag_now->fr_literal + op_at[i] / 2,
 		      op_at[i] & 1, operand + i,
-		      (x & MEMRELAX) ? movb + 1 : 0,
-		      this_try);
+		      (x & MEMRELAX) ? movb + 1 : 0);
 
       else if (x_mode == PCREL)
 	{
@@ -1871,8 +1823,8 @@ fix_operand_size (struct h8_op *operand, int size)
 	   necessary.  */
 	if (Hmode
 	    && !Nmode 
-	    && ((((addressT) operand->exp.X_add_number + 0x8000)
-		 & 0xffffffff) > 0xffff
+	    && (operand->exp.X_add_number < -32768
+		|| operand->exp.X_add_number > 32767
 		|| operand->exp.X_add_symbol != 0
 		|| operand->exp.X_op_symbol != 0))
 	  operand->mode |= L_24;
@@ -1881,14 +1833,10 @@ fix_operand_size (struct h8_op *operand, int size)
 	break;
 
       case PCREL:
-	if ((((addressT) operand->exp.X_add_number + 0x80)
-	     & 0xffffffff) <= 0xff)
-	  {
-	    if (operand->exp.X_add_symbol != NULL)
-	      operand->mode |= bsize;
-	    else
-	      operand->mode |= L_8;
-	  }
+	/* This condition is long standing, though somewhat suspect.  */
+	if (operand->exp.X_add_number > -128
+	    && operand->exp.X_add_number < 127)
+	  operand->mode |= L_8;
 	else
 	  operand->mode |= L_16;
 	break;
@@ -2069,8 +2017,18 @@ md_assemble (char *str)
 
   build_bytes (instruction, operand);
 
+#ifdef BFD_ASSEMBLER
   dwarf2_emit_insn (instruction->length);
+#endif
 }
+
+#ifndef BFD_ASSEMBLER
+void
+tc_crawl_symbol_chain (object_headers *headers ATTRIBUTE_UNUSED)
+{
+  printf (_("call to tc_crawl_symbol_chain \n"));
+}
+#endif
 
 symbolS *
 md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
@@ -2078,19 +2036,76 @@ md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
   return 0;
 }
 
-/* Various routines to kill one day.  */
+#ifndef BFD_ASSEMBLER
+void
+tc_headers_hook (object_headers *headers ATTRIBUTE_UNUSED)
+{
+  printf (_("call to tc_headers_hook \n"));
+}
+#endif
+
+/* Various routines to kill one day */
+/* Equal to MAX_PRECISION in atof-ieee.c */
+#define MAX_LITTLENUMS 6
+
+/* Turn a string in input_line_pointer into a floating point constant
+   of type TYPE, and store the appropriate bytes in *LITP.  The number
+   of LITTLENUMS emitted is stored in *SIZEP.  An error message is
+   returned, or NULL on OK.  */
 
 char *
 md_atof (int type, char *litP, int *sizeP)
 {
-  return ieee_md_atof (type, litP, sizeP, TRUE);
+  int prec;
+  LITTLENUM_TYPE words[MAX_LITTLENUMS];
+  LITTLENUM_TYPE *wordP;
+  char *t;
+
+  switch (type)
+    {
+    case 'f':
+    case 'F':
+    case 's':
+    case 'S':
+      prec = 2;
+      break;
+
+    case 'd':
+    case 'D':
+    case 'r':
+    case 'R':
+      prec = 4;
+      break;
+
+    case 'x':
+    case 'X':
+      prec = 6;
+      break;
+
+    case 'p':
+    case 'P':
+      prec = 6;
+      break;
+
+    default:
+      *sizeP = 0;
+      return _("Bad call to MD_ATOF()");
+    }
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+
+  *sizeP = prec * sizeof (LITTLENUM_TYPE);
+  for (wordP = words; prec--;)
+    {
+      md_number_to_chars (litP, (long) (*wordP++), sizeof (LITTLENUM_TYPE));
+      litP += sizeof (LITTLENUM_TYPE);
+    }
+  return 0;
 }
 
-#define OPTION_H_TICK_HEX      (OPTION_MD_BASE)
-
 const char *md_shortopts = "";
 struct option md_longopts[] = {
-  { "h-tick-hex", no_argument,	      NULL, OPTION_H_TICK_HEX  },
   {NULL, no_argument, NULL, 0}
 };
 
@@ -2099,16 +2114,7 @@ size_t md_longopts_size = sizeof (md_longopts);
 int
 md_parse_option (int c ATTRIBUTE_UNUSED, char *arg ATTRIBUTE_UNUSED)
 {
-  switch (c)
-    {
-    case OPTION_H_TICK_HEX:
-      enable_h_tick_hex = 1;
-      break;
-
-    default:
-      return 0;
-    }
-  return 1;
+  return 0;
 }
 
 void
@@ -2126,7 +2132,12 @@ tc_aout_fix_to_chars (void)
 }
 
 void
-md_convert_frag (bfd *headers ATTRIBUTE_UNUSED,
+md_convert_frag (
+#ifdef BFD_ASSEMBLER
+		 bfd *headers ATTRIBUTE_UNUSED,
+#else
+		 object_headers *headers ATTRIBUTE_UNUSED,
+#endif
 		 segT seg ATTRIBUTE_UNUSED,
 		 fragS *fragP ATTRIBUTE_UNUSED)
 {
@@ -2134,15 +2145,25 @@ md_convert_frag (bfd *headers ATTRIBUTE_UNUSED,
   abort ();
 }
 
+#ifdef BFD_ASSEMBLER
 valueT
 md_section_align (segT segment, valueT size)
 {
   int align = bfd_get_section_alignment (stdoutput, segment);
   return ((size + (1 << align) - 1) & (-1 << align));
 }
+#else
+valueT
+md_section_align (segT seg, valueT size)
+{
+  return ((size + (1 << section_alignment[(int) seg]) - 1)
+	  & (-1 << section_alignment[(int) seg]));
+}
+#endif
+
 
 void
-md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
+md_apply_fix3 (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 {
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
   long val = *valP;
@@ -2162,13 +2183,6 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       *buf++ = (val >> 8);
       *buf++ = val;
       break;
-    case 8:
-      /* This can arise when the .quad or .8byte pseudo-ops are used.
-	 Returning here (without setting fx_done) will cause the code
-	 to attempt to generate a reloc which will then fail with the
-	 slightly more helpful error message: "Cannot represent
-	 relocation type BFD_RELOC_64".  */
-      return;
     default:
       abort ();
     }
@@ -2178,10 +2192,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 }
 
 int
-md_estimate_size_before_relax (fragS *fragP ATTRIBUTE_UNUSED,
-			       segT segment_type ATTRIBUTE_UNUSED)
+md_estimate_size_before_relax (register fragS *fragP ATTRIBUTE_UNUSED,
+			       register segT segment_type ATTRIBUTE_UNUSED)
 {
-  printf (_("call to md_estimate_size_before_relax \n"));
+  printf (_("call tomd_estimate_size_before_relax \n"));
   abort ();
 }
 
@@ -2193,13 +2207,71 @@ md_number_to_chars (char *ptr, valueT use, int nbytes)
 }
 
 long
-md_pcrel_from (fixS *fixp)
+md_pcrel_from (fixS *fixP ATTRIBUTE_UNUSED)
 {
-  as_bad_where (fixp->fx_file, fixp->fx_line,
-		_("Unexpected reference to a symbol in a non-code section"));
-  return 0;
+  abort ();
 }
 
+#ifndef BFD_ASSEMBLER
+void
+tc_reloc_mangle (fixS *fix_ptr, struct internal_reloc *intr, bfd_vma base)
+{
+  symbolS *symbol_ptr;
+
+  symbol_ptr = fix_ptr->fx_addsy;
+
+  /* If this relocation is attached to a symbol then it's ok
+     to output it.  */
+  if (fix_ptr->fx_r_type == TC_CONS_RELOC)
+    {
+      /* cons likes to create reloc32's whatever the size of the reloc..
+       */
+      switch (fix_ptr->fx_size)
+	{
+	case 4:
+	  intr->r_type = R_RELLONG;
+	  break;
+	case 2:
+	  intr->r_type = R_RELWORD;
+	  break;
+	case 1:
+	  intr->r_type = R_RELBYTE;
+	  break;
+	default:
+	  abort ();
+	}
+    }
+  else
+    {
+      intr->r_type = fix_ptr->fx_r_type;
+    }
+
+  intr->r_vaddr = fix_ptr->fx_frag->fr_address + fix_ptr->fx_where + base;
+  intr->r_offset = fix_ptr->fx_offset;
+
+  if (symbol_ptr)
+    {
+      if (symbol_ptr->sy_number != -1)
+	intr->r_symndx = symbol_ptr->sy_number;
+      else
+	{
+	  symbolS *segsym;
+
+	  /* This case arises when a reference is made to `.'.  */
+	  segsym = seg_info (S_GET_SEGMENT (symbol_ptr))->dot;
+	  if (segsym == NULL)
+	    intr->r_symndx = -1;
+	  else
+	    {
+	      intr->r_symndx = segsym->sy_number;
+	      intr->r_offset += S_GET_VALUE (symbol_ptr);
+	    }
+	}
+    }
+  else
+    intr->r_symndx = -1;
+}
+#else /* BFD_ASSEMBLER */
 arelent *
 tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 {
@@ -2212,13 +2284,13 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	  || S_GET_SEGMENT (fixp->fx_addsy) == undefined_section)
 	{
 	  as_bad_where (fixp->fx_file, fixp->fx_line,
-			_("Difference of symbols in different sections is not supported"));
+			"Difference of symbols in different sections is not supported");
 	  return NULL;
 	}
     }
 
-  rel = xmalloc (sizeof (arelent));
-  rel->sym_ptr_ptr = xmalloc (sizeof (asymbol *));
+  rel = (arelent *) xmalloc (sizeof (arelent));
+  rel->sym_ptr_ptr = (asymbol **) xmalloc (sizeof (asymbol *));
   *rel->sym_ptr_ptr = symbol_get_bfdsym (fixp->fx_addsy);
   rel->address = fixp->fx_frag->fr_address + fixp->fx_where;
   rel->addend = fixp->fx_offset;
@@ -2228,7 +2300,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 #define DEBUG 0
 #if DEBUG
   fprintf (stderr, "%s\n", bfd_get_reloc_code_name (r_type));
-  fflush (stderr);
+  fflush(stderr);
 #endif
   rel->howto = bfd_reloc_type_lookup (stdoutput, r_type);
   if (rel->howto == NULL)
@@ -2241,3 +2313,4 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 
   return rel;
 }
+#endif

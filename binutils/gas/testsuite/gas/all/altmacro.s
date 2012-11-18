@@ -7,7 +7,7 @@ l2:	.byte	v2
 .endm
 
 .macro	m2 v1, v2
-	m1 %(v1), %(v2-v1)
+	m1 %v1, %(v2-v1)
 .endm
 
 .macro	m3 str
@@ -20,7 +20,7 @@ m2	1, 3
 m2	9, 27
 
 m3	"abc"
-m3	<"1", "23">
+m3	<123>
 
 	.noaltmacro
 

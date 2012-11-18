@@ -5,28 +5,24 @@ if [ -z "$MACHINE" ]; then
 else
   OUTPUT_ARCH=${ARCH}:${MACHINE}
 fi
-fragment <<EOF
+cat >e${EMULATION_NAME}.c <<EOF
 /* This file is part of GLD, the Gnu Linker.
    Copyright 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
+   2005 Free Software Foundation, Inc.
 
-   This file is part of the GNU Binutils.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
-
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 /* For WINDOWS_NT */
 /* The original file generated returned different default scripts depending
@@ -35,12 +31,11 @@ fragment <<EOF
    only determine if the subsystem is console or windows in order to select
    the correct entry point by default. */
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "bfdlink.h"
 #include "getopt.h"
 #include "libiberty.h"
-#include "filenames.h"
 #include "ld.h"
 #include "ldmain.h"
 #include "ldexp.h"
@@ -221,8 +216,23 @@ set_pe_subsystem (void)
 	  set_pe_name ("__subsystem__", v[i].value);
 
 	  /* If the subsystem is windows, we use a different entry
-	     point.  */
-	  lang_default_entry (v[i].entry);
+	     point.  We also register the entry point as an undefined
+	     symbol. from lang_add_entry() The reason we do
+	     this is so that the user
+	     doesn't have to because they would have to use the -u
+	     switch if they were specifying an entry point other than
+	     _mainCRTStartup.  Specifically, if creating a windows
+	     application, entry point _WinMainCRTStartup must be
+	     specified.  What I have found for non console
+	     applications (entry not _mainCRTStartup) is that the .obj
+	     that contains mainCRTStartup is brought in since it is
+	     the first encountered in libc.lib and it has other
+	     symbols in it which will be pulled in by the link
+	     process.  To avoid this, adding -u with the entry point
+	     name specified forces the correct .obj to be used.  We
+	     can avoid making the user do this by always adding the
+	     entry point name as an undefined symbol.  */
+	  lang_add_entry (v[i].entry, 1);
 
 	  return;
 	}
@@ -271,7 +281,11 @@ gld${EMULATION_NAME}_handle_option (int optc)
     case OPTION_BASE_FILE:
       link_info.base_file = fopen (optarg, FOPEN_WB);
       if (link_info.base_file == NULL)
-	einfo (_("%F%P: cannot open base file %s\n"), optarg);
+	{
+	  fprintf (stderr, "%s: Can't open base file %s\n",
+		   program_name, optarg);
+	  xexit (1);
+	}
       break;
 
       /* PE options */
@@ -327,6 +341,7 @@ gld_${EMULATION_NAME}_set_symbols (void)
   /* Run through and invent symbols for all the
      names and insert the defaults. */
   int j;
+  lang_statement_list_type *save;
 
   if (!init[IMAGEBASEOFF].inited)
     {
@@ -343,13 +358,14 @@ gld_${EMULATION_NAME}_set_symbols (void)
     return;
 
   /* Glue the assignments into the abs section */
-  push_stat_ptr (&abs_output_section->children);
+  save = stat_ptr;
+
+  stat_ptr = &(abs_output_section->children);
 
   for (j = 0; init[j].ptr; j++)
     {
       long val = init[j].value;
-      lang_add_assignment (exp_assign (init[j].symbol, exp_intop (val),
-				       FALSE));
+      lang_add_assignment (exp_assop ('=', init[j].symbol, exp_intop (val)));
       if (init[j].size == sizeof(short))
 	*(short *)init[j].ptr = val;
       else if (init[j].size == sizeof(int))
@@ -362,7 +378,7 @@ gld_${EMULATION_NAME}_set_symbols (void)
       else	abort();
     }
   /* Restore the pointer. */
-  pop_stat_ptr ();
+  stat_ptr = save;
 
   if (pe.FileAlignment >
       pe.SectionAlignment)
@@ -374,18 +390,16 @@ gld_${EMULATION_NAME}_set_symbols (void)
 static void
 gld_${EMULATION_NAME}_after_open (void)
 {
-  after_open_default ();
-
   /* Pass the wacky PE command line options into the output bfd.
      FIXME: This should be done via a function, rather than by
      including an internal BFD header.  */
-  if (!coff_data(link_info.output_bfd)->pe)
+  if (!coff_data(output_bfd)->pe)
     {
       einfo ("%F%P: PE operations on non PE file.\n");
     }
 
-  pe_data(link_info.output_bfd)->pe_opthdr = pe;
-  pe_data(link_info.output_bfd)->dll = init[DLLOFF].value;
+  pe_data(output_bfd)->pe_opthdr = pe;
+  pe_data(output_bfd)->dll = init[DLLOFF].value;
 
 }
 
@@ -398,13 +412,13 @@ sort_by_file_name (const void *a, const void *b)
   const lang_statement_union_type *const *rb = b;
   int i, a_sec, b_sec;
 
-  i = filename_cmp ((*ra)->input_section.section->owner->my_archive->filename,
-		    (*rb)->input_section.section->owner->my_archive->filename);
+  i = strcmp ((*ra)->input_section.ifile->the_bfd->my_archive->filename,
+	      (*rb)->input_section.ifile->the_bfd->my_archive->filename);
   if (i != 0)
     return i;
 
-  i = filename_cmp ((*ra)->input_section.section->owner->filename,
-		    (*rb)->input_section.section->owner->filename);
+  i = strcmp ((*ra)->input_section.ifile->filename,
+		 (*rb)->input_section.ifile->filename);
   if (i != 0)
     return i;
   /* the tail idata4/5 are the only ones without relocs to an
@@ -428,15 +442,15 @@ sort_by_file_name (const void *a, const void *b)
        if ( (strcmp( (*ra)->input_section.section->name, ".idata$6") == 0) )
           return 0; /* don't sort .idata$6 or .idata$7 FIXME dlltool eliminate .idata$7 */
 
-       if (! bfd_get_section_contents ((*ra)->input_section.section->owner,
+       if (! bfd_get_section_contents ((*ra)->input_section.ifile->the_bfd,
          (*ra)->input_section.section, &a_sec, (file_ptr) 0, (bfd_size_type)sizeof(a_sec)))
             einfo ("%F%B: Can't read contents of section .idata: %E\n",
-                 (*ra)->input_section.section->owner);
+                 (*ra)->input_section.ifile->the_bfd);
 
-       if (! bfd_get_section_contents ((*rb)->input_section.section->owner,
+       if (! bfd_get_section_contents ((*rb)->input_section.ifile->the_bfd,
         (*rb)->input_section.section, &b_sec, (file_ptr) 0, (bfd_size_type)sizeof(b_sec) ))
            einfo ("%F%B: Can't read contents of section .idata: %E\n",
-                (*rb)->input_section.section->owner);
+                (*rb)->input_section.ifile->the_bfd);
 
       i =  ((a_sec < b_sec) ? -1 : 0);
       if ( i != 0)
@@ -453,15 +467,16 @@ sort_by_section_name (const void *a, const void *b)
   const lang_statement_union_type *const *rb = b;
   int i;
   i = strcmp ((*ra)->input_section.section->name,
-	      (*rb)->input_section.section->name);
-  /* This is a hack to make .stab and .stabstr last, so we don't have
-     to fix strip/objcopy for .reloc sections.
-     FIXME stripping images with a .rsrc section still needs to be fixed.  */
-  if (i != 0)
+		 (*rb)->input_section.section->name);
+/* this is a hack to make .stab and .stabstr last, so we don't have
+   to fix strip/objcopy for .reloc sections.
+   FIXME stripping images with a .rsrc section still needs to be fixed */
+  if ( i != 0)
     {
-      if ((CONST_STRNEQ ((*ra)->input_section.section->name, ".stab"))
-           && (! CONST_STRNEQ ((*rb)->input_section.section->name, ".stab")))
+      if ((strncmp ((*ra)->input_section.section->name, ".stab", 5) == 0)
+           && (strncmp ((*rb)->input_section.section->name, ".stab", 5) != 0))
          return 1;
+      return i;
     }
   return i;
 }
@@ -534,7 +549,7 @@ sort_sections (lang_statement_union_type *s)
 	    {
 	      /* Is this the .idata section?  */
 	      if (sec->spec.name != NULL
-		  && CONST_STRNEQ (sec->spec.name, ".idata"))
+		  && strncmp (sec->spec.name, ".idata", 6) == 0)
 		{
 		  /* Sort the children.  We want to sort any objects in
 		     the same archive.  In order to handle the case of
@@ -547,7 +562,7 @@ sort_sections (lang_statement_union_type *s)
 		    {
 		      lang_statement_union_type *start = *p;
 		      if (start->header.type != lang_input_section_enum
-			  || !start->input_section.section->owner->my_archive)
+			  || !start->input_section.ifile->the_bfd->my_archive)
 			p = &(start->header.next);
 		      else
 			{
@@ -606,6 +621,8 @@ sort_sections (lang_statement_union_type *s)
 static void
 gld_${EMULATION_NAME}_before_allocation (void)
 {
+  extern lang_statement_list_type *stat_ptr;
+
 #ifdef TARGET_IS_ppcpe
   /* Here we rummage through the found bfds to collect toc information */
   {
@@ -644,8 +661,6 @@ gld_${EMULATION_NAME}_before_allocation (void)
 #endif /* TARGET_IS_ppcpe */
 
   sort_sections (stat_ptr->head);
-
-  before_allocation_default ();
 }
 
 /* Place an orphan section.  We use this to put sections with a '\$' in them
@@ -659,31 +674,32 @@ gld_${EMULATION_NAME}_before_allocation (void)
    but I'm leaving this here in case we want to enable it for sections
    which are not mentioned in the linker script.  */
 
-static lang_output_section_statement_type *
-gld${EMULATION_NAME}_place_orphan (asection *s,
-				   const char *secname,
-				   int constraint)
+static bfd_boolean
+gld${EMULATION_NAME}_place_orphan (lang_input_statement_type *file, asection *s)
 {
+  const char *secname;
   char *output_secname, *ps;
   lang_output_section_statement_type *os;
   lang_statement_union_type *l;
 
   if ((s->flags & SEC_ALLOC) == 0)
-    return NULL;
+    return FALSE;
 
   /* Don't process grouped sections unless doing a final link.
      If they're marked as COMDAT sections, we don't want .text\$foo to
      end up in .text and then have .text disappear because it's marked
      link-once-discard.  */
   if (link_info.relocatable)
-    return NULL;
+    return FALSE;
+
+  secname = bfd_get_section_name (s->owner, s);
 
   /* Everything from the '\$' on gets deleted so don't allow '\$' as the
      first character.  */
   if (*secname == '\$')
     einfo ("%P%F: section %s has '\$' as first character\n", secname);
   if (strchr (secname + 1, '\$') == NULL)
-    return NULL;
+    return FALSE;
 
   /* Look up the output section.  The Microsoft specs say sections names in
      image files never contain a '\$'.  Fortunately, lang_..._lookup creates
@@ -691,7 +707,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
   output_secname = xstrdup (secname);
   ps = strchr (output_secname + 1, '\$');
   *ps = 0;
-  os = lang_output_section_statement_lookup (output_secname, constraint, TRUE);
+  os = lang_output_section_statement_lookup (output_secname);
 
   /* Find the '\$' wild statement for this section.  We currently require the
      linker script to explicitly mention "*(.foo\$)".
@@ -719,9 +735,9 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
      The sections still have to be sorted, but that has to wait until
      all such sections have been processed by us.  The sorting is done by
      sort_sections.  */
-  lang_add_section (&l->wild_statement.children, s, NULL, os);
+  lang_add_section (&l->wild_statement.children, s, os, file);
 
-  return os;
+  return TRUE;
 }
 
 static char *
@@ -731,7 +747,7 @@ EOF
 # sed commands to quote an ld script as a C string.
 sc="-f stringify.sed"
 
-fragment <<EOF
+cat >>e${EMULATION_NAME}.c <<EOF
 {
   *isfile = 0;
 
@@ -749,7 +765,7 @@ echo '  ; else return'                                 >> e${EMULATION_NAME}.c
 sed $sc ldscripts/${EMULATION_NAME}.x                  >> e${EMULATION_NAME}.c
 echo '; }'                                             >> e${EMULATION_NAME}.c
 
-fragment <<EOF
+cat >>e${EMULATION_NAME}.c <<EOF
 
 
 struct ld_emulation_xfer_struct ld_${EMULATION_NAME}_emulation =
@@ -766,7 +782,7 @@ struct ld_emulation_xfer_struct ld_${EMULATION_NAME}_emulation =
   gld_${EMULATION_NAME}_get_script,
   "${EMULATION_NAME}",
   "${OUTPUT_FORMAT}",
-  finish_default,
+  NULL, /* finish */
   NULL, /* create output section statements */
   NULL, /* open dynamic archive */
   gld${EMULATION_NAME}_place_orphan,

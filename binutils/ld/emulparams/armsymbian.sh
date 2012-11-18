@@ -13,10 +13,13 @@ EMBEDDED=yes
 # .ARM.exidx$${Base,Limit} symbols.
 OTHER_READONLY_SECTIONS="
   .ARM.extab ${RELOCATING-0} : { *(.ARM.extab${RELOCATING+* .gnu.linkonce.armextab.*}) }
-  ${RELOCATING+ PROVIDE_HIDDEN (.ARM.exidx\$\$Base = .); }
-  ${RELOCATING+ PROVIDE_HIDDEN (__exidx_start = .); }
+  ${RELOCATING+ .ARM.exidx\$\$Base = . ; }
+  ${RELOCATING+ __exidx_start = .; }
   .ARM.exidx ${RELOCATING-0} : { *(.ARM.exidx${RELOCATING+* .gnu.linkonce.armexidx.*}) }
-  ${RELOCATING+ PROVIDE_HIDDEN (__exidx_end = .); }
-  ${RELOCATING+ PROVIDE_HIDDEN (.ARM.exidx\$\$Limit = .); }"
+  ${RELOCATING+ __exidx_end = .; }
+  ${RELOCATING+ .ARM.exidx\$\$Limit = . ; }"
 
-MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
+# This value should match ELF_MAXPAGESIZE in BFD.  Otherwise, elf.c
+# will not place read-write sections in a separate ELF segment from
+# the read-only sections.
+MAXPAGESIZE=0x8000

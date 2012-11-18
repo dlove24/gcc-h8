@@ -1,12 +1,12 @@
 /* tc-fr30.c -- Assembler for the Fujitsu FR30.
-   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2005, 2006, 2007, 2009
+   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2005
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,9 +16,10 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330,
+   Boston, MA 02111-1307, USA.  */
 
+#include <stdio.h>
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
@@ -65,8 +66,9 @@ struct option md_longopts[] =
 size_t md_longopts_size = sizeof (md_longopts);
 
 int
-md_parse_option (int c ATTRIBUTE_UNUSED,
-		 char *arg ATTRIBUTE_UNUSED)
+md_parse_option (c, arg)
+     int c ATTRIBUTE_UNUSED;
+     char *arg ATTRIBUTE_UNUSED;
 {
   switch (c)
     {
@@ -77,7 +79,8 @@ md_parse_option (int c ATTRIBUTE_UNUSED,
 }
 
 void
-md_show_usage (FILE * stream)
+md_show_usage (stream)
+  FILE * stream;
 {
   fprintf (stream, _(" FR30 specific command line options:\n"));
 }
@@ -91,7 +94,7 @@ const pseudo_typeS md_pseudo_table[] =
 
 
 void
-md_begin (void)
+md_begin ()
 {
   /* Initialize the `cgen' interface.  */
 
@@ -107,7 +110,8 @@ md_begin (void)
 }
 
 void
-md_assemble (char *str)
+md_assemble (str)
+     char *str;
 {
   static int last_insn_had_delay_slot = 0;
   fr30_insn insn;
@@ -121,7 +125,7 @@ md_assemble (char *str)
 
   if (!insn.insn)
     {
-      as_bad ("%s", errmsg);
+      as_bad (errmsg);
       return;
     }
 
@@ -143,7 +147,8 @@ md_assemble (char *str)
    We just ignore it.  */
 
 void
-md_operand (expressionS * expressionP)
+md_operand (expressionP)
+     expressionS * expressionP;
 {
   if (* input_line_pointer == '#')
     {
@@ -153,17 +158,19 @@ md_operand (expressionS * expressionP)
 }
 
 valueT
-md_section_align (segT segment, valueT size)
+md_section_align (segment, size)
+     segT   segment;
+     valueT size;
 {
   int align = bfd_get_section_alignment (stdoutput, segment);
-
   return ((size + (1 << align) - 1) & (-1 << align));
 }
 
 symbolS *
-md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
+md_undefined_symbol (name)
+  char *name ATTRIBUTE_UNUSED;
 {
-  return NULL;
+  return 0;
 }
 
 /* Interface to relax_segment.  */
@@ -208,7 +215,9 @@ const relax_typeS md_relax_table[] =
    0 value.  */
 
 int
-md_estimate_size_before_relax (fragS * fragP, segT segment)
+md_estimate_size_before_relax (fragP, segment)
+     fragS * fragP;
+     segT    segment;
 {
   /* The only thing we have to handle here are symbols outside of the
      current segment.  They may be undefined or in a different segment in
@@ -259,9 +268,10 @@ md_estimate_size_before_relax (fragS * fragP, segT segment)
    fragP->fr_subtype is the subtype of what the address relaxed to.  */
 
 void
-md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
-		 segT sec ATTRIBUTE_UNUSED,
-		 fragS *fragP ATTRIBUTE_UNUSED)
+md_convert_frag (abfd, sec, fragP)
+  bfd *abfd ATTRIBUTE_UNUSED;
+  segT sec ATTRIBUTE_UNUSED;
+  fragS *fragP ATTRIBUTE_UNUSED;
 {
 }
 
@@ -271,14 +281,18 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED,
    given a PC relative reloc.  */
 
 long
-md_pcrel_from_section (fixS * fixP, segT sec)
+md_pcrel_from_section (fixP, sec)
+     fixS * fixP;
+     segT   sec;
 {
   if (fixP->fx_addsy != (symbolS *) NULL
       && (! S_IS_DEFINED (fixP->fx_addsy)
 	  || S_GET_SEGMENT (fixP->fx_addsy) != sec))
-    /* The symbol is undefined (or is defined but not in this section).
-       Let the linker figure it out.  */
-    return 0;
+    {
+      /* The symbol is undefined (or is defined but not in this section).
+	 Let the linker figure it out.  */
+      return 0;
+    }
 
   return (fixP->fx_frag->fr_address + fixP->fx_where) & ~1;
 }
@@ -288,9 +302,10 @@ md_pcrel_from_section (fixS * fixP, segT sec)
    *FIXP may be modified if desired.  */
 
 bfd_reloc_code_real_type
-md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
-		      const CGEN_OPERAND *operand,
-		      fixS *fixP)
+md_cgen_lookup_reloc (insn, operand, fixP)
+     const CGEN_INSN *insn ATTRIBUTE_UNUSED;
+     const CGEN_OPERAND *operand;
+     fixS *fixP;
 {
   switch (operand->type)
     {
@@ -303,7 +318,7 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
     case FR30_OPERAND_I8:      return BFD_RELOC_8;
     case FR30_OPERAND_I32:     return BFD_RELOC_FR30_48;
     case FR30_OPERAND_I20:     return BFD_RELOC_FR30_20;
-    default : /* Avoid -Wall warning.  */
+    default : /* avoid -Wall warning */
       break;
     }
 
@@ -313,20 +328,77 @@ md_cgen_lookup_reloc (const CGEN_INSN *insn ATTRIBUTE_UNUSED,
 /* Write a value out to the object file, using the appropriate endianness.  */
 
 void
-md_number_to_chars (char * buf, valueT val, int n)
+md_number_to_chars (buf, val, n)
+     char * buf;
+     valueT val;
+     int    n;
 {
   number_to_chars_bigendian (buf, val, n);
 }
 
+/* Turn a string in input_line_pointer into a floating point constant of type
+   type, and store the appropriate bytes in *litP.  The number of LITTLENUMS
+   emitted is stored in *sizeP .  An error message is returned, or NULL on OK.
+*/
+
+/* Equal to MAX_PRECISION in atof-ieee.c */
+#define MAX_LITTLENUMS 6
+
 char *
-md_atof (int type, char * litP, int * sizeP)
+md_atof (type, litP, sizeP)
+     char   type;
+     char * litP;
+     int *  sizeP;
 {
-  return ieee_md_atof (type, litP, sizeP, TRUE);
+  int              i;
+  int              prec;
+  LITTLENUM_TYPE   words [MAX_LITTLENUMS];
+  char *           t;
+
+  switch (type)
+    {
+    case 'f':
+    case 'F':
+    case 's':
+    case 'S':
+      prec = 2;
+      break;
+
+    case 'd':
+    case 'D':
+    case 'r':
+    case 'R':
+      prec = 4;
+      break;
+
+   /* FIXME: Some targets allow other format chars for bigger sizes here.  */
+
+    default:
+      * sizeP = 0;
+      return _("Bad call to md_atof()");
+    }
+
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+  * sizeP = prec * sizeof (LITTLENUM_TYPE);
+
+  for (i = 0; i < prec; i++)
+    {
+      md_number_to_chars (litP, (valueT) words[i],
+			  sizeof (LITTLENUM_TYPE));
+      litP += sizeof (LITTLENUM_TYPE);
+    }
+
+  return 0;
 }
 
 /* Worker function for fr30_is_colon_insn().  */
+static char restore_colon PARAMS ((int));
+
 static char
-restore_colon (int advance_i_l_p_by)
+restore_colon (advance_i_l_p_by)
+     int advance_i_l_p_by;
 {
   char c;
 
@@ -348,11 +420,12 @@ restore_colon (int advance_i_l_p_by)
    to the real end of the instruction/symbol, and returns the character
    that really terminated the symbol.  Otherwise it returns 0.  */
 char
-fr30_is_colon_insn (char *  start)
+fr30_is_colon_insn (start)
+     char *  start;
 {
   char * i_l_p = input_line_pointer;
 
-  /* Check to see if the symbol parsed so far is 'ldi'.  */
+  /* Check to see if the symbol parsed so far is 'ldi'  */
   if (   (start[0] != 'l' && start[0] != 'L')
       || (start[1] != 'd' && start[1] != 'D')
       || (start[2] != 'i' && start[2] != 'I')
@@ -393,15 +466,15 @@ fr30_is_colon_insn (char *  start)
       return 0;
     }
 
-  /* Check to see if the text following the colon is '8'.  */
+  /* Check to see if the text following the colon is '8' */
   if (i_l_p[1] == '8' && (i_l_p[2] == ' ' || i_l_p[2] == '\t'))
     return restore_colon (2);
 
-  /* Check to see if the text following the colon is '20'.  */
+  /* Check to see if the text following the colon is '20' */
   else if (i_l_p[1] == '2' && i_l_p[2] =='0' && (i_l_p[3] == ' ' || i_l_p[3] == '\t'))
     return restore_colon (3);
 
-  /* Check to see if the text following the colon is '32'.  */
+  /* Check to see if the text following the colon is '32' */
   else if (i_l_p[1] == '3' && i_l_p[2] =='2' && (i_l_p[3] == ' ' || i_l_p[3] == '\t'))
     return restore_colon (3);
 
@@ -409,9 +482,10 @@ fr30_is_colon_insn (char *  start)
 }
 
 bfd_boolean
-fr30_fix_adjustable (fixS * fixP)
+fr30_fix_adjustable (fixP)
+   fixS * fixP;
 {
-  /* We need the symbol name for the VTABLE entries.  */
+  /* We need the symbol name for the VTABLE entries */
   if (fixP->fx_r_type == BFD_RELOC_VTABLE_INHERIT
       || fixP->fx_r_type == BFD_RELOC_VTABLE_ENTRY)
     return 0;

@@ -10,7 +10,7 @@
 #	OTHER_TEXT_SECTIONS - these get put in .text when relocating
 #	OTHER_READWRITE_SECTIONS - other than .data .bss .ctors .sdata ...
 #		(e.g., .PARISC.global)
-#	ATTRS_SECTIONS - at the end
+#	OTHER_BSS_SECTIONS - other than .bss .sbss ...
 #	OTHER_SECTIONS - at the end
 #	EXECUTABLE_SYMBOLS - symbols that must be defined for an
 #		executable (e.g., _DYNAMIC_LINK)
@@ -36,7 +36,7 @@
 #	FINI_START, FINI_END - statements just before and just after
 # 	combination of .fini sections.
 #	STACK_ADDR - start of a .stack section.
-#	OTHER_SYMBOLS - symbols to place right at the end of the script.
+#	OTHER_END_SYMBOLS - symbols to place right at the end of the script.
 #
 # When adding sections, do note that the names of some sections are used
 # when specifying the start address of the next.
@@ -69,7 +69,6 @@ test -z "${LITTLE_OUTPUT_FORMAT}" && LITTLE_OUTPUT_FORMAT=${OUTPUT_FORMAT}
 if [ -z "$MACHINE" ]; then OUTPUT_ARCH=${ARCH}; else OUTPUT_ARCH=${ARCH}:${MACHINE}; fi
 test -z "${ELFSIZE}" && ELFSIZE=32
 test -z "${ALIGNMENT}" && ALIGNMENT="${ELFSIZE} / 8"
-test -z "$ATTRS_SECTIONS" && ATTRS_SECTIONS=".gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }"
 test "$LD_FLAG" = "N" && DATA_ADDR=.
 INTERP=".interp       ${RELOCATING-0} : { *(.interp) }"
 PLT=".plt          ${RELOCATING-0} : { *(.plt) }"
@@ -117,24 +116,22 @@ CTOR="
        doesn't matter which directory crtbegin.o
        is in.  */
 
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
+    KEEP (*crtbegin*.o(.ctors))
 
     /* We don't want to include the .ctor section from
-       the crtend.o file until after the sorted ctors.
+       from the crtend.o file until after the sorted ctors.
        The .ctor section from the crtend file contains the
        end of ctors marker and it must be last */
 
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o $OTHER_EXCLUDE_FILES) .ctors))
+    KEEP (*(EXCLUDE_FILE (*crtend*.o $OTHER_EXCLUDE_FILES) .ctors))
     KEEP (*(SORT(.ctors.*)))
     KEEP (*(.ctors))
     ${CONSTRUCTING+${CTOR_END}}
 "
 DTOR="
     ${CONSTRUCTING+${DTOR_START}}
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o $OTHER_EXCLUDE_FILES) .dtors))
+    KEEP (*crtbegin*.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend*.o $OTHER_EXCLUDE_FILES) .dtors))
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
     ${CONSTRUCTING+${DTOR_END}}
@@ -151,7 +148,7 @@ cat <<EOF
 OUTPUT_FORMAT("${OUTPUT_FORMAT}", "${BIG_OUTPUT_FORMAT}",
 	      "${LITTLE_OUTPUT_FORMAT}")
 OUTPUT_ARCH(${OUTPUT_ARCH})
-${RELOCATING+ENTRY(${ENTRY})}
+ENTRY(${ENTRY})
 
 ${RELOCATING+${LIB_SEARCH_DIRS}}
 ${RELOCATING+/* Do we need any of these for elf?
@@ -301,10 +298,10 @@ cat <<EOF
       .bss section disappears because there are no input sections.  */
    ${RELOCATING+. = ALIGN(${ALIGNMENT});}
   }
-  ${RELOCATING+${OTHER_BSS_END_SYMBOLS}}
+  ${OTHER_BSS_SECTIONS}
   ${RELOCATING+. = ALIGN(${ALIGNMENT});}
-  ${RELOCATING+${OTHER_END_SYMBOLS}}
   ${RELOCATING+_end = .;}
+  ${RELOCATING+${OTHER_BSS_END_SYMBOLS}}
   ${RELOCATING+PROVIDE (end = .);}
 
   /* Stabs debugging sections.  */
@@ -350,12 +347,8 @@ cat <<EOF
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
 
-  /* DWARF Extension.  */
-  .debug_macro    0 : { *(.debug_macro) } 
-  
   ${STACK_ADDR+${STACK}}
-  ${ATTRS_SECTIONS}
   ${OTHER_SECTIONS}
-  ${RELOCATING+${OTHER_SYMBOLS}}
+  ${RELOCATING+${OTHER_END_SYMBOLS}}
 }
 EOF

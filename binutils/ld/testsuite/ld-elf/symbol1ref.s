@@ -1,3 +1,3 @@
-	.data
-	.dc.a symbol1
+	.text
+	.long symbol1
 

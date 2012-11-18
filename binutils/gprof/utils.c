@@ -26,14 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include "gprof.h"
 #include "demangle.h"
+#include "gprof.h"
 #include "search_list.h"
 #include "source.h"
 #include "symtab.h"
 #include "cg_arcs.h"
 #include "utils.h"
-#include "corefile.h"
 
 
 /*
@@ -50,11 +49,20 @@ print_name_only (Sym *self)
 
   if (name)
     {
-      if (!bsd_style_output && demangle)
+      if (!bsd_style_output)
 	{
-	  demangled = bfd_demangle (core_bfd, name, DMGL_ANSI | DMGL_PARAMS);
-	  if (demangled)
-	    name = demangled;
+	  if (name[0] == '_' && name[1] && discard_underscores)
+	    {
+	      name++;
+	    }
+	  if (demangle)
+	    {
+	      demangled = cplus_demangle (name, DMGL_ANSI | DMGL_PARAMS);
+	      if (demangled)
+		{
+		  name = demangled;
+		}
+	    }
 	}
       printf ("%s", name);
       size = strlen (name);

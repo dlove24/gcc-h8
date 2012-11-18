@@ -2,7 +2,6 @@
 # sh[l]elf(32|64).sh parameter scripts.
 SCRIPT_NAME=elf
 OUTPUT_FORMAT=${OUTPUT_FORMAT-"elf32-sh64"}
-NO_REL_RELOCS=yes
 TEXT_START_ADDR=0x1000
 MAXPAGESIZE=128
 ARCH=sh
@@ -41,7 +40,7 @@ DTOR_END='___dtors_end = .;'
 # the address is needed to place the .stack section, which in turn is needed
 # to hold the sentinel value(s).
 test -z "$CREATE_SHLIB" && OTHER_SECTIONS="
-  .stack ${RELOCATING-0}${RELOCATING+(DEFINED(_stack) ? _stack : ALIGN (0x40000) + 0x80000)} :
+  .stack ${RELOCATING-0}${RELOCATING+(DEFINED(_stack) ? _stack : ALIGN (0x40000) + 0x40000)} :
   {
     ${RELOCATING+_stack = .;}
     *(.stack)

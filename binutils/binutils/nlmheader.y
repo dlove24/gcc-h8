@@ -1,23 +1,22 @@
 %{/* nlmheader.y - parse NLM header specification keywords.
-     Copyright 1993, 1994, 1995, 1997, 1998, 2001, 2002, 2003, 2005, 2007,
-     2010 Free Software Foundation, Inc.
+     Copyright 1993, 1994, 1995, 1997, 1998, 2001, 2002, 2003
+     Free Software Foundation, Inc.
 
-     This file is part of GNU Binutils.
+This file is part of GNU Binutils.
 
-     This program is free software; you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
-     the Free Software Foundation; either version 3 of the License, or
-     (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-     This program is distributed in the hope that it will be useful,
-     but WITHOUT ANY WARRANTY; without even the implied warranty of
-     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-     You should have received a copy of the GNU General Public License
-     along with this program; if not, write to the Free Software
-     Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-     MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 /* Written by Ian Lance Taylor <ian@cygnus.com>.
 
@@ -28,12 +27,13 @@
    This implementation is based on the description in the NetWare Tool
    Maker Specification manual, edition 1.0.  */
 
-#include "sysdep.h"
+#include "ansidecl.h"
+#include <stdio.h>
 #include "safe-ctype.h"
 #include "bfd.h"
+#include "bucomm.h"
 #include "nlm/common.h"
 #include "nlm/internal.h"
-#include "bucomm.h"
 #include "nlmconv.h"
 
 /* Information is stored in the structures pointed to by these
@@ -117,7 +117,7 @@ static char *xstrdup (const char *);
 
 /* The reserved words.  */
 
-%token CHECK CODESTART COPYRIGHT CUSTOM DATE DEBUG_K DESCRIPTION EXIT
+%token CHECK CODESTART COPYRIGHT CUSTOM DATE DEBUG DESCRIPTION EXIT
 %token EXPORT FLAG_ON FLAG_OFF FULLMAP HELP IMPORT INPUT MAP MESSAGES
 %token MODULE MULTIPLE OS_DOMAIN OUTPUT PSEUDOPREEMPTION REENTRANT
 %token SCREENNAME SHARELIB STACK START SYNCHRONIZE
@@ -202,7 +202,7 @@ command:
 	    if (version_hdr->year < 1900 || version_hdr->year > 3000)
 	      nlmheader_warn (_("illegal year"), -1);
 	  }
-	| DEBUG_K
+	| DEBUG
 	  {
 	    debug_info = TRUE;
 	  }
@@ -586,14 +586,14 @@ struct keyword_tokens_struct
   int token;
 };
 
-static struct keyword_tokens_struct keyword_tokens[] =
+struct keyword_tokens_struct keyword_tokens[] =
 {
   { "CHECK", CHECK },
   { "CODESTART", CODESTART },
   { "COPYRIGHT", COPYRIGHT },
   { "CUSTOM", CUSTOM },
   { "DATE", DATE },
-  { "DEBUG", DEBUG_K },
+  { "DEBUG", DEBUG },
   { "DESCRIPTION", DESCRIPTION },
   { "EXIT", EXIT },
   { "EXPORT", EXPORT },

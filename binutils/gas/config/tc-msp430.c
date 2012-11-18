@@ -1,14 +1,13 @@
 /* tc-msp430.c -- Assembler code for the Texas Instruments MSP430
 
-  Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010, 2012
-  Free Software Foundation, Inc.
+  Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
   Contributed by Dmitry Diky <diwil@mail.ru>
 
   This file is part of GAS, the GNU Assembler.
 
   GAS is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 3, or (at your option)
+  the Free Software Foundation; either version 2, or (at your option)
   any later version.
 
   GAS is distributed in the hope that it will be useful,
@@ -18,56 +17,19 @@
 
   You should have received a copy of the GNU General Public License
   along with GAS; see the file COPYING.  If not, write to
-  the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-  Boston, MA 02110-1301, USA.  */
+  the Free Software Foundation, 59 Temple Place - Suite 330,
+  Boston, MA 02111-1307, USA.  */
 
-#include "as.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <limits.h>
+
 #define PUSH_1X_WORKAROUND
+#include "as.h"
 #include "subsegs.h"
 #include "opcode/msp430.h"
 #include "safe-ctype.h"
-#include "dwarf2dbg.h"
-
-/* We will disable polymorphs by default because it is dangerous.
-   The potential problem here is the following: assume we got the
-   following code:
-
-	jump .l1
-	nop
-	jump  subroutine	; external symbol
-      .l1:
-	nop
-	ret
-   
-   In case of assembly time relaxation we'll get:
-	0: jmp .l1 <.text +0x08> (reloc deleted)
-	2: nop
-	4: br subroutine
-    .l1:
-	8: nop
-	10: ret
-
-   If the 'subroutine' is within +-1024 bytes range then linker
-   will produce:
-	0: jmp .text +0x08
-	2: nop
-	4: jmp subroutine
-	.l1:
-	6: nop
-	8: ret	; 'jmp .text +0x08' will land here. WRONG!!!
-
-   The workaround is the following:
-   1. Declare global var enable_polymorphs which set to 1 via option -mp.
-   2. Declare global var enable_relax	which set to 1 via option -mQ.
-
-   If polymorphs are enabled, and relax isn't, treat all jumps as long jumps,
-   do not delete any relocs and leave them for linker.
-   
-   If relax is enabled, relax at assembly time and kill relocs as necessary.  */
-
-int msp430_enable_relax;
-int msp430_enable_polys;
 
 /* GCC uses the some condition codes which we'll
    implement as new polymorph instructions.
@@ -162,7 +124,7 @@ static struct hcodes_s msp430_hcodes[] =
 
 const char comment_chars[] = ";";
 const char line_comment_chars[] = "#";
-const char line_separator_chars[] = "{";
+const char line_separator_chars[] = "";
 const char EXP_CHARS[] = "eE";
 const char FLT_CHARS[] = "dD";
 
@@ -243,7 +205,6 @@ struct mcu_type_s
 #define MSP430_ISA_14   14
 #define MSP430_ISA_15   15
 #define MSP430_ISA_16   16
-#define MSP430_ISA_21   21
 #define MSP430_ISA_31   31
 #define MSP430_ISA_32   32
 #define MSP430_ISA_33   33
@@ -290,11 +251,6 @@ static struct mcu_type_s mcu_types[] =
   {"msp430x1611", MSP430_ISA_16, bfd_mach_msp16},
   {"msp430x1612", MSP430_ISA_16, bfd_mach_msp16},
 
-  {"msp430x2101", MSP430_ISA_21, bfd_mach_msp21},
-  {"msp430x2111", MSP430_ISA_21, bfd_mach_msp21},
-  {"msp430x2121", MSP430_ISA_21, bfd_mach_msp21},
-  {"msp430x2131", MSP430_ISA_21, bfd_mach_msp21},
-  
   {"msp430x311",  MSP430_ISA_31, bfd_mach_msp31},
   {"msp430x312",  MSP430_ISA_31, bfd_mach_msp31},
   {"msp430x313",  MSP430_ISA_31, bfd_mach_msp31},
@@ -390,7 +346,7 @@ static struct mcu_type_s * msp430_mcu = & default_mcu;
 	push r8
       .profiler "cdp",fxx,0, .LFrameOffset_fxx	; check stack value at this point
 						; (this is a prologue end)
-						; note, that spare var filled with the frame size
+						; note, that spare var filled with the farme size
 	mov r15,r8
 	....
       .profiler cdE,fxx		; check stack
@@ -481,7 +437,7 @@ skip_space (char * s)
   return s;
 }
 
-/* Extract one word from FROM and copy it to TO. Delimiters are ",;\n"  */
+/* Extract one word from FROM and copy it to TO. Delimeters are ",;\n"  */
 
 static char *
 extract_operand (char * from, char * to, int limit)
@@ -618,17 +574,17 @@ msp430_profiler (int dummy ATTRIBUTE_UNUSED)
 	  || ! pow2value (p_flags & (  MSP430_PROFILER_FLAG_INITSECT
 				     | MSP430_PROFILER_FLAG_FINISECT))))
     {
-      as_bad (_("ambiguous flags combination - '.profiler' directive ignored."));
+      as_bad (_("ambigious flags combination - '.profiler' directive ignored."));
       input_line_pointer = end;
       return;
     }
 
   /* Generate temp symbol which denotes current location.  */
-  if (now_seg == absolute_section)	/* Paranoia ?  */
+  if (now_seg == absolute_section)	/* Paranoja ?  */
     {
       exp1.X_op = O_constant;
       exp1.X_add_number = abs_section_offset;
-      as_warn (_("profiling in absolute section?"));
+      as_warn (_("profiling in absolute section? Hm..."));
     }
   else
     {
@@ -677,6 +633,7 @@ msp430_profiler (int dummy ATTRIBUTE_UNUSED)
 static char *
 extract_word (char * from, char * to, int limit)
 {
+  char *op_start;
   char *op_end;
   int size = 0;
 
@@ -685,7 +642,7 @@ extract_word (char * from, char * to, int limit)
   *to = 0;
 
   /* Find the op code end.  */
-  for (op_end = from; *op_end != 0 && is_part_of_name (*op_end);)
+  for (op_start = op_end = from; *op_end != 0 && is_part_of_name (*op_end);)
     {
       to[size++] = *op_end++;
       if (size + 1 >= limit)
@@ -697,8 +654,6 @@ extract_word (char * from, char * to, int limit)
 }
 
 #define OPTION_MMCU 'm'
-#define OPTION_RELAX 'Q'
-#define OPTION_POLYMORPHS 'P'
 
 static void
 msp430_set_arch (int dummy ATTRIBUTE_UNUSED)
@@ -748,17 +703,6 @@ md_parse_option (int c, char * arg)
 	as_fatal (_("redefinition of mcu type %s' to %s'"),
 		  msp430_mcu->name, mcu_types[i].name);
       return 1;
-      break;
-      
-    case OPTION_RELAX:
-      msp430_enable_relax = 1; 
-      return 1;
-      break;
-      
-    case OPTION_POLYMORPHS:
-      msp430_enable_polys = 1;
-      return 1;
-      break;
     }
 
   return 0;
@@ -777,8 +721,6 @@ const char *md_shortopts = "m:";
 struct option md_longopts[] =
 {
   {"mmcu", required_argument, NULL, OPTION_MMCU},
-  {"mP", no_argument, NULL, OPTION_POLYMORPHS},
-  {"mQ", no_argument, NULL, OPTION_RELAX},
   {NULL, no_argument, NULL, 0}
 };
 
@@ -810,9 +752,6 @@ md_show_usage (FILE * stream)
 	     "                  msp430xG437 msp430xG438 msp430G439\n"
 	     "                  msp430x435  msp430x436  msp430x437\n"
 	     "                  msp430x447  msp430x448  msp430x449\n"));
-  fprintf (stream,
-	   _("  -mQ - enable relaxation at assembly time. DANGEROUS!\n"
-	     "  -mP - enable polymorph instructions\n"));
 
   show_mcu_list (stream);
 }
@@ -840,10 +779,46 @@ extract_cmd (char * from, char * to, int limit)
   return from;
 }
 
+/* Turn a string in input_line_pointer into a floating point constant
+   of type TYPE, and store the appropriate bytes in *LITP.  The number
+   of LITTLENUMS emitted is stored in *SIZEP.  An error message is
+   returned, or NULL on OK.  */
+
 char *
 md_atof (int type, char * litP, int * sizeP)
 {
-  return ieee_md_atof (type, litP, sizeP, FALSE);
+  int prec;
+  LITTLENUM_TYPE words[4];
+  LITTLENUM_TYPE *wordP;
+  char *t;
+
+  switch (type)
+    {
+    case 'f':
+      prec = 2;
+      break;
+    case 'd':
+      prec = 4;
+      break;
+    default:
+      *sizeP = 0;
+      return _("bad call to md_atof");
+    }
+
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+
+  *sizeP = prec * sizeof (LITTLENUM_TYPE);
+
+  /* This loop outputs the LITTLENUMs in REVERSE order.  */
+  for (wordP = words + prec - 1; prec--;)
+    {
+      md_number_to_chars (litP, (valueT) (*wordP--), sizeof (LITTLENUM_TYPE));
+      litP += sizeof (LITTLENUM_TYPE);
+    }
+
+  return NULL;
 }
 
 void
@@ -1008,7 +983,7 @@ msp430_srcoperand (struct msp430_operand_s * op,
 	      if (bin == 0x1200)
 		{
 		  /* Remove warning as confusing.
-		     as_warn (_("Hardware push bug workaround")); */
+		     as_warn(_("Hardware push bug workaround")); */
 		}
 	      else
 #endif
@@ -1025,7 +1000,7 @@ msp430_srcoperand (struct msp430_operand_s * op,
 	      if (bin == 0x1200)
 		{
 		  /* Remove warning as confusing.
-		     as_warn (_("Hardware push bug workaround")); */
+		     as_warn(_("Hardware push bug workaround")); */
 		}
 	      else
 #endif
@@ -1101,7 +1076,7 @@ msp430_srcoperand (struct msp430_operand_s * op,
 	      op->mode = OP_REG;
 	    }
 	}
-      /* Redundant (yet) check.  */
+      /* Redudant (yet) check.  */
       else if (op->exp.X_op == O_register)
 	as_bad
 	  (_("Registers cannot be used within immediate expression [%s]"), l);
@@ -1136,7 +1111,7 @@ msp430_srcoperand (struct msp430_operand_s * op,
 	;
       else
 	{
-	  /* Redundant (yet) check.  */
+	  /* Redudant (yet) check.  */
 	  if (op->exp.X_op == O_register)
 	    as_bad
 	      (_("Registers cannot be used within absolute expression [%s]"), l);
@@ -1224,7 +1199,7 @@ msp430_srcoperand (struct msp430_operand_s * op,
       op->reg = *t - '0';
       if (op->reg > 9 || op->reg < 0)
 	{
-	  as_bad (_("unknown operator (r%s substituted as a register name"),
+	  as_bad (_("unknown operator (r%s substituded as a register name"),
 		  t);
 	  return 1;
 	}
@@ -1279,7 +1254,7 @@ msp430_srcoperand (struct msp430_operand_s * op,
 	;
       else
 	{
-	  /* Redundant (yet) check.  */
+	  /* Redudant (yet) check.  */
 	  if (op->exp.X_op == O_register)
 	    as_bad
 	      (_("Registers cannot be used as a prefix of indexed expression [%s]"), l);
@@ -1380,7 +1355,7 @@ static unsigned int
 msp430_operands (struct msp430_opcode_s * opcode, char * line)
 {
   int bin = opcode->bin_opcode;	/* Opcode mask.  */
-  int __is = 0;
+  int __is;
   char l1[MAX_OP_LEN], l2[MAX_OP_LEN];
   char *frag;
   int where;
@@ -1432,7 +1407,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	  __is = 2;
 	  frag = frag_more (__is);
 	  bfd_putl16 ((bfd_vma) bin, frag);
-	  dwarf2_emit_insn (__is);
 	  break;
 	case 1:
 	  /* Something which works with destination operand.  */
@@ -1446,7 +1420,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	  frag = frag_more (2 * __is);
 	  where = frag - frag_now->fr_literal;
 	  bfd_putl16 ((bfd_vma) bin, frag);
-	  dwarf2_emit_insn (2 * __is);
 
 	  if (op1.mode == OP_EXP)
 	    {
@@ -1480,8 +1453,7 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	    frag = frag_more (2 * __is);
 	    where = frag - frag_now->fr_literal;
 	    bfd_putl16 ((bfd_vma) bin, frag);
-	    dwarf2_emit_insn (2 * __is);
-	    
+
 	    if (op1.mode == OP_EXP)
 	      {
 		where += 2;	/* Advance 'where' as we do not know _where_.  */
@@ -1525,7 +1497,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	  frag = frag_more (2 * __is);
 	  where = frag - frag_now->fr_literal;
 	  bfd_putl16 ((bfd_vma) bin, frag);
-	  dwarf2_emit_insn (2 * __is);
 
 	  if (op1.mode == OP_EXP)
 	    {
@@ -1558,7 +1529,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
       frag = frag_more (2 * __is);
       where = frag - frag_now->fr_literal;
       bfd_putl16 ((bfd_vma) bin, frag);
-      dwarf2_emit_insn (2 * __is);
 
       if (op1.mode == OP_EXP)
 	{
@@ -1593,7 +1563,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	  /* reti instruction.  */
 	  frag = frag_more (2);
 	  bfd_putl16 ((bfd_vma) bin, frag);
-	  dwarf2_emit_insn (2);
 	  break;
 	}
 
@@ -1607,7 +1576,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
       frag = frag_more (2 * __is);
       where = frag - frag_now->fr_literal;
       bfd_putl16 ((bfd_vma) bin, frag);
-      dwarf2_emit_insn (2 * __is);
 
       if (op1.mode == OP_EXP)
 	{
@@ -1692,14 +1660,14 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	  else if (*l1 == '$')
 	    {
 	      as_bad (_("instruction requires label sans '$'"));
+	      break;
 	    }
 	  else
 	    {
 	      as_bad (_
 		      ("instruction requires label or value in range -511:512"));
+	      break;
 	    }
-	  dwarf2_emit_insn (2 * __is);
-	  break;
 	}
       else
 	{
@@ -1709,12 +1677,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
       break;
 
     case 4:	/* Extended jumps.  */
-      if (!msp430_enable_polys)
-	{
-	  as_bad (_("polymorphs are not enabled. Use -mP option to enable."));
-	  break;
-	}
-	
       line = extract_operand (line, l1, sizeof (l1));
       if (l1[0])
 	{
@@ -1731,12 +1693,7 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	      /* Relaxation required.  */
 	      struct rcodes_s rc = msp430_rcodes[opcode->insn_opnumb];
 
-	      /* The parameter to dwarf2_emit_insn is actually the offset to the start
-		 of the insn from the fix piece of instruction that was emitted.
-		 Since next fragments may have variable size we tie debug info
-	         to the beginning of the instruction. */
 	      frag = frag_more (8);
-	      dwarf2_emit_insn (0);
 	      bfd_putl16 ((bfd_vma) rc.sop, frag);
 	      frag = frag_variant (rs_machine_dependent, 8, 2,
 				   ENCODE_RELAX (rc.lpos, STATE_BITS10), /* Wild guess.  */
@@ -1751,11 +1708,6 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
       break;
 
     case 5:	/* Emulated extended branches.  */
-      if (!msp430_enable_polys)
-	{
-	  as_bad (_("polymorphs are not enabled. Use -mP option to enable."));
-	  break;
-	}
       line = extract_operand (line, l1, sizeof (l1));
       if (l1[0])
 	{
@@ -1773,10 +1725,8 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
 	      struct hcodes_s hc = msp430_hcodes[opcode->insn_opnumb];
 
 	      frag = frag_more (8);
-	      dwarf2_emit_insn (0);
 	      bfd_putl16 ((bfd_vma) hc.op0, frag);
 	      bfd_putl16 ((bfd_vma) hc.op1, frag+2);
-
 	      frag = frag_variant (rs_machine_dependent, 8, 2,
 				   ENCODE_RELAX (STATE_EMUL_BRANCH, STATE_BITS10), /* Wild guess.  */
 				   exp.X_add_symbol,
@@ -1790,7 +1740,7 @@ msp430_operands (struct msp430_opcode_s * opcode, char * line)
       break;
 
     default:
-      as_bad (_("Illegal instruction or not implemented opcode."));
+      as_bad (_("Ilegal instruction or not implmented opcode."));
     }
 
   input_line_pointer = line;
@@ -1864,25 +1814,11 @@ md_pcrel_from_section (fixS * fixp, segT sec)
   return fixp->fx_frag->fr_address + fixp->fx_where;
 }
 
-/* Replaces standard TC_FORCE_RELOCATION_LOCAL.
-   Now it handles the situation when relocations
-   have to be passed to linker. */
-int
-msp430_force_relocation_local(fixS *fixp)
-{
-  if (msp430_enable_polys
-        && !msp430_enable_relax)
-    return 1;
-  else
-    return (!fixp->fx_pcrel
-	    || generic_force_reloc(fixp));
-}
-
-
 /* GAS will call this for each fixup.  It should store the correct
    value in the object file.  */
+
 void
-md_apply_fix (fixS * fixp, valueT * valuep, segT seg)
+md_apply_fix3 (fixS * fixp, valueT * valuep, segT seg)
 {
   unsigned char * where;
   unsigned long insn;
@@ -1937,18 +1873,13 @@ md_apply_fix (fixS * fixp, valueT * valuep, segT seg)
 	}
     }
 
-  fixp->fx_no_overflow = 1;
-
-  /* if polymorphs are enabled and relax disabled. 
-     do not kill any relocs and pass them to linker. */
-  if (msp430_enable_polys 
-      && !msp430_enable_relax)
+  switch (fixp->fx_r_type)
     {
-      if (!fixp->fx_addsy || (fixp->fx_addsy 
-	  && S_GET_SEGMENT (fixp->fx_addsy) == absolute_section))
-	fixp->fx_done = 1;	/* It is ok to kill 'abs' reloc.  */
-      else
-      	fixp->fx_done = 0;
+    default:
+      fixp->fx_no_overflow = 1;
+      break;
+    case BFD_RELOC_MSP430_10_PCREL:
+      break;
     }
 
   if (fixp->fx_done)
@@ -2027,11 +1958,12 @@ md_apply_fix (fixS * fixp, valueT * valuep, segT seg)
     }
 }
 
-/* GAS will call this to generate a reloc, passing the resulting reloc
-   to `bfd_install_relocation'.  This currently works poorly, as
-   `bfd_install_relocation' often does the wrong thing, and instances of
-   `tc_gen_reloc' have been written to work around the problems, which
-   in turns makes it difficult to fix `bfd_install_relocation'.  */
+/* A `BFD_ASSEMBLER' GAS will call this to generate a reloc.  GAS
+   will pass the resulting reloc to `bfd_install_relocation'.  This
+   currently works poorly, as `bfd_install_relocation' often does the
+   wrong thing, and instances of `tc_gen_reloc' have been written to
+   work around the problems, which in turns makes it difficult to fix
+   `bfd_install_relocation'.  */
 
 /* If while processing a fixup, a reloc really needs to be created
    then it is done here.  */
@@ -2079,7 +2011,7 @@ md_estimate_size_before_relax (fragS * fragP ATTRIBUTE_UNUSED,
   else if (fragP->fr_symbol)
     {
       /* Its got a segment, but its not ours.   Even if fr_symbol is in
-	 an absolute segment, we don't know a displacement until we link
+	 an absolute segment, we dont know a displacement until we link
 	 object files. So it will always be long. This also applies to
 	 labels in a subsegment of current. Liker may relax it to short
 	 jump later. Return value == 8.  */
@@ -2089,7 +2021,7 @@ md_estimate_size_before_relax (fragS * fragP ATTRIBUTE_UNUSED,
   else
     {
       /* We know the abs value. may be it is a jump to fixed address.
-         Impossible in our case, cause all constants already handled. */
+         Impossible in our case, cause all constants already handeled. */
       fragP->fr_subtype =
 	  ENCODE_RELAX (RELAX_LEN (fragP->fr_subtype), STATE_UNDEF);
     }
@@ -2248,13 +2180,6 @@ msp430_relax_frag (segT seg ATTRIBUTE_UNUSED, fragS * fragP,
       aim = S_GET_VALUE (symbolP) - fragP->fr_address - fragP->fr_fix;
     }
 
-  if (!msp430_enable_relax)
-    {
-      /* Relaxation is not enabled. So, make all jump as long ones
-         by setting 'aim' to quite high value. */
-      aim = 0x7fff;
-    }
-  
   this_state = fragP->fr_subtype;
   start_type = this_type = table + this_state;
 
@@ -2262,7 +2187,7 @@ msp430_relax_frag (segT seg ATTRIBUTE_UNUSED, fragS * fragP,
     {
       /* Look backwards.  */
       for (next_state = this_type->rlx_more; next_state;)
-	if (aim >= this_type->rlx_backward || !this_type->rlx_backward)
+	if (aim >= this_type->rlx_backward)
 	  next_state = 0;
 	else
 	  {
@@ -2276,7 +2201,7 @@ msp430_relax_frag (segT seg ATTRIBUTE_UNUSED, fragS * fragP,
     {
       /* Look forwards.  */
       for (next_state = this_type->rlx_more; next_state;)
-	if (aim <= this_type->rlx_forward || !this_type->rlx_forward)
+	if (aim <= this_type->rlx_forward)
 	  next_state = 0;
 	else
 	  {

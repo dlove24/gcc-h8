@@ -1,38 +1,48 @@
 /* BFD back-end for os9000 i386 binaries.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2001, 2002,
-   2004, 2005, 2006, 2007, 2009, 2011, 2012  Free Software Foundation, Inc.
+   2004, 2005 Free Software Foundation, Inc.
    Written by Cygnus Support.
 
-   This file is part of BFD, the Binary File Descriptor library.
+This file is part of BFD, the Binary File Descriptor library.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
+
 #include "bfd.h"
+#include "sysdep.h"
 #include "libbfd.h"
 #include "bfdlink.h"
 #include "libaout.h"		/* BFD a.out internal data structures */
 #include "os9k.h"
 
+static const bfd_target * os9k_callback
+  PARAMS ((bfd *));
+static const bfd_target * os9k_object_p
+  PARAMS ((bfd *));
+static int os9k_sizeof_headers
+  PARAMS ((bfd *, bfd_boolean));
+bfd_boolean os9k_swap_exec_header_in
+  PARAMS ((bfd *, mh_com *, struct internal_exec *));
+
 /* Swaps the information in an executable header taken from a raw byte
    stream memory image, into the internal exec_header structure.  */
-static bfd_boolean
-os9k_swap_exec_header_in (bfd *abfd,
-			  mh_com *raw_bytes,
-			  struct internal_exec *execp)
+bfd_boolean
+os9k_swap_exec_header_in (abfd, raw_bytes, execp)
+     bfd *abfd;
+     mh_com *raw_bytes;
+     struct internal_exec *execp;
 {
   mh_com *bytes = (mh_com *) raw_bytes;
   unsigned int dload, dmemsize, dmemstart;
@@ -67,12 +77,44 @@ os9k_swap_exec_header_in (bfd *abfd,
   return TRUE;
 }
 
+static const bfd_target *
+os9k_object_p (abfd)
+     bfd *abfd;
+{
+  struct internal_exec anexec;
+  mh_com exec_bytes;
+
+  if (bfd_bread ((PTR) &exec_bytes, (bfd_size_type) MHCOM_BYTES_SIZE, abfd)
+      != MHCOM_BYTES_SIZE)
+    {
+      if (bfd_get_error () != bfd_error_system_call)
+	bfd_set_error (bfd_error_wrong_format);
+      return 0;
+    }
+
+  anexec.a_info = H_GET_16 (abfd, exec_bytes.m_sync);
+  if (N_BADMAG (anexec))
+    {
+      bfd_set_error (bfd_error_wrong_format);
+      return 0;
+    }
+
+  if (! os9k_swap_exec_header_in (abfd, &exec_bytes, &anexec))
+    {
+      if (bfd_get_error () != bfd_error_system_call)
+	bfd_set_error (bfd_error_wrong_format);
+      return NULL;
+    }
+  return aout_32_some_aout_object_p (abfd, &anexec, os9k_callback);
+}
+
 
 /* Finish up the opening of a b.out file for reading.  Fill in all the
    fields that are not handled by common code.  */
 
 static const bfd_target *
-os9k_callback (bfd *abfd)
+os9k_callback (abfd)
+     bfd *abfd;
 {
   struct internal_exec *execp = exec_hdr (abfd);
   unsigned long bss_start;
@@ -114,39 +156,10 @@ os9k_callback (bfd *abfd)
   return abfd->xvec;
 }
 
-static const bfd_target *
-os9k_object_p (bfd *abfd)
-{
-  struct internal_exec anexec;
-  mh_com exec_bytes;
-
-  if (bfd_bread (&exec_bytes, (bfd_size_type) MHCOM_BYTES_SIZE, abfd)
-      != MHCOM_BYTES_SIZE)
-    {
-      if (bfd_get_error () != bfd_error_system_call)
-	bfd_set_error (bfd_error_wrong_format);
-      return 0;
-    }
-
-  anexec.a_info = H_GET_16 (abfd, exec_bytes.m_sync);
-  if (N_BADMAG (anexec))
-    {
-      bfd_set_error (bfd_error_wrong_format);
-      return 0;
-    }
-
-  if (! os9k_swap_exec_header_in (abfd, &exec_bytes, &anexec))
-    {
-      if (bfd_get_error () != bfd_error_system_call)
-	bfd_set_error (bfd_error_wrong_format);
-      return NULL;
-    }
-  return aout_32_some_aout_object_p (abfd, &anexec, os9k_callback);
-}
-
 static int
-os9k_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
-		     struct bfd_link_info *info ATTRIBUTE_UNUSED)
+os9k_sizeof_headers (ignore_abfd, ignore)
+     bfd *ignore_abfd ATTRIBUTE_UNUSED;
+     bfd_boolean ignore ATTRIBUTE_UNUSED;
 {
   return sizeof (struct internal_exec);
 }
@@ -158,7 +171,6 @@ os9k_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
 #define aout_32_bfd_make_debug_symbol _bfd_nosymbols_bfd_make_debug_symbol
 
 #define aout_32_bfd_reloc_type_lookup _bfd_norelocs_bfd_reloc_type_lookup
-#define aout_32_bfd_reloc_name_lookup _bfd_norelocs_bfd_reloc_name_lookup
 
 #define aout_32_get_section_contents_in_window \
   _bfd_generic_get_section_contents_in_window
@@ -167,19 +179,15 @@ os9k_sizeof_headers (bfd *abfd ATTRIBUTE_UNUSED,
   bfd_generic_get_relocated_section_contents
 #define os9k_bfd_relax_section bfd_generic_relax_section
 #define os9k_bfd_gc_sections bfd_generic_gc_sections
-#define os9k_bfd_lookup_section_flags bfd_generic_lookup_section_flags
 #define os9k_bfd_merge_sections bfd_generic_merge_sections
 #define os9k_bfd_is_group_section bfd_generic_is_group_section
 #define os9k_bfd_discard_group bfd_generic_discard_group
 #define os9k_section_already_linked \
   _bfd_generic_section_already_linked
-#define os9k_bfd_define_common_symbol bfd_generic_define_common_symbol
 #define os9k_bfd_link_hash_table_create _bfd_generic_link_hash_table_create
 #define os9k_bfd_link_hash_table_free _bfd_generic_link_hash_table_free
 #define os9k_bfd_link_add_symbols _bfd_generic_link_add_symbols
 #define os9k_bfd_link_just_syms _bfd_generic_link_just_syms
-#define os9k_bfd_copy_link_hash_symbol_type \
-  _bfd_generic_copy_link_hash_symbol_type
 #define os9k_bfd_final_link _bfd_generic_final_link
 #define os9k_bfd_link_split_section  _bfd_generic_link_split_section
 
@@ -194,7 +202,6 @@ const bfd_target i386os9k_vec =
     0,				/* symbol leading char */
     ' ',				/* ar_pad_char */
     16,				/* ar_max_namelen */
-    0,				/* match priority.  */
 
     bfd_getl64, bfd_getl_signed_64, bfd_putl64,
     bfd_getl32, bfd_getl_signed_32, bfd_putl32,
@@ -221,5 +228,5 @@ const bfd_target i386os9k_vec =
 
     NULL,
 
-    NULL,
+    (PTR) 0,
   };

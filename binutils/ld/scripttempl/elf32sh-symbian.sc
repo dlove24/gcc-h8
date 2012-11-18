@@ -8,7 +8,7 @@
 #	OTHER_TEXT_SECTIONS - these get put in .text when relocating
 #	OTHER_READWRITE_SECTIONS - other than .data .bss .ctors .sdata ...
 #		(e.g., .PARISC.global)
-#	ATTRS_SECTIONS - at the end
+#	OTHER_BSS_SECTIONS - other than .bss .sbss ...
 #	OTHER_SECTIONS - at the end
 #	EXECUTABLE_SYMBOLS - symbols that must be defined for an
 #		executable (e.g., _DYNAMIC_LINK)
@@ -34,7 +34,7 @@
 #	FINI_START, FINI_END - statements just before and just after
 # 	combination of .fini sections.
 #	STACK_ADDR - start of a .stack section.
-#	OTHER_SYMBOLS - symbols to place right at the end of the script.
+#	OTHER_END_SYMBOLS - symbols to place right at the end of the script.
 #
 # When adding sections, do note that the names of some sections are used
 # when specifying the start address of the next.
@@ -72,7 +72,6 @@ test -z "${ALIGNMENT}" && ALIGNMENT="${ELFSIZE} / 8"
 test "$LD_FLAG" = "N" && DATA_ADDR=.
 test -n "$CREATE_SHLIB$CREATE_PIE" && test -n "$SHLIB_DATA_ADDR" && COMMONPAGESIZE=""
 test -z "$CREATE_SHLIB$CREATE_PIE" && test -n "$DATA_ADDR" && COMMONPAGESIZE=""
-test -z "$ATTRS_SECTIONS" && ATTRS_SECTIONS=".gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }"
 DATA_SEGMENT_ALIGN="ALIGN(${SEGMENT_SIZE}) + (. & (${MAXPAGESIZE} - 1))"
 DATA_SEGMENT_END=""
 if test -n "${COMMONPAGESIZE}"; then
@@ -83,22 +82,8 @@ fi
     PLT=".plt            : { *(.plt) } :dynamic :dyn"
 DYNAMIC=".dynamic        : { *(.dynamic) } :dynamic :dyn"
  RODATA=".rodata    ALIGN(4) : { *(.rodata${RELOCATING+ .rodata.* .gnu.linkonce.r.*}) }"
-DISCARDED="/DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.directive)  *(.gnu.lto_*) }"
+STACKNOTE="/DISCARD/ : { *(.note.GNU-stack)  *(.directive) }"
 test -z "$GOT" && GOT=".got          ${RELOCATING-0} : { *(.got.plt) *(.got) } :dynamic :dyn"
-INIT_ARRAY=".init_array   ${RELOCATING-0} :
-  {
-     ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (__init_array_start = .);}}
-     KEEP (*(SORT(.init_array.*)))
-     KEEP (*(.init_array))
-     ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (__init_array_end = .);}}
-  }"
-FINI_ARRAY=".fini_array   ${RELOCATING-0} :
-  {
-    ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (__fini_array_start = .);}}
-    KEEP (*(SORT(.fini_array.*)))
-    KEEP (*(.fini_array))
-    ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (__fini_array_end = .);}}
-  }"
 CTOR=".ctors     ALIGN(4) : 
   {
     ${CONSTRUCTING+${CTOR_START}}
@@ -112,15 +97,14 @@ CTOR=".ctors     ALIGN(4) :
        doesn't matter which directory crtbegin.o
        is in.  */
 
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
+    KEEP (*crtbegin*.o(.ctors))
 
     /* We don't want to include the .ctor section from
-       the crtend.o file until after the sorted ctors.
+       from the crtend.o file until after the sorted ctors.
        The .ctor section from the crtend file contains the
        end of ctors marker and it must be last */
 
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o $OTHER_EXCLUDE_FILES) .ctors))
+    KEEP (*(EXCLUDE_FILE (*crtend*.o $OTHER_EXCLUDE_FILES) .ctors))
     KEEP (*(SORT(.ctors.*)))
     KEEP (*(.ctors))
     ${CONSTRUCTING+${CTOR_END}}
@@ -128,9 +112,8 @@ CTOR=".ctors     ALIGN(4) :
 DTOR=".dtors        ALIGN(4) :
   {
     ${CONSTRUCTING+${DTOR_START}}
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o $OTHER_EXCLUDE_FILES) .dtors))
+    KEEP (*crtbegin*.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend*.o $OTHER_EXCLUDE_FILES) .dtors))
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
     ${CONSTRUCTING+${DTOR_END}}
@@ -152,7 +135,7 @@ cat <<EOF
 OUTPUT_FORMAT("${OUTPUT_FORMAT}", "${BIG_OUTPUT_FORMAT}",
 	      "${LITTLE_OUTPUT_FORMAT}")
 OUTPUT_ARCH(${OUTPUT_ARCH})
-${RELOCATING+ENTRY(${ENTRY})}
+ENTRY(${ENTRY})
 
 ${RELOCATING+${LIB_SEARCH_DIRS}}
 ${RELOCATING+/* Do we need any of these for elf?
@@ -222,14 +205,22 @@ SECTIONS
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
   . = ALIGN(128) + (. & (128 - 1));
-  .preinit_array   ${RELOCATING-0} :
-  {
-    ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (__preinit_array_start = .);}}
-    KEEP (*(.preinit_array))
-    ${RELOCATING+${CREATE_SHLIB-PROVIDE_HIDDEN (__preinit_array_end = .);}}
-  }
-  ${RELOCATING+${INIT_ARRAY}}
-  ${RELOCATING+${FINI_ARRAY}}
+  /* Ensure the __preinit_array_start label is properly aligned.  We
+     could instead move the label definition inside the section, but
+     the linker would then create the section even if it turns out to
+     be empty, which isn't pretty.  */
+  ${RELOCATING+. = ALIGN(${ALIGNMENT});}
+  ${RELOCATING+${CREATE_SHLIB-PROVIDE (__preinit_array_start = .);}}
+  .preinit_array   ${RELOCATING-0} : { *(.preinit_array) }
+  ${RELOCATING+${CREATE_SHLIB-PROVIDE (__preinit_array_end = .);}}
+
+  ${RELOCATING+${CREATE_SHLIB-PROVIDE (__init_array_start = .);}}
+  .init_array   ${RELOCATING-0} : { *(.init_array) }
+  ${RELOCATING+${CREATE_SHLIB-PROVIDE (__init_array_end = .);}}
+
+  ${RELOCATING+${CREATE_SHLIB-PROVIDE (__fini_array_start = .);}}
+  .fini_array   ${RELOCATING-0} : { *(.fini_array) }
+  ${RELOCATING+${CREATE_SHLIB-PROVIDE (__fini_array_end = .);}}
 
   ${CREATE_SHLIB-${CREATE_PIE-${RELOCATING+. = ${DATA_ADDR-${DATA_SEGMENT_ALIGN}};}}}
   ${CREATE_SHLIB+${RELOCATING+. = ${SHLIB_DATA_ADDR-${DATA_SEGMENT_ALIGN}};}}
@@ -266,10 +257,10 @@ SECTIONS
       .bss section disappears because there are no input sections.  */
    ${RELOCATING+. = ALIGN(${ALIGNMENT});}
   } :data
-  ${RELOCATING+${OTHER_BSS_END_SYMBOLS}}
+  ${OTHER_BSS_SECTIONS}
   ${RELOCATING+. = ALIGN(${ALIGNMENT});}
-  ${RELOCATING+${OTHER_END_SYMBOLS}}
   ${RELOCATING+_end = .;}
+  ${RELOCATING+${OTHER_BSS_END_SYMBOLS}}
   ${RELOCATING+PROVIDE (end = .);}
   ${RELOCATING+${DATA_SEGMENT_END}}
 
@@ -378,17 +369,9 @@ cat <<EOF
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
 
-  /* DWARF 3 */
-  .debug_pubtypes 0 : { *(.debug_pubtypes) }
-  .debug_ranges   0 : { *(.debug_ranges) }
-
-  /* DWARF Extension.  */
-  .debug_macro    0 : { *(.debug_macro) } 
-
   ${STACK_ADDR+${STACK}}
-  ${ATTRS_SECTIONS}
   ${OTHER_SECTIONS}
-  ${RELOCATING+${OTHER_SYMBOLS}}
-  ${RELOCATING+${DISCARDED}}
+  ${RELOCATING+${OTHER_END_SYMBOLS}}
+  ${RELOCATING+${STACKNOTE}}
 }
 EOF

@@ -8,33 +8,22 @@
 
 Disassembly of section \.text:
 
-.* <00000010\.plt_call\.__tls_get_addr(|_opt)\+0>:
-.*	e9 63 00 00 	ld      r11,0\(r3\)
-.*	e9 83 00 08 	ld      r12,8\(r3\)
-.*	7c 60 1b 78 	mr      r0,r3
-.*	2c 2b 00 00 	cmpdi   r11,0
-.*	7c 6c 6a 14 	add     r3,r12,r13
-.*	4d 82 00 20 	beqlr   
-.*	7c 03 03 78 	mr      r3,r0
-.*	7d 68 02 a6 	mflr    r11
-.*	f9 61 00 20 	std     r11,32\(r1\)
+.* <_start-0x1c>:
+.*	3d 82 00 00 	addis   r12,r2,0
 .*	f8 41 00 28 	std     r2,40\(r1\)
-.*	e9 62 80 48 	ld      r11,-32696\(r2\)
+.*	e9 6c 80 48 	ld      r11,-32696\(r12\)
+.*	e8 4c 80 50 	ld      r2,-32688\(r12\)
 .*	7d 69 03 a6 	mtctr   r11
-.*	e8 42 80 50 	ld      r2,-32688\(r2\)
-.*	4e 80 04 21 	bctrl
-.*	e9 61 00 20 	ld      r11,32\(r1\)
-.*	e8 41 00 28 	ld      r2,40\(r1\)
-.*	7d 68 03 a6 	mtlr    r11
-.*	4e 80 00 20 	blr
+.*	e9 6c 80 58 	ld      r11,-32680\(r12\)
+.*	4e 80 04 20 	bctr
 
 .* <_start>:
 .*	e8 62 80 10 	ld      r3,-32752\(r2\)
 .*	60 00 00 00 	nop
 .*	7c 63 6a 14 	add     r3,r3,r13
 .*	38 62 80 18 	addi    r3,r2,-32744
-.*	4b ff ff a9 	bl      .*
-.*	60 00 00 00 	nop
+.*	4b ff ff d5 	bl      .*
+.*	e8 41 00 28 	ld      r2,40\(r1\)
 .*	3c 6d 00 00 	addis   r3,r13,0
 .*	60 00 00 00 	nop
 .*	38 63 90 38 	addi    r3,r3,-28616
@@ -67,22 +56,21 @@ Disassembly of section \.text:
 .*	e9 4d 90 2a 	lwa     r10,-28632\(r13\)
 .*	3d 2d 00 00 	addis   r9,r13,0
 .*	a9 49 90 30 	lha     r10,-28624\(r9\)
-.*	00 00 00 00 .*
-.*	00 01 02 00 .*
-.* <__glink_PLTresolve>:
-.*	7d 88 02 a6 	mflr    r12
-.*	42 9f 00 05 	bcl-    20,4\*cr7\+so,.*
-.*	7d 68 02 a6 	mflr    r11
-.*	e8 4b ff f0 	ld      r2,-16\(r11\)
-.*	7d 88 03 a6 	mtlr    r12
-.*	7d 82 5a 14 	add     r12,r2,r11
-.*	e9 6c 00 00 	ld      r11,0\(r12\)
+.*	7d 89 02 a6 	mfctr   r12
+.*	78 0b 1f 24 	rldicr  r11,r0,3,60
+.*	34 40 80 00 	addic\.  r2,r0,-32768
+.*	7d 8b 60 50 	subf    r12,r11,r12
+.*	7c 42 fe 76 	sradi   r2,r2,63
+.*	78 0b 17 64 	rldicr  r11,r0,2,61
+.*	7c 42 58 38 	and     r2,r2,r11
+.*	7d 8b 60 50 	subf    r12,r11,r12
+.*	7d 8c 12 14 	add     r12,r12,r2
+.*	3d 8c 00 01 	addis   r12,r12,1
+.*	e9 6c 01 c4 	ld      r11,452\(r12\)
+.*	39 8c 01 c4 	addi    r12,r12,452
 .*	e8 4c 00 08 	ld      r2,8\(r12\)
 .*	7d 69 03 a6 	mtctr   r11
 .*	e9 6c 00 10 	ld      r11,16\(r12\)
 .*	4e 80 04 20 	bctr
-.*	60 00 00 00 	nop
-.*	60 00 00 00 	nop
-.*	60 00 00 00 	nop
 .*	38 00 00 00 	li      r0,0
-.*	4b ff ff c4 	b       .*
+.*	4b ff ff bc 	b       .*

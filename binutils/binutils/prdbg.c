@@ -1,6 +1,6 @@
 /* prdbg.c -- Print out generic debugging information.
-   Copyright 1995, 1996, 1999, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2011  Free Software Foundation, Inc.
+   Copyright 1995, 1996, 1999, 2002, 2003, 2004
+   Free Software Foundation, Inc.
    Written by Ian Lance Taylor <ian@cygnus.com>.
    Tags style generation written by Salvador E. Tropea <set@computer.org>.
 
@@ -8,7 +8,7 @@
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -18,17 +18,18 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 /* This file prints out the generic debugging information, by
    supplying a set of routines to debug_write.  */
 
-#include "sysdep.h"
+#include <stdio.h>
 #include <assert.h>
+
 #include "bfd.h"
+#include "bucomm.h"
 #include "libiberty.h"
-#include "demangle.h"
 #include "debug.h"
 #include "budbg.h"
 
@@ -52,7 +53,7 @@ struct pr_handle
   /* The symbols table for this BFD.  */
   asymbol **syms;
   /* Pointer to a function to demangle symbols.  */
-  char *(*demangler) (bfd *, const char *, int);
+  char *(*demangler) (bfd *, const char *);
 };
 
 /* The type stack.  */
@@ -303,7 +304,7 @@ print_debugging_info (FILE *f, void *dhandle, bfd *abfd, asymbol **syms,
   info.filename = NULL;
   info.abfd = abfd;
   info.syms = syms;
-  info.demangler = (char * (*)(struct bfd *, const char *, int)) demangler;
+  info.demangler = demangler;
 
   if (as_tags)
     {
@@ -499,26 +500,6 @@ print_vma (bfd_vma vma, char *buf, bfd_boolean unsignedp, bfd_boolean hexp)
       else
 	sprintf (buf, "%ld", (long) vma);
     }
-#if BFD_HOST_64BIT_LONG_LONG
-  else if (sizeof (vma) <= sizeof (unsigned long long))
-    {
-#ifndef __MSVCRT__
-      if (hexp)
-	sprintf (buf, "0x%llx", (unsigned long long) vma);
-      else if (unsignedp)
-	sprintf (buf, "%llu", (unsigned long long) vma);
-      else
-	sprintf (buf, "%lld", (long long) vma);
-#else
-      if (hexp)
-	sprintf (buf, "0x%I64x", (unsigned long long) vma);
-      else if (unsignedp)
-	sprintf (buf, "%I64u", (unsigned long long) vma);
-      else
-	sprintf (buf, "%I64d", (long long) vma);
-#endif
-    }
-#endif
   else
     {
       buf[0] = '0';
@@ -731,16 +712,10 @@ pr_function_type (void *p, int argcount, bfd_boolean varargs)
       for (i = argcount - 1; i >= 0; i--)
 	{
 	  if (! substitute_type (info, ""))
-	    {
-	      free (arg_types);
-	      return FALSE;
-	    }
+	    return FALSE;
 	  arg_types[i] = pop_type (info);
 	  if (arg_types[i] == NULL)
-	    {
-	      free (arg_types);
-	      return FALSE;
-	    }
+	    return FALSE;
 	  len += strlen (arg_types[i]) + 2;
 	}
       if (varargs)
@@ -750,7 +725,7 @@ pr_function_type (void *p, int argcount, bfd_boolean varargs)
   /* Now the return type is on the top of the stack.  */
 
   s = (char *) xmalloc (len);
-  LITSTRCPY (s, "(|) (");
+  strcpy (s, "(|) (");
 
   if (argcount < 0)
     strcat (s, "/* unknown */");
@@ -935,10 +910,11 @@ pr_method_type (void *p, bfd_boolean domain, int argcount, bfd_boolean varargs)
       domain_type = pop_type (info);
       if (domain_type == NULL)
 	return FALSE;
-      if (CONST_STRNEQ (domain_type, "class ")
+      if (strncmp (domain_type, "class ", sizeof "class " - 1) == 0
 	  && strchr (domain_type + sizeof "class " - 1, ' ') == NULL)
 	domain_type += sizeof "class " - 1;
-      else if (CONST_STRNEQ (domain_type, "union class ")
+      else if (strncmp (domain_type, "union class ",
+			sizeof "union class ") == 0
 	       && (strchr (domain_type + sizeof "union class " - 1, ' ')
 		   == NULL))
 	domain_type += sizeof "union class " - 1;
@@ -958,16 +934,10 @@ pr_method_type (void *p, bfd_boolean domain, int argcount, bfd_boolean varargs)
       for (i = argcount - 1; i >= 0; i--)
 	{
 	  if (! substitute_type (info, ""))
-	    {
-	      free (arg_types);
-	      return FALSE;
-	    }
+	    return FALSE;
 	  arg_types[i] = pop_type (info);
 	  if (arg_types[i] == NULL)
-	    {
-	      free (arg_types);
-	      return FALSE;
-	    }
+	    return FALSE;
 	  len += strlen (arg_types[i]) + 2;
 	}
       if (varargs)
@@ -1329,7 +1299,7 @@ pr_class_static_member (void *p, const char *name, const char *physname,
 /* Add a base class to a class.  */
 
 static bfd_boolean
-pr_class_baseclass (void *p, bfd_vma bitpos, bfd_boolean is_virtual,
+pr_class_baseclass (void *p, bfd_vma bitpos, bfd_boolean virtual,
 		    enum debug_visibility visibility)
 {
   struct pr_handle *info = (struct pr_handle *) p;
@@ -1347,7 +1317,7 @@ pr_class_baseclass (void *p, bfd_vma bitpos, bfd_boolean is_virtual,
   if (t == NULL)
     return FALSE;
 
-  if (CONST_STRNEQ (t, "class "))
+  if (strncmp (t, "class ", sizeof "class " - 1) == 0)
     t += sizeof "class " - 1;
 
   /* Push it back on to take advantage of the prepend_type and
@@ -1355,7 +1325,7 @@ pr_class_baseclass (void *p, bfd_vma bitpos, bfd_boolean is_virtual,
   if (! push_type (info, t))
     return FALSE;
 
-  if (is_virtual)
+  if (virtual)
     {
       if (! prepend_type (info, "virtual "))
 	return FALSE;
@@ -1959,13 +1929,15 @@ translate_addresses (bfd *abfd, char *addr_hex, FILE *f, asymbol **syms)
 /* Start a new compilation unit.  */
 
 static bfd_boolean
-tg_start_compilation_unit (void * p, const char *fname ATTRIBUTE_UNUSED)
+tg_start_compilation_unit (void * p, const char *filename ATTRIBUTE_UNUSED)
 {
   struct pr_handle *info = (struct pr_handle *) p;
 
+  fprintf (stderr, "New compilation unit: %s\n", filename);
+
   free (info->filename);
   /* Should it be relative? best way to do it here?.  */
-  info->filename = strdup (fname);
+  info->filename = strdup (filename);
 
   return TRUE;
 }
@@ -1973,13 +1945,13 @@ tg_start_compilation_unit (void * p, const char *fname ATTRIBUTE_UNUSED)
 /* Start a source file within a compilation unit.  */
 
 static bfd_boolean
-tg_start_source (void *p, const char *fname)
+tg_start_source (void *p, const char *filename)
 {
   struct pr_handle *info = (struct pr_handle *) p;
 
   free (info->filename);
   /* Should it be relative? best way to do it here?.  */
-  info->filename = strdup (fname);
+  info->filename = strdup (filename);
 
   return TRUE;
 }
@@ -2100,7 +2072,8 @@ tg_struct_field (void *p, const char *name, bfd_vma bitpos ATTRIBUTE_UNUSED,
 static bfd_boolean
 tg_end_struct_type (void *p ATTRIBUTE_UNUSED)
 {
-  assert (((struct pr_handle *) p)->stack != NULL);
+  struct pr_handle *info = (struct pr_handle *) p;
+  assert (info->stack != NULL);
 
   return TRUE;
 }
@@ -2184,33 +2157,22 @@ tg_class_static_member (void *p, const char *name,
   full_name = (char *) xmalloc (len_var + len_class + 3);
   if (! full_name)
     return FALSE;
-  sprintf (full_name, "%s::%s", info->stack->next->type, name);
+  memcpy (full_name, info->stack->next->type, len_class);
+  memcpy (full_name + len_class, "::", 2);
+  memcpy (full_name + len_class + 2, name, len_var + 1);
 
   if (! substitute_type (info, full_name))
-    {
-      free (full_name);
-      return FALSE;
-    }
+    return FALSE;
 
   if (! prepend_type (info, "static "))
-    {
-      free (full_name);
-      return FALSE;
-    }
+    return FALSE;
 
   t = pop_type (info);
   if (t == NULL)
-    {
-      free (full_name);
-      return FALSE;
-    }
+    return FALSE;
 
   if (! tg_fix_visibility (info, visibility))
-    {
-      free (t);
-      free (full_name);
-      return FALSE;
-    }
+    return FALSE;
 
   fprintf (info->f, "%s\t%s\t0;\"\tkind:x\ttype:%s\tclass:%s\taccess:%s\n",
 	   name, info->filename, t, info->stack->type,
@@ -2225,7 +2187,7 @@ tg_class_static_member (void *p, const char *name,
 
 static bfd_boolean
 tg_class_baseclass (void *p, bfd_vma bitpos ATTRIBUTE_UNUSED,
-		    bfd_boolean is_virtual, enum debug_visibility visibility)
+		    bfd_boolean virtual, enum debug_visibility visibility)
 {
   struct pr_handle *info = (struct pr_handle *) p;
   char *t;
@@ -2237,7 +2199,7 @@ tg_class_baseclass (void *p, bfd_vma bitpos ATTRIBUTE_UNUSED,
   if (t == NULL)
     return FALSE;
 
-  if (CONST_STRNEQ (t, "class "))
+  if (strncmp (t, "class ", sizeof "class " - 1) == 0)
     t += sizeof "class " - 1;
 
   /* Push it back on to take advantage of the prepend_type and
@@ -2245,7 +2207,7 @@ tg_class_baseclass (void *p, bfd_vma bitpos ATTRIBUTE_UNUSED,
   if (! push_type (info, t))
     return FALSE;
 
-  if (is_virtual)
+  if (virtual)
     {
       if (! prepend_type (info, "virtual "))
 	return FALSE;
@@ -2320,18 +2282,12 @@ tg_class_method_variant (void *p, const char *physname ATTRIBUTE_UNUSED,
 
   /* Stick the name of the method into its type.  */
   if (! substitute_type (info, method_name))
-    {
-      free (method_name);
-      return FALSE;
-    }
+    return FALSE;
 
   /* Get the type.  */
   method_type = pop_type (info);
   if (method_type == NULL)
-    {
-      free (method_name);
-      return FALSE;
-    }
+    return FALSE;
 
   /* Pull off the context type if there is one.  */
   if (! context)
@@ -2340,21 +2296,12 @@ tg_class_method_variant (void *p, const char *physname ATTRIBUTE_UNUSED,
     {
       context_type = pop_type (info);
       if (context_type == NULL)
-	{
-	  free (method_type);
-	  free (method_name);
-	  return FALSE;
-	}
+	return FALSE;
     }
 
   /* Now the top of the stack is the class.  */
   if (! tg_fix_visibility (info, visibility))
-    {
-      free (method_type);
-      free (method_name);
-      free (context_type);
-      return FALSE;
-    }
+    return FALSE;
 
   fprintf (info->f, "%s\t%s\t0;\"\tkind:p\ttype:%s\tclass:%s\n",
 	   method_name, info->filename, method_type, info->stack->type);
@@ -2400,26 +2347,16 @@ tg_class_static_method_variant (void *p,
   method_name = strdup (info->stack->next->method);
   /* Stick the name of the method into its type.  */
   if (! substitute_type (info, info->stack->next->method))
-    {
-      free (method_name);
-      return FALSE;
-    }
+    return FALSE;
 
   /* Get the type.  */
   method_type = pop_type (info);
   if (method_type == NULL)
-    {
-      free (method_name);
-      return FALSE;
-    }
+    return FALSE;
 
   /* Now the top of the stack is the class.  */
   if (! tg_fix_visibility (info, visibility))
-    {
-      free (method_type);
-      free (method_name);
-      return FALSE;
-    }
+    return FALSE;
 
   fprintf (info->f, "%s\t%s\t0;\"\tkind:p\ttype:%s\tclass:%s\taccess:%s\n",
 	   method_name, info->filename, method_type, info->stack->type,
@@ -2592,18 +2529,25 @@ tg_variable (void *p, const char *name, enum debug_var_kind kind,
 	     bfd_vma val ATTRIBUTE_UNUSED)
 {
   struct pr_handle *info = (struct pr_handle *) p;
-  char *t, *dname, *from_class;
+  char *t;
+  const char *dname, *from_class;
 
   t = pop_type (info);
   if (t == NULL)
     return FALSE;
 
-  dname = NULL;
+  dname = name;
   if (info->demangler)
-    dname = info->demangler (info->abfd, name, DMGL_ANSI | DMGL_PARAMS);
+    {
+      dname = info->demangler (info->abfd, name);
+      if (strcmp (name, dname) == 0)
+	{
+	  free ((char *) dname);
+	  dname = name;
+	}
+    }
 
-  from_class = NULL;
-  if (dname != NULL)
+  if (dname != name)
     {
       char *sep;
       sep = strstr (dname, "::");
@@ -2614,9 +2558,14 @@ tg_variable (void *p, const char *name, enum debug_var_kind kind,
 	  from_class = dname;
 	}
       else
-	/* Obscure types as vts and type_info nodes.  */
-	name = dname;
+	{
+	  /* Obscure types as vts and type_info nodes.  */
+	  name = dname;
+	  from_class = NULL;
+	}
     }
+  else
+    from_class = NULL;
 
   fprintf (info->f, "%s\t%s\t0;\"\tkind:v\ttype:%s", name, info->filename, t);
 
@@ -2634,10 +2583,10 @@ tg_variable (void *p, const char *name, enum debug_var_kind kind,
     }
 
   if (from_class)
-    fprintf (info->f, "\tclass:%s", from_class);
-
-  if (dname)
-    free (dname);
+    {
+      fprintf (info->f, "\tclass:%s",from_class);
+      free ((char *) dname);
+    }
 
   fprintf (info->f, "\n");
 
@@ -2652,22 +2601,28 @@ static bfd_boolean
 tg_start_function (void *p, const char *name, bfd_boolean global)
 {
   struct pr_handle *info = (struct pr_handle *) p;
-  char *dname;
+  const char *dname;
 
   if (! global)
     info->stack->flavor = "static";
   else
     info->stack->flavor = NULL;
 
-  dname = NULL;
+  dname = name;
   if (info->demangler)
-    dname = info->demangler (info->abfd, name, DMGL_ANSI | DMGL_PARAMS);
+    {
+      dname = info->demangler (info->abfd, name);
+      if (strcmp (name, dname) == 0)
+	{
+	  free ((char *) dname);
+	  dname = name;
+	}
+    }
 
-  if (! substitute_type (info, dname ? dname : name))
+  if (! substitute_type (info, dname))
     return FALSE;
 
-  info->stack->method = NULL;
-  if (dname != NULL)
+  if (dname != name)
     {
       char *sep;
       sep = strstr (dname, "::");
@@ -2687,6 +2642,8 @@ tg_start_function (void *p, const char *name, bfd_boolean global)
 	*sep = 0;
       /* Obscure functions as type_info function.  */
     }
+  else
+    info->stack->method = NULL;
 
   info->stack->parents = strdup (name);
 
@@ -2794,7 +2751,7 @@ tg_start_block (void *p, bfd_vma addr)
 /* Write out line number information.  */
 
 static bfd_boolean
-tg_lineno (void *p ATTRIBUTE_UNUSED, const char *fname ATTRIBUTE_UNUSED,
+tg_lineno (void *p ATTRIBUTE_UNUSED, const char *filename ATTRIBUTE_UNUSED,
 	   unsigned long lineno ATTRIBUTE_UNUSED,
 	   bfd_vma addr ATTRIBUTE_UNUSED)
 {

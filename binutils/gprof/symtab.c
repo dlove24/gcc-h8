@@ -1,13 +1,12 @@
 /* symtab.c
 
-   Copyright 1999, 2000, 2001, 2002, 2004, 2007, 2008
-   Free Software Foundation, Inc.
+   Copyright 1999, 2000, 2001, 2002, 2004 Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,8 +16,8 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #include "gprof.h"
 #include "search_list.h"
@@ -165,9 +164,8 @@ symtab_finalize (Sym_Table *tab)
        for (j = 0; j < tab->len; ++j)
 	 {
 	   printf ("[symtab_finalize] 0x%lx-0x%lx\t%s\n",
-		   (unsigned long) tab->base[j].addr,
-		   (unsigned long) tab->base[j].end_addr,
-		   tab->base[j].name);
+		 (long) tab->base[j].addr, (long) tab->base[j].end_addr,
+		 tab->base[j].name);
 	 }
   );
 }
@@ -178,7 +176,7 @@ symtab_finalize (Sym_Table *tab)
 Sym *
 dbg_sym_lookup (Sym_Table *sym_tab, bfd_vma address)
 {
-  unsigned long low, mid, high;
+  long low, mid, high;
   Sym *sym;
 
   fprintf (stderr, "[dbg_sym_lookup] address 0x%lx\n",

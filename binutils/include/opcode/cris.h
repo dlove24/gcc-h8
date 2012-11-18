@@ -1,25 +1,24 @@
 /* cris.h -- Header file for CRIS opcode and register tables.
-   Copyright (C) 2000, 2001, 2004, 2010 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2001, 2004 Free Software Foundation, Inc.
    Contributed by Axis Communications AB, Lund, Sweden.
    Originally written for GAS 1.38.1 by Mikael Asker.
    Updated, BFDized and GNUified by Hans-Peter Nilsson.
 
-   This file is part of GAS, GDB and the GNU binutils.
+This file is part of GAS, GDB and the GNU binutils.
 
-   GAS, GDB, and GNU binutils is free software; you can redistribute it
-   and/or modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 3, or (at your
-   option) any later version.
+GAS, GDB, and GNU binutils is free software; you can redistribute it
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2, or (at your
+option) any later version.
 
-   GAS, GDB, and GNU binutils are distributed in the hope that they will be
-   useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+GAS, GDB, and GNU binutils are distributed in the hope that they will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 #ifndef __CRIS_H_INCLUDED_
 #define __CRIS_H_INCLUDED_
@@ -195,15 +194,8 @@ extern const char *const cris_cc_strings[];
 #define JUMP_INDIR_Z_BITS (0xf2c0)
 #define JUMP_PC_INCR_OPCODE \
  (JUMP_INDIR_OPCODE + AUTOINCR_BIT * 0x0100 + REG_PC)
-
-#define MOVE_M_TO_PREG_OPCODE 0x0a30
-#define MOVE_M_TO_PREG_ZBITS 0x01c0
-
-/* BDAP.D N,PC.  */
-#define MOVE_PC_INCR_OPCODE_PREFIX \
- (((BDAP_INCR_HIGH | (REG_PC << 4)) << 8) | BDAP_PC_LOW | (2 << 4))
-#define MOVE_PC_INCR_OPCODE_SUFFIX \
- (MOVE_M_TO_PREG_OPCODE | REG_PC | (AUTOINCR_BIT << 8))
+#define ADD_PC_INCR_OPCODE \
+ (0xfa00 + (2 << 4) + AUTOINCR_BIT * 0x0100 + REG_PC)
 
 #define JUMP_PC_INCR_OPCODE_V32 (0x0DBF)
 

@@ -1,24 +1,19 @@
 /* ld-emul.h - Linker emulation header file
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000, 2001,
-   2002, 2003, 2004, 2005, 2007, 2008
+   2002, 2003, 2004
    Free Software Foundation, Inc.
 
-   This file is part of the GNU Binutils.
+   This file is part of GLD, the Gnu Linker.
 
-   This program is free software; you can redistribute it and/or modify
+   GLD is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   the Free Software Foundation; either version 1, or (at your option)
+   any later version.
 
-   This program is distributed in the hope that it will be useful,
+   GLD is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   GNU General Public License for more details.  */
 
 #ifndef LDEMUL_H
 #define LDEMUL_H
@@ -58,8 +53,8 @@ extern void ldemul_set_symbols
   (void);
 extern void ldemul_create_output_section_statements
   (void);
-extern lang_output_section_statement_type *ldemul_place_orphan
-  (asection *, const char *, int);
+extern bfd_boolean ldemul_place_orphan
+  (struct lang_input_statement_struct *, asection *);
 extern bfd_boolean ldemul_parse_args
   (int, char **);
 extern void ldemul_add_options
@@ -81,10 +76,6 @@ extern void after_open_default
 extern void after_allocation_default
   (void);
 extern void before_allocation_default
-  (void);
-extern void finish_default
-  (void);
-extern void finish_default
   (void);
 extern void set_output_arch_default
   (void);
@@ -151,8 +142,8 @@ typedef struct ld_emulation_xfer_struct {
   /* Place an orphan section.  Return TRUE if it was placed, FALSE if
      the default action should be taken.  This field may be NULL, in
      which case the default action will always be taken.  */
-  lang_output_section_statement_type *(*place_orphan)
-    (asection *, const char *, int);
+  bfd_boolean (*place_orphan)
+    (struct lang_input_statement_struct *, asection *);
 
   /* Run after assigning parsing with the args, but before
      reading the script.  Used to initialize symbols used in the script.  */

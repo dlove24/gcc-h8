@@ -1,12 +1,12 @@
 /* itbl-ops.c
-   Copyright 1997, 1999, 2000, 2001, 2002, 2003, 2005, 2006, 2007,
-   2009, 2010  Free Software Foundation, Inc.
+   Copyright 1997, 1999, 2000, 2001, 2002, 2003, 2005
+   Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,8 +16,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 /*======================================================================*/
 /*
@@ -89,7 +89,9 @@
  *
  */
 
-#include "as.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "itbl-ops.h"
 #include <itbl-parse.h>
 
@@ -97,7 +99,7 @@
 
 #ifdef DEBUG
 #include <assert.h>
-#define ASSERT(x) gas_assert (x)
+#define ASSERT(x) assert(x)
 #define DBG(x) printf x
 #else
 #define ASSERT(x)
@@ -145,7 +147,12 @@ struct itbl_entry {
 
 static int itbl_num_opcodes = 0;
 /* Array of entries for each processor and entry type */
-static struct itbl_entry *entries[e_nprocs][e_ntypes];
+static struct itbl_entry *entries[e_nprocs][e_ntypes] = {
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0}
+};
 
 /* local prototypes */
 static unsigned long build_opcode (struct itbl_entry *e);
@@ -246,6 +253,8 @@ itbl_add_operand (struct itbl_entry *e, int yytype, int sbit,
 /* Interfaces for assembler and disassembler */
 
 #ifndef STAND_ALONE
+#include "as.h"
+#include "symbols.h"
 static void append_insns_as_macros (void);
 
 /* Initialize for gas.  */
@@ -300,10 +309,7 @@ append_insns_as_macros (void)
 {
   struct ITBL_OPCODE_STRUCT *new_opcodes, *o;
   struct itbl_entry *e, **es;
-  int n, size, new_size, new_num_opcodes;
-#ifdef USE_MACROS
-  int id;
-#endif
+  int n, id, size, new_size, new_num_opcodes;
 
   if (!itbl_have_entries)
     return;
@@ -338,9 +344,7 @@ append_insns_as_macros (void)
   /* FIXME! some NUMOPCODES are calculated expressions.
 		These need to be changed before itbls can be supported.  */
 
-#ifdef USE_MACROS
   id = ITBL_NUM_MACROS;		/* begin the next macro id after the last */
-#endif
   o = &new_opcodes[ITBL_NUM_OPCODES];	/* append macro to opcodes list */
   for (n = e_p0; n < e_nprocs; n++)
     {
@@ -598,7 +602,6 @@ itbl_disassemble (char *s, unsigned long insn)
     {
       struct itbl_entry *r;
       unsigned long value;
-      char s_value[20];
 
       if (f == e->fields)	/* First operand is preceded by tab.  */
 	strcat (s, "\t");
@@ -617,18 +620,14 @@ itbl_disassemble (char *s, unsigned long insn)
 	  if (r)
 	    strcat (s, r->name);
 	  else
-	    {
-	      sprintf (s_value, "$%lu", value);
-	      strcat (s, s_value);
-	    }
+	    sprintf (s, "%s$%lu", s, value);
 	  break;
 	case e_addr:
 	  /* Use assembler's symbol table to find symbol.  */
 	  /* FIXME!! Do we need this?  If so, what about relocs??  */
 	  /* If not a symbol, fall through to IMMED.  */
 	case e_immed:
-	  sprintf (s_value, "0x%lx", value);
-	  strcat (s, s_value);
+	  sprintf (s, "%s0x%lx", s, value);
 	  break;
 	default:
 	  return 0;		/* error; invalid field spec */

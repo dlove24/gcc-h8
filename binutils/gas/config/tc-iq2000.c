@@ -1,12 +1,11 @@
 /* tc-iq2000.c -- Assembler for the Sitera IQ2000.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2009, 2010
-   Free Software Foundation. Inc.
+   Copyright (C) 2003, 2004, 2005 Free Software Foundation.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,9 +15,10 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330,
+   Boston, MA 02111-1307, USA.  */
 
+#include <stdio.h>
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
@@ -29,7 +29,7 @@
 #include "elf/common.h"
 #include "elf/iq2000.h"
 #include "libbfd.h"
-#include "sb.h"
+#include "hash.h"
 #include "macro.h"
 
 /* Structure to hold all of the different components describing
@@ -534,7 +534,7 @@ iq2000_record_hi16 (int    reloc_type,
 {
   struct iq2000_hi_fixup * hi_fixup;
 
-  gas_assert (reloc_type == BFD_RELOC_HI16);
+  assert (reloc_type == BFD_RELOC_HI16);
 
   hi_fixup = xmalloc (sizeof * hi_fixup);
   hi_fixup->fixp = fixP;
@@ -574,7 +574,7 @@ iq2000_cgen_record_fixup_exp (fragS *              frag,
 #define FX_OPINFO_R_TYPE(f) ((f)->fx_cgen.opinfo)
 
 /* Sort any unmatched HI16 relocs so that they immediately precede
-   the corresponding LO16 reloc.  This is called before md_apply_fix and
+   the corresponding LO16 reloc.  This is called before md_apply_fix3 and
    tc_gen_reloc.  */
 
 void
@@ -587,7 +587,7 @@ iq2000_frob_file (void)
       segment_info_type * seginfo;
       int                 pass;
 
-      gas_assert (FX_OPINFO_R_TYPE (l->fixp) == BFD_RELOC_HI16
+      assert (FX_OPINFO_R_TYPE (l->fixp) == BFD_RELOC_HI16
 	      || FX_OPINFO_R_TYPE (l->fixp) == BFD_RELOC_LO16);
 
       /* Check quickly whether the next fixup happens to be a matching low.  */
@@ -627,7 +627,7 @@ iq2000_frob_file (void)
 		  for (pf = &seginfo->fix_root;
 		       * pf != l->fixp;
 		       pf = & (* pf)->fx_next)
-		    gas_assert (* pf != NULL);
+		    assert (* pf != NULL);
 
 		  * pf = l->fixp->fx_next;
 
@@ -725,11 +725,60 @@ md_operand (expressionS * exp)
     gas_cgen_md_operand (exp);
 }
 
+/* Turn a string in input_line_pointer into a floating point constant
+   of type type, and store the appropriate bytes in *litP.  The number
+   of LITTLENUMS emitted is stored in *sizeP .  An error message is
+   returned, or NULL on OK.  */
+
+/* Equal to MAX_PRECISION in atof-ieee.c */
+#define MAX_LITTLENUMS 6
+
 char *
 md_atof (int type, char * litP, int * sizeP)
 {
-  return ieee_md_atof (type, litP, sizeP, TRUE);
+  int              i;
+  int              prec;
+  LITTLENUM_TYPE   words [MAX_LITTLENUMS];
+  char *           t;
+
+  switch (type)
+    {
+    case 'f':
+    case 'F':
+    case 's':
+    case 'S':
+      prec = 2;
+      break;
+
+    case 'd':
+    case 'D':
+    case 'r':
+    case 'R':
+      prec = 4;
+      break;
+
+   /* FIXME: Some targets allow other format chars for bigger sizes here.  */
+
+    default:
+      * sizeP = 0;
+      return _("Bad call to md_atof()");
+    }
+
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+  * sizeP = prec * sizeof (LITTLENUM_TYPE);
+
+  for (i = 0; i < prec; i++)
+    {
+      md_number_to_chars (litP, (valueT) words[i],
+			  sizeof (LITTLENUM_TYPE));
+      litP += sizeof (LITTLENUM_TYPE);
+    }
+
+  return 0;
 }
+
 
 bfd_boolean
 iq2000_fix_adjustable (fixS * fixP)
@@ -751,7 +800,7 @@ iq2000_fix_adjustable (fixS * fixP)
     return TRUE;
 
   /* Prevent all adjustments to global symbols.  */
-  if (S_IS_EXTERNAL (fixP->fx_addsy))
+  if (S_IS_EXTERN (fixP->fx_addsy))
     return FALSE;
 
   if (S_IS_WEAK (fixP->fx_addsy))
@@ -837,7 +886,7 @@ s_iq2000_end (int x ATTRIBUTE_UNUSED)
 
   if (p != NULL)
     {
-      gas_assert (S_GET_NAME (p));
+      assert (S_GET_NAME (p));
       if (strcmp (S_GET_NAME (p), S_GET_NAME (cur_proc_ptr->isym)))
 	as_warn (_(".end symbol does not match .ent symbol."));
     }
@@ -909,6 +958,7 @@ get_number (void)
 static void
 s_iq2000_ent (int aent)
 {
+  int number = 0;
   symbolS *symbolP;
   int maybe_text;
 
@@ -917,7 +967,7 @@ s_iq2000_ent (int aent)
     input_line_pointer++;
   SKIP_WHITESPACE ();
   if (ISDIGIT (*input_line_pointer) || *input_line_pointer == '-')
-    get_number ();
+    number = get_number ();
 
   if ((bfd_get_section_flags (stdoutput, now_seg) & SEC_CODE) != 0)
     maybe_text = 1;

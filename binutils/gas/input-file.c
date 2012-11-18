@@ -1,13 +1,13 @@
 /* input_file.c - Deal with Input Files -
    Copyright 1987, 1990, 1991, 1992, 1993, 1994, 1995, 1999, 2000, 2001,
-   2002, 2003, 2005, 2006, 2007, 2009, 2012
+   2002, 2003, 2005
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -17,17 +17,22 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 /* Confines all details of reading source bytes to this module.
    All O/S specific crocks should live here.
    What we lose in "efficiency" we gain in modularity.
    Note we don't need to #include the "as.h" file. No common coupling!  */
 
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #include "as.h"
 #include "input-file.h"
 #include "safe-ctype.h"
+
+static int input_file_get (char *, int);
 
 /* This variable is non-zero if the file currently being read should be
    preprocessed by app.  It is zero if the file can be read straight in.  */
@@ -69,10 +74,16 @@ input_file_end (void)
 }
 
 /* Return BUFFER_SIZE.  */
-size_t
+unsigned int
 input_file_buffer_size (void)
 {
   return (BUFFER_SIZE);
+}
+
+int
+input_file_is_open (void)
+{
+  return f_in != (FILE *) 0;
 }
 
 /* Push the state of our input, returning a pointer to saved info that
@@ -122,7 +133,7 @@ input_file_open (char *filename, /* "" means use stdin. Must not be 0.  */
 
   preprocess = pre;
 
-  gas_assert (filename != 0);	/* Filename may not be NULL.  */
+  assert (filename != 0);	/* Filename may not be NULL.  */
   if (filename[0])
     {
       f_in = fopen (filename, FOPEN_RT);
@@ -138,8 +149,10 @@ input_file_open (char *filename, /* "" means use stdin. Must not be 0.  */
 
   if (f_in == NULL)
     {
-      as_bad (_("can't open %s for reading: %s"),
-	      file_name, xstrerror (errno));
+#ifdef BFD_ASSEMBLER
+      bfd_set_error (bfd_error_system_call);
+#endif
+      as_perror (_("Can't open %s for reading"), file_name);
       return;
     }
 
@@ -147,22 +160,15 @@ input_file_open (char *filename, /* "" means use stdin. Must not be 0.  */
 
   if (ferror (f_in))
     {
-      as_bad (_("can't read from %s: %s"),
-	      file_name, xstrerror (errno));
+#ifdef BFD_ASSEMBLER
+      bfd_set_error (bfd_error_system_call);
+#endif
+      as_perror (_("Can't open %s for reading"), file_name);
 
       fclose (f_in);
       f_in = NULL;
       return;
     }
-
-  /* Check for an empty input file.  */
-  if (feof (f_in))
-    {
-      fclose (f_in);
-      f_in = NULL;
-      return;
-    }
-  gas_assert (c != EOF);
 
   if (c == '#')
     {
@@ -170,8 +176,8 @@ input_file_open (char *filename, /* "" means use stdin. Must not be 0.  */
       c = getc (f_in);
       if (c == 'N')
 	{
-	  if (fgets (buf, sizeof (buf), f_in)
-	      && !strncmp (buf, "O_APP", 5) && ISSPACE (buf[5]))
+	  fgets (buf, 80, f_in);
+	  if (!strncmp (buf, "O_APP", 5) && ISSPACE (buf[5]))
 	    preprocess = 0;
 	  if (!strchr (buf, '\n'))
 	    ungetc ('#', f_in);	/* It was longer.  */
@@ -180,8 +186,8 @@ input_file_open (char *filename, /* "" means use stdin. Must not be 0.  */
 	}
       else if (c == 'A')
 	{
-	  if (fgets (buf, sizeof (buf), f_in)
-	      && !strncmp (buf, "PP", 2) && ISSPACE (buf[2]))
+	  fgets (buf, 80, f_in);
+	  if (!strncmp (buf, "PP", 2) && ISSPACE (buf[2]))
 	    preprocess = 1;
 	  if (!strchr (buf, '\n'))
 	    ungetc ('#', f_in);
@@ -211,17 +217,20 @@ input_file_close (void)
 
 /* This function is passed to do_scrub_chars.  */
 
-static size_t
-input_file_get (char *buf, size_t buflen)
+static int
+input_file_get (char *buf, int buflen)
 {
-  size_t size;
+  int size;
 
-  if (feof (f_in))
-    return 0;
-  
   size = fread (buf, sizeof (char), buflen, f_in);
-  if (ferror (f_in))
-    as_bad (_("can't read from %s: %s"), file_name, xstrerror (errno));
+  if (size < 0)
+    {
+#ifdef BFD_ASSEMBLER
+      bfd_set_error (bfd_error_system_call);
+#endif
+      as_perror (_("Can't read from %s"), file_name);
+      size = 0;
+    }
   return size;
 }
 
@@ -231,7 +240,7 @@ char *
 input_file_give_next_buffer (char *where /* Where to place 1st character of new buffer.  */)
 {
   char *return_value;		/* -> Last char of what we read, + 1.  */
-  size_t size;
+  register int size;
 
   if (f_in == (FILE *) 0)
     return 0;
@@ -242,15 +251,26 @@ input_file_give_next_buffer (char *where /* Where to place 1st character of new 
   if (preprocess)
     size = do_scrub_chars (input_file_get, where, BUFFER_SIZE);
   else
-    size = input_file_get (where, BUFFER_SIZE);
-
+    size = fread (where, sizeof (char), BUFFER_SIZE, f_in);
+  if (size < 0)
+    {
+#ifdef BFD_ASSEMBLER
+      bfd_set_error (bfd_error_system_call);
+#endif
+      as_perror (_("Can't read from %s"), file_name);
+      size = 0;
+    }
   if (size)
     return_value = where + size;
   else
     {
       if (fclose (f_in))
-	as_warn (_("can't close %s: %s"), file_name, xstrerror (errno));
-
+	{
+#ifdef BFD_ASSEMBLER
+	  bfd_set_error (bfd_error_system_call);
+#endif
+	  as_perror (_("Can't close %s"), file_name);
+	}
       f_in = (FILE *) 0;
       return_value = 0;
     }

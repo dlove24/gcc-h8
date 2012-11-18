@@ -1,13 +1,12 @@
 /* tc-sh.c -- Assemble code for the Renesas / SuperH SH
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012
-   Free Software Foundation, Inc.
+   2003, 2004, 2005  Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -17,12 +16,14 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330,
+   Boston, MA 02111-1307, USA.  */
 
 /* Written By Steve Chamberlain <sac@cygnus.com>  */
 
+#include <stdio.h>
 #include "as.h"
+#include "bfd.h"
 #include "subsegs.h"
 #define DEFINE_TABLE
 #include "opcodes/sh-opc.h"
@@ -123,6 +124,8 @@ const pseudo_typeS md_pseudo_table[] =
   {0, 0, 0}
 };
 
+/*int md_reloc_size; */
+
 int sh_relax;		/* set if -relax seen */
 
 /* Whether -small was seen.  */
@@ -133,22 +136,13 @@ int sh_small;
 
 static int dont_adjust_reloc_32;
 
-/* Flag to indicate that '$' is allowed as a register prefix.  */
-
-static int allow_dollar_register_prefix;
-
-/* Preset architecture set, if given; zero otherwise.  */
+/* preset architecture set, if given; zero otherwise.  */
 
 static unsigned int preset_target_arch;
 
 /* The bit mask of architectures that could
    accommodate the insns seen so far.  */
 static unsigned int valid_arch;
-
-#ifdef OBJ_ELF
-/* Whether --fdpic was given.  */
-static int sh_fdpic;
-#endif
 
 const char EXP_CHARS[] = "eE";
 
@@ -617,6 +611,7 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 
   if (exp->X_op == O_PIC_reloc)
     {
+#ifdef HAVE_SH64
       switch (*r_type_p)
 	{
 	case BFD_RELOC_NONE:
@@ -624,31 +619,6 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 	  *r_type_p = exp->X_md;
 	  break;
 
-	case BFD_RELOC_SH_DISP20:
-	  switch (exp->X_md)
-	    {
-	    case BFD_RELOC_32_GOT_PCREL:
-	      *r_type_p = BFD_RELOC_SH_GOT20;
-	      break;
-
-	    case BFD_RELOC_32_GOTOFF:
-	      *r_type_p = BFD_RELOC_SH_GOTOFF20;
-	      break;
-
-	    case BFD_RELOC_SH_GOTFUNCDESC:
-	      *r_type_p = BFD_RELOC_SH_GOTFUNCDESC20;
-	      break;
-
-	    case BFD_RELOC_SH_GOTOFFFUNCDESC:
-	      *r_type_p = BFD_RELOC_SH_GOTOFFFUNCDESC20;
-	      break;
-
-	    default:
-	      abort ();
-	    }
-	  break;
-
-#ifdef HAVE_SH64
 	case BFD_RELOC_SH_IMM_LOW16:
 	  switch (exp->X_md)
 	    {
@@ -744,11 +714,13 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 	      abort ();
 	    }
 	  break;
-#endif
 
 	default:
 	  abort ();
 	}
+#else
+      *r_type_p = exp->X_md;
+#endif
       if (exp == main_exp)
 	exp->X_op = O_symbol;
       else
@@ -789,9 +761,11 @@ sh_cons_fix_new (fragS *frag, int off, int size, expressionS *exp)
 	r_type = BFD_RELOC_32;
 	break;
 
+#ifdef HAVE_SH64
       case 8:
 	r_type = BFD_RELOC_64;
 	break;
+#endif
 
       default:
 	goto error;
@@ -851,97 +825,8 @@ sh_elf_cons (register int nbytes)
   else
     demand_empty_rest_of_line ();
 }
-
-/* The regular frag_offset_fixed_p doesn't work for rs_align_test
-   frags.  */
-
-static bfd_boolean
-align_test_frag_offset_fixed_p (const fragS *frag1, const fragS *frag2,
-				bfd_vma *offset)
-{
-  const fragS *frag;
-  bfd_vma off;
-
-  /* Start with offset initialised to difference between the two frags.
-     Prior to assigning frag addresses this will be zero.  */
-  off = frag1->fr_address - frag2->fr_address;
-  if (frag1 == frag2)
-    {
-      *offset = off;
-      return TRUE;
-    }
-
-  /* Maybe frag2 is after frag1.  */
-  frag = frag1;
-  while (frag->fr_type == rs_fill
-	 || frag->fr_type == rs_align_test)
-    {
-      if (frag->fr_type == rs_fill)
-	off += frag->fr_fix + frag->fr_offset * frag->fr_var;
-      else
-	off += frag->fr_fix;
-      frag = frag->fr_next;
-      if (frag == NULL)
-	break;
-      if (frag == frag2)
-	{
-	  *offset = off;
-	  return TRUE;
-	}
-    }
-
-  /* Maybe frag1 is after frag2.  */
-  off = frag1->fr_address - frag2->fr_address;
-  frag = frag2;
-  while (frag->fr_type == rs_fill
-	 || frag->fr_type == rs_align_test)
-    {
-      if (frag->fr_type == rs_fill)
-	off -= frag->fr_fix + frag->fr_offset * frag->fr_var;
-      else
-	off -= frag->fr_fix;
-      frag = frag->fr_next;
-      if (frag == NULL)
-	break;
-      if (frag == frag1)
-	{
-	  *offset = off;
-	  return TRUE;
-	}
-    }
-
-  return FALSE;
-}
-
-/* Optimize a difference of symbols which have rs_align_test frag if
-   possible.  */
-
-int
-sh_optimize_expr (expressionS *l, operatorT op, expressionS *r)
-{
-  bfd_vma frag_off;
-
-  if (op == O_subtract
-      && l->X_op == O_symbol
-      && r->X_op == O_symbol
-      && S_GET_SEGMENT (l->X_add_symbol) == S_GET_SEGMENT (r->X_add_symbol)
-      && (SEG_NORMAL (S_GET_SEGMENT (l->X_add_symbol))
-	  || r->X_add_symbol == l->X_add_symbol)
-      && align_test_frag_offset_fixed_p (symbol_get_frag (l->X_add_symbol),
-					 symbol_get_frag (r->X_add_symbol),
-					 &frag_off))
-    {
-      l->X_add_number -= r->X_add_number;
-      l->X_add_number -= frag_off / OCTETS_PER_BYTE;
-      l->X_add_number += (S_GET_VALUE (l->X_add_symbol)
-			  - S_GET_VALUE (r->X_add_symbol));
-      l->X_op = O_constant;
-      l->X_add_symbol = 0;
-      return 1;
-    }
-  return 0;
-}
 #endif /* OBJ_ELF */
+
 
 /* This function is called once, at assembler startup time.  This should
    set up all the tables, etc that the MD part of the assembler needs.  */
@@ -986,8 +871,8 @@ static int reg_b;
 
 /* Try to parse a reg name.  Return the number of chars consumed.  */
 
-static unsigned int
-parse_reg_without_prefix (char *src, int *mode, int *reg)
+static int
+parse_reg (char *src, int *mode, int *reg)
 {
   char l0 = TOLOWER (src[0]);
   char l1 = l0 ? TOLOWER (src[1]) : 0;
@@ -1342,50 +1227,26 @@ parse_reg_without_prefix (char *src, int *mode, int *reg)
   return 0;
 }
 
-/* Like parse_reg_without_prefix, but this version supports
-   $-prefixed register names if enabled by the user.  */
-
-static unsigned int
-parse_reg (char *src, int *mode, int *reg)
-{
-  unsigned int prefix;
-  unsigned int consumed;
-
-  if (src[0] == '$')
-    {
-      if (allow_dollar_register_prefix)
-	{
-	  src ++;
-	  prefix = 1;
-	}
-      else
-	return 0;
-    }
-  else
-    prefix = 0;
-  
-  consumed = parse_reg_without_prefix (src, mode, reg);
-
-  if (consumed == 0)
-    return 0;
-
-  return consumed + prefix;
-}
-
 static char *
 parse_exp (char *s, sh_operand_info *op)
 {
   char *save;
-  char *new_pointer;
+  char *new;
 
   save = input_line_pointer;
   input_line_pointer = s;
   expression (&op->immediate);
   if (op->immediate.X_op == O_absent)
     as_bad (_("missing operand"));
-  new_pointer = input_line_pointer;
+#ifdef OBJ_ELF
+  else if (op->immediate.X_op == O_PIC_reloc
+	   || sh_PIC_related_p (op->immediate.X_add_symbol)
+	   || sh_PIC_related_p (op->immediate.X_op_symbol))
+    as_bad (_("misplaced PIC operand"));
+#endif
+  new = input_line_pointer;
   input_line_pointer = save;
-  return new_pointer;
+  return new;
 }
 
 /* The many forms of operand:
@@ -1699,6 +1560,36 @@ get_specific (sh_opcode_info *opcode, sh_operand_info *operands)
 	  sh_operand_info *user = operands + n;
 	  sh_arg_type arg = this_try->arg[n];
 
+	  if (SH_MERGE_ARCH_SET_VALID (valid_arch, arch_sh2a_nofpu_up)
+	      && (   arg == A_DISP_REG_M
+		  || arg == A_DISP_REG_N))
+	    {
+	      /* Check a few key IMM* fields for overflow.  */
+	      int opf;
+	      long val = user->immediate.X_add_number;
+
+	      for (opf = 0; opf < 4; opf ++)
+		switch (this_try->nibbles[opf])
+		  {
+		  case IMM0_4:
+		  case IMM1_4:
+		    if (val < 0 || val > 15)
+		      goto fail;
+		    break;
+		  case IMM0_4BY2:
+		  case IMM1_4BY2:
+		    if (val < 0 || val > 15 * 2)
+		      goto fail;
+		    break;
+		  case IMM0_4BY4:
+		  case IMM1_4BY4:
+		    if (val < 0 || val > 15 * 4)
+		      goto fail;
+		    break;
+		  default:
+		    break;
+		  }
+	    }
 	  switch (arg)
 	    {
 	    case A_DISP_PC:
@@ -2192,36 +2083,6 @@ get_specific (sh_opcode_info *opcode, sh_operand_info *operands)
 	      printf (_("unhandled %d\n"), arg);
 	      goto fail;
 	    }
-	  if (SH_MERGE_ARCH_SET_VALID (valid_arch, arch_sh2a_nofpu_up)
-	      && (   arg == A_DISP_REG_M
-		  || arg == A_DISP_REG_N))
-	    {
-	      /* Check a few key IMM* fields for overflow.  */
-	      int opf;
-	      long val = user->immediate.X_add_number;
-
-	      for (opf = 0; opf < 4; opf ++)
-		switch (this_try->nibbles[opf])
-		  {
-		  case IMM0_4:
-		  case IMM1_4:
-		    if (val < 0 || val > 15)
-		      goto fail;
-		    break;
-		  case IMM0_4BY2:
-		  case IMM1_4BY2:
-		    if (val < 0 || val > 15 * 2)
-		      goto fail;
-		    break;
-		  case IMM0_4BY4:
-		  case IMM1_4BY4:
-		    if (val < 0 || val > 15 * 4)
-		      goto fail;
-		    break;
-		  default:
-		    break;
-		  }
-	    }
 	}
       if ( !SH_MERGE_ARCH_SET_VALID (valid_arch, this_try->arch))
 	goto fail;
@@ -2340,16 +2201,12 @@ insert_loop_bounds (char *output, sh_operand_info *operand)
 static unsigned int
 build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 {
-  int indx;
+  int index;
   char nbuf[8];
   char *output;
   unsigned int size = 2;
   int low_byte = target_big_endian ? 1 : 0;
   int max_index = 4;
-  bfd_reloc_code_real_type r_type;
-#ifdef OBJ_ELF
-  int unhandled_pic = 0;
-#endif
 
   nbuf[0] = 0;
   nbuf[1] = 0;
@@ -2360,16 +2217,6 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
   nbuf[6] = 0;
   nbuf[7] = 0;
 
-#ifdef OBJ_ELF
-  for (indx = 0; indx < 3; indx++)
-    if (opcode->arg[indx] == A_IMM
-	&& operand[indx].type == A_IMM
-	&& (operand[indx].immediate.X_op == O_PIC_reloc
-	    || sh_PIC_related_p (operand[indx].immediate.X_add_symbol)
-	    || sh_PIC_related_p (operand[indx].immediate.X_op_symbol)))
-      unhandled_pic = 1;
-#endif
-
   if (SH_MERGE_ARCH_SET (opcode->arch, arch_op32))
     {
       output = frag_more (4);
@@ -2379,12 +2226,12 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
   else
     output = frag_more (2);
 
-  for (indx = 0; indx < max_index; indx++)
+  for (index = 0; index < max_index; index++)
     {
-      sh_nibble_type i = opcode->nibbles[indx];
+      sh_nibble_type i = opcode->nibbles[index];
       if (i < 16)
 	{
-	  nbuf[indx] = i;
+	  nbuf[index] = i;
 	}
       else
 	{
@@ -2392,32 +2239,32 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 	    {
 	    case REG_N:
 	    case REG_N_D:
-	      nbuf[indx] = reg_n;
+	      nbuf[index] = reg_n;
 	      break;
 	    case REG_M:
-	      nbuf[indx] = reg_m;
+	      nbuf[index] = reg_m;
 	      break;
 	    case SDT_REG_N:
 	      if (reg_n < 2 || reg_n > 5)
 		as_bad (_("Invalid register: 'r%d'"), reg_n);
-	      nbuf[indx] = (reg_n & 3) | 4;
+	      nbuf[index] = (reg_n & 3) | 4;
 	      break;
 	    case REG_NM:
-	      nbuf[indx] = reg_n | (reg_m >> 2);
+	      nbuf[index] = reg_n | (reg_m >> 2);
 	      break;
 	    case REG_B:
-	      nbuf[indx] = reg_b | 0x08;
+	      nbuf[index] = reg_b | 0x08;
 	      break;
 	    case REG_N_B01:
-	      nbuf[indx] = reg_n | 0x01;
+	      nbuf[index] = reg_n | 0x01;
 	      break;
 	    case IMM0_3s:
-	      nbuf[indx] |= 0x08;
+	      nbuf[index] |= 0x08;
 	    case IMM0_3c:
 	      insert (output + low_byte, BFD_RELOC_SH_IMM3, 0, operand);
 	      break;
 	    case IMM0_3Us:
-	      nbuf[indx] |= 0x80;
+	      nbuf[index] |= 0x80;
 	    case IMM0_3Uc:
 	      insert (output + low_byte, BFD_RELOC_SH_IMM3U, 0, operand);
 	      break;
@@ -2448,13 +2295,7 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 	    case IMM0_20_4:
 	      break;
 	    case IMM0_20:
-	      r_type = BFD_RELOC_SH_DISP20;
-#ifdef OBJ_ELF
-	      if (sh_check_fixup (&operand->immediate, &r_type))
-		as_bad (_("Invalid PIC expression."));
-	      unhandled_pic = 0;
-#endif
-	      insert4 (output, r_type, 0, operand);
+	      insert4 (output, BFD_RELOC_SH_DISP20, 0, operand);
 	      break;
 	    case IMM0_20BY8:
 	      insert4 (output, BFD_RELOC_SH_DISP20BY8, 0, operand);
@@ -2505,7 +2346,7 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 	      break;
 	    case REPEAT:
 	      output = insert_loop_bounds (output, operand);
-	      nbuf[indx] = opcode->nibbles[3];
+	      nbuf[index] = opcode->nibbles[3];
 	      operand += 2;
 	      break;
 	    default:
@@ -2513,10 +2354,6 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 	    }
 	}
     }
-#ifdef OBJ_ELF
-  if (unhandled_pic)
-    as_bad (_("misplaced PIC operand"));
-#endif
   if (!target_big_endian)
     {
       output[1] = (nbuf[0] << 4) | (nbuf[1]);
@@ -2553,7 +2390,7 @@ find_cooked_opcode (char **str_p)
   unsigned char *op_start;
   unsigned char *op_end;
   char name[20];
-  unsigned int nlen = 0;
+  int nlen = 0;
 
   /* Drop leading whitespace.  */
   while (*str == ' ')
@@ -2565,7 +2402,7 @@ find_cooked_opcode (char **str_p)
      assemble_ppi, so the opcode might be terminated by an '@'.  */
   for (op_start = op_end = (unsigned char *) str;
        *op_end
-       && nlen < sizeof (name) - 1
+       && nlen < 20
        && !is_end_of_line[*op_end] && *op_end != ' ' && *op_end != '@';
        op_end++)
     {
@@ -2929,7 +2766,7 @@ md_assemble (char *str)
   if (opcode == NULL)
     {
       /* The opcode is not in the hash table.
-	 This means we definitely have an assembly failure,
+	 This means we definately have an assembly failure,
 	 but the instruction may be valid in another CPU variant.
 	 In this case emit something better than 'unknown opcode'.
 	 Search the full table in sh-opc.h to check. */
@@ -2998,9 +2835,6 @@ md_assemble (char *str)
 	    as_bad (_("Delayed branches not available on SH1"));
 	  parse_exp (op_end + 1, &operand[0]);
 	  build_relax (opcode, &operand[0]);
-
-	  /* All branches are currently 16 bit.  */
-	  size = 2;
 	}
       else
 	{
@@ -3037,14 +2871,16 @@ md_assemble (char *str)
 	}
     }
 
+#ifdef BFD_ASSEMBLER
   dwarf2_emit_insn (size);
+#endif
 }
 
 /* This routine is called each time a label definition is seen.  It
    emits a BFD_RELOC_SH_LABEL reloc if necessary.  */
 
 void
-sh_frob_label (symbolS *sym)
+sh_frob_label (void)
 {
   static fragS *last_label_frag;
   static int last_label_offset;
@@ -3063,8 +2899,6 @@ sh_frob_label (symbolS *sym)
 	  last_label_offset = offset;
 	}
     }
-
-  dwarf2_emit_label (sym);
 }
 
 /* This routine is called when the assembler is about to output some
@@ -3088,12 +2922,80 @@ md_undefined_symbol (char *name ATTRIBUTE_UNUSED)
   return 0;
 }
 
+#ifdef OBJ_COFF
+#ifndef BFD_ASSEMBLER
+
+void
+tc_crawl_symbol_chain (object_headers *headers ATTRIBUTE_UNUSED)
+{
+  printf (_("call to tc_crawl_symbol_chain \n"));
+}
+
+void
+tc_headers_hook (object_headers *headers ATTRIBUTE_UNUSED)
+{
+  printf (_("call to tc_headers_hook \n"));
+}
+
+#endif
+#endif
+
 /* Various routines to kill one day.  */
+/* Equal to MAX_PRECISION in atof-ieee.c.  */
+#define MAX_LITTLENUMS 6
+
+/* Turn a string in input_line_pointer into a floating point constant
+   of type TYPE, and store the appropriate bytes in *LITP.  The number
+   of LITTLENUMS emitted is stored in *SIZEP .  An error message is
+   returned, or NULL on OK.  */
 
 char *
 md_atof (int type, char *litP, int *sizeP)
 {
-  return ieee_md_atof (type, litP, sizeP, target_big_endian);
+  int prec;
+  LITTLENUM_TYPE words[4];
+  char *t;
+  int i;
+
+  switch (type)
+    {
+    case 'f':
+      prec = 2;
+      break;
+
+    case 'd':
+      prec = 4;
+      break;
+
+    default:
+      *sizeP = 0;
+      return _("bad call to md_atof");
+    }
+
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+
+  *sizeP = prec * 2;
+
+  if (! target_big_endian)
+    {
+      for (i = prec - 1; i >= 0; i--)
+	{
+	  md_number_to_chars (litP, (valueT) words[i], 2);
+	  litP += 2;
+	}
+    }
+  else
+    {
+      for (i = 0; i < prec; i++)
+	{
+	  md_number_to_chars (litP, (valueT) words[i], 2);
+	  litP += 2;
+	}
+    }
+
+  return NULL;
 }
 
 /* Handle the .uses pseudo-op.  This pseudo-op is used just before a
@@ -3123,58 +3025,37 @@ s_uses (int ignore ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
-enum options
-{
-  OPTION_RELAX = OPTION_MD_BASE,
-  OPTION_BIG,
-  OPTION_LITTLE,
-  OPTION_SMALL,
-  OPTION_DSP,
-  OPTION_ISA,
-  OPTION_RENESAS,
-  OPTION_ALLOW_REG_PREFIX,
-#ifdef HAVE_SH64
-  OPTION_ABI,
-  OPTION_NO_MIX,
-  OPTION_SHCOMPACT_CONST_CRANGE,
-  OPTION_NO_EXPAND,
-  OPTION_PT32,
-#endif
-  OPTION_H_TICK_HEX,
-#ifdef OBJ_ELF
-  OPTION_FDPIC,
-#endif
-  OPTION_DUMMY  /* Not used.  This is just here to make it easy to add and subtract options from this enum.  */
-};
-
 const char *md_shortopts = "";
 struct option md_longopts[] =
 {
+#define OPTION_RELAX  (OPTION_MD_BASE)
+#define OPTION_BIG (OPTION_MD_BASE + 1)
+#define OPTION_LITTLE (OPTION_BIG + 1)
+#define OPTION_SMALL (OPTION_LITTLE + 1)
+#define OPTION_DSP (OPTION_SMALL + 1)
+#define OPTION_ISA                    (OPTION_DSP + 1)
+#define OPTION_RENESAS (OPTION_ISA + 1)
+
   {"relax", no_argument, NULL, OPTION_RELAX},
   {"big", no_argument, NULL, OPTION_BIG},
   {"little", no_argument, NULL, OPTION_LITTLE},
-  /* The next two switches are here because the
-     generic parts of the linker testsuite uses them.  */
-  {"EB", no_argument, NULL, OPTION_BIG},
-  {"EL", no_argument, NULL, OPTION_LITTLE},
   {"small", no_argument, NULL, OPTION_SMALL},
   {"dsp", no_argument, NULL, OPTION_DSP},
-  {"isa", required_argument, NULL, OPTION_ISA},
+  {"isa",                    required_argument, NULL, OPTION_ISA},
   {"renesas", no_argument, NULL, OPTION_RENESAS},
-  {"allow-reg-prefix", no_argument, NULL, OPTION_ALLOW_REG_PREFIX},
 
 #ifdef HAVE_SH64
+#define OPTION_ABI                    (OPTION_RENESAS + 1)
+#define OPTION_NO_MIX                 (OPTION_ABI + 1)
+#define OPTION_SHCOMPACT_CONST_CRANGE (OPTION_NO_MIX + 1)
+#define OPTION_NO_EXPAND              (OPTION_SHCOMPACT_CONST_CRANGE + 1)
+#define OPTION_PT32                   (OPTION_NO_EXPAND + 1)
   {"abi",                    required_argument, NULL, OPTION_ABI},
   {"no-mix",                 no_argument, NULL, OPTION_NO_MIX},
   {"shcompact-const-crange", no_argument, NULL, OPTION_SHCOMPACT_CONST_CRANGE},
   {"no-expand",              no_argument, NULL, OPTION_NO_EXPAND},
   {"expand-pt32",            no_argument, NULL, OPTION_PT32},
 #endif /* HAVE_SH64 */
-  { "h-tick-hex", no_argument,	      NULL, OPTION_H_TICK_HEX  },
-
-#ifdef OBJ_ELF
-  {"fdpic", no_argument, NULL, OPTION_FDPIC},
-#endif
 
   {NULL, no_argument, NULL, 0}
 };
@@ -3209,10 +3090,6 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
       dont_adjust_reloc_32 = 1;
       break;
 
-    case OPTION_ALLOW_REG_PREFIX:
-      allow_dollar_register_prefix = 1;
-      break;
-
     case OPTION_ISA:
       if (strcasecmp (arg, "dsp") == 0)
 	preset_target_arch = arch_sh_up & ~(arch_sh_sp_fpu|arch_sh_dp_fpu);
@@ -3240,7 +3117,6 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
 	{
 	  extern const bfd_arch_info_type bfd_sh_arch;
 	  bfd_arch_info_type const *bfd_arch = &bfd_sh_arch;
-
 	  preset_target_arch = 0;
 	  for (; bfd_arch; bfd_arch=bfd_arch->next)
 	    {
@@ -3264,7 +3140,7 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
 	    }
 	  
 	  if (!preset_target_arch)
-	    as_bad (_("Invalid argument to --isa option: %s"), arg);
+	    as_bad ("Invalid argument to --isa option: %s", arg);
 	}
       break;
 
@@ -3285,7 +3161,7 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
 	  sh64_abi = sh64_abi_64;
 	}
       else
-	as_bad (_("Invalid argument to --abi option: %s"), arg);
+	as_bad ("Invalid argument to --abi option: %s", arg);
       break;
 
     case OPTION_NO_MIX:
@@ -3305,16 +3181,6 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
       break;
 #endif /* HAVE_SH64 */
 
-    case OPTION_H_TICK_HEX:
-      enable_h_tick_hex = 1;
-      break;
-
-#ifdef OBJ_ELF
-    case OPTION_FDPIC:
-      sh_fdpic = TRUE;
-      break;
-#endif /* OBJ_ELF */
-
     default:
       return 0;
     }
@@ -3327,21 +3193,19 @@ md_show_usage (FILE *stream)
 {
   fprintf (stream, _("\
 SH options:\n\
---little		generate little endian code\n\
---big			generate big endian code\n\
---relax			alter jump instructions for long displacements\n\
---renesas		disable optimization with section symbol for\n\
+-little			generate little endian code\n\
+-big			generate big endian code\n\
+-relax			alter jump instructions for long displacements\n\
+-renesas		disable optimization with section symbol for\n\
 			compatibility with Renesas assembler.\n\
---small			align sections to 4 byte boundaries, not 16\n\
---dsp			enable sh-dsp insns, and disable floating-point ISAs.\n\
---allow-reg-prefix	allow '$' as a register name prefix.\n\
---isa=[any		use most appropriate isa\n\
+-small			align sections to 4 byte boundaries, not 16\n\
+-dsp			enable sh-dsp insns, and disable floating-point ISAs.\n\
+-isa=[any		use most appropriate isa\n\
     | dsp               same as '-dsp'\n\
     | fp"));
   {
     extern const bfd_arch_info_type bfd_sh_arch;
     bfd_arch_info_type const *bfd_arch = &bfd_sh_arch;
-
     for (; bfd_arch; bfd_arch=bfd_arch->next)
       if (bfd_arch->mach != bfd_mach_sh5)
 	{
@@ -3352,25 +3216,21 @@ SH options:\n\
   fprintf (stream, "]\n");
 #ifdef HAVE_SH64
   fprintf (stream, _("\
---isa=[shmedia		set as the default instruction set for SH64\n\
+-isa=[shmedia		set as the default instruction set for SH64\n\
     | SHmedia\n\
     | shcompact\n\
     | SHcompact]\n"));
   fprintf (stream, _("\
---abi=[32|64]		set size of expanded SHmedia operands and object\n\
+-abi=[32|64]		set size of expanded SHmedia operands and object\n\
 			file type\n\
---shcompact-const-crange  emit code-range descriptors for constants in\n\
+-shcompact-const-crange	emit code-range descriptors for constants in\n\
 			SHcompact code sections\n\
---no-mix		disallow SHmedia code in the same section as\n\
+-no-mix			disallow SHmedia code in the same section as\n\
 			constants and SHcompact code\n\
---no-expand		do not expand MOVI, PT, PTA or PTB instructions\n\
---expand-pt32		with -abi=64, expand PT, PTA and PTB instructions\n\
+-no-expand		do not expand MOVI, PT, PTA or PTB instructions\n\
+-expand-pt32		with -abi=64, expand PT, PTA and PTB instructions\n\
 			to 32 bits only\n"));
 #endif /* HAVE_SH64 */
-#ifdef OBJ_ELF
-  fprintf (stream, _("\
---fdpic			generate an FDPIC object file\n"));
-#endif /* OBJ_ELF */
 }
 
 /* This struct is used to pass arguments to sh_count_relocs through
@@ -3385,7 +3245,8 @@ struct sh_count_relocs
 };
 
 /* Count the number of fixups in a section which refer to a particular
-   symbol.  This is called via bfd_map_over_sections.  */
+   symbol.  When using BFD_ASSEMBLER, this is called via
+   bfd_map_over_sections.  */
 
 static void
 sh_count_relocs (bfd *abfd ATTRIBUTE_UNUSED, segT sec, void *data)
@@ -3410,8 +3271,8 @@ sh_count_relocs (bfd *abfd ATTRIBUTE_UNUSED, segT sec, void *data)
     }
 }
 
-/* Handle the count relocs for a particular section.
-   This is called via bfd_map_over_sections.  */
+/* Handle the count relocs for a particular section.  When using
+   BFD_ASSEMBLER, this is called via bfd_map_over_sections.  */
 
 static void
 sh_frob_section (bfd *abfd ATTRIBUTE_UNUSED, segT sec,
@@ -3423,21 +3284,6 @@ sh_frob_section (bfd *abfd ATTRIBUTE_UNUSED, segT sec,
   seginfo = seg_info (sec);
   if (seginfo == NULL)
     return;
-
-  for (fix = seginfo->fix_root; fix != NULL; fix = fix->fx_next)
-    {
-      symbolS *sym;
-
-      sym = fix->fx_addsy;
-      /* Check for a local_symbol.  */
-      if (sym && sym->bsym == NULL)
-	{
-	  struct local_symbol *ls = (struct local_symbol *)sym;
-	  /* See if it's been converted.  If so, canonicalize.  */
-	  if (local_symbol_converted_p (ls))
-	    fix->fx_addsy = local_symbol_get_real_symbol (ls);
-	}
-    }
 
   for (fix = seginfo->fix_root; fix != NULL; fix = fix->fx_next)
     {
@@ -3456,6 +3302,9 @@ sh_frob_section (bfd *abfd ATTRIBUTE_UNUSED, segT sec,
 	  || fix->fx_subsy != NULL
 	  || fix->fx_addnumber != 0
 	  || S_GET_SEGMENT (sym) != sec
+#if ! defined (BFD_ASSEMBLER) && defined (OBJ_COFF)
+	  || S_GET_STORAGE_CLASS (sym) == C_EXT
+#endif
 	  || S_IS_EXTERNAL (sym))
 	{
 	  as_warn_where (fix->fx_file, fix->fx_line,
@@ -3495,6 +3344,9 @@ sh_frob_section (bfd *abfd ATTRIBUTE_UNUSED, segT sec,
 	  || fscan->fx_subsy != NULL
 	  || fscan->fx_addnumber != 0
 	  || S_GET_SEGMENT (sym) != sec
+#if ! defined (BFD_ASSEMBLER) && defined (OBJ_COFF)
+	  || S_GET_STORAGE_CLASS (sym) == C_EXT
+#endif
 	  || S_IS_EXTERNAL (sym))
 	{
 	  as_warn_where (fix->fx_file, fix->fx_line,
@@ -3506,7 +3358,16 @@ sh_frob_section (bfd *abfd ATTRIBUTE_UNUSED, segT sec,
 	 counting the number of times we find a reference to sym.  */
       info.sym = sym;
       info.count = 0;
+#ifdef BFD_ASSEMBLER
       bfd_map_over_sections (stdoutput, sh_count_relocs, &info);
+#else
+      {
+	int iscan;
+
+	for (iscan = SEG_E0; iscan < SEG_UNKNOWN; iscan++)
+	  sh_count_relocs ((bfd *) NULL, iscan, &info);
+      }
+#endif
 
       if (info.count < 1)
 	abort ();
@@ -3541,14 +3402,28 @@ sh_frob_file (void)
   if (! sh_relax)
     return;
 
+#ifdef BFD_ASSEMBLER
   bfd_map_over_sections (stdoutput, sh_frob_section, NULL);
+#else
+  {
+    int iseg;
+
+    for (iseg = SEG_E0; iseg < SEG_UNKNOWN; iseg++)
+      sh_frob_section ((bfd *) NULL, iseg, NULL);
+  }
+#endif
 }
 
 /* Called after relaxing.  Set the correct sizes of the fragments, and
-   create relocs so that md_apply_fix will fill in the correct values.  */
+   create relocs so that md_apply_fix3 will fill in the correct values.  */
 
 void
+#ifdef BFD_ASSEMBLER
 md_convert_frag (bfd *headers ATTRIBUTE_UNUSED, segT seg, fragS *fragP)
+#else
+md_convert_frag (object_headers *headers ATTRIBUTE_UNUSED, segT seg,
+		 fragS *fragP)
+#endif
 {
   int donerelax = 0;
 
@@ -3621,7 +3496,12 @@ md_convert_frag (bfd *headers ATTRIBUTE_UNUSED, segT seg, fragS *fragP)
 
 	/* Build a relocation to six / four bytes farther on.  */
 	subseg_change (seg, 0);
-	fix_new (fragP, fragP->fr_fix, 2, section_symbol (seg),
+	fix_new (fragP, fragP->fr_fix, 2,
+#ifdef BFD_ASSEMBLER
+		 section_symbol (seg),
+#else
+		 seg_info (seg)->dot,
+#endif
 		 fragP->fr_address + fragP->fr_fix + (delay ? 4 : 6),
 		 1, BFD_RELOC_SH_PCDISP8BY2);
 
@@ -3688,12 +3568,17 @@ md_convert_frag (bfd *headers ATTRIBUTE_UNUSED, segT seg, fragS *fragP)
 valueT
 md_section_align (segT seg ATTRIBUTE_UNUSED, valueT size)
 {
+#ifdef BFD_ASSEMBLER
 #ifdef OBJ_ELF
   return size;
 #else /* ! OBJ_ELF */
   return ((size + (1 << bfd_get_section_alignment (stdoutput, seg)) - 1)
 	  & (-1 << bfd_get_section_alignment (stdoutput, seg)));
 #endif /* ! OBJ_ELF */
+#else /* ! BFD_ASSEMBLER */
+  return ((size + (1 << section_alignment[(int) seg]) - 1)
+	  & (-1 << section_alignment[(int) seg]));
+#endif /* ! BFD_ASSEMBLER */
 }
 
 /* This static variable is set by s_uacons to tell sh_cons_align that
@@ -3723,6 +3608,7 @@ void
 sh_cons_align (int nbytes)
 {
   int nalign;
+  char *p;
 
   if (sh_no_align_cons)
     {
@@ -3748,8 +3634,8 @@ sh_cons_align (int nbytes)
       return;
     }
 
-  frag_var (rs_align_test, 1, 1, (relax_substateT) 0,
-	    (symbolS *) NULL, (offsetT) nalign, (char *) NULL);
+  p = frag_var (rs_align_test, 1, 1, (relax_substateT) 0,
+		(symbolS *) NULL, (offsetT) nalign, (char *) NULL);
 
   record_alignment (now_seg, nalign);
 }
@@ -3791,7 +3677,7 @@ sh_handle_align (fragS *frag)
   else if (frag->fr_type == rs_align_test)
     {
       if (bytes != 0)
-	as_bad_where (frag->fr_file, frag->fr_line, _("misaligned data"));
+	as_warn_where (frag->fr_file, frag->fr_line, _("misaligned data"));
     }
 
   if (sh_relax
@@ -3863,13 +3749,7 @@ sh_fix_adjustable (fixS *fixP)
 {
   if (fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL
       || fixP->fx_r_type == BFD_RELOC_32_GOT_PCREL
-      || fixP->fx_r_type == BFD_RELOC_SH_GOT20
       || fixP->fx_r_type == BFD_RELOC_SH_GOTPC
-      || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC
-      || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC20
-      || fixP->fx_r_type == BFD_RELOC_SH_GOTOFFFUNCDESC
-      || fixP->fx_r_type == BFD_RELOC_SH_GOTOFFFUNCDESC20
-      || fixP->fx_r_type == BFD_RELOC_SH_FUNCDESC
       || ((fixP->fx_r_type == BFD_RELOC_32) && dont_adjust_reloc_32)
       || fixP->fx_r_type == BFD_RELOC_RVA)
     return 0;
@@ -3897,62 +3777,20 @@ sh_elf_final_processing (void)
   else
 #elif defined TARGET_SYMBIAN
     if (1)
-      {
-	extern int sh_symbian_find_elf_flags (unsigned int);
-
-	val = sh_symbian_find_elf_flags (valid_arch);
-      }
+      val = sh_symbian_find_elf_flags (valid_arch);
     else
 #endif /* HAVE_SH64 */
     val = sh_find_elf_flags (valid_arch);
 
   elf_elfheader (stdoutput)->e_flags &= ~EF_SH_MACH_MASK;
   elf_elfheader (stdoutput)->e_flags |= val;
-
-  if (sh_fdpic)
-    elf_elfheader (stdoutput)->e_flags |= EF_SH_FDPIC;
 }
 #endif
-
-#ifdef TE_UCLINUX
-/* Return the target format for uClinux.  */
-
-const char *
-sh_uclinux_target_format (void)
-{
-  if (sh_fdpic)
-    return (!target_big_endian ? "elf32-sh-fdpic" : "elf32-shbig-fdpic");
-  else
-    return (!target_big_endian ? "elf32-shl" : "elf32-sh");
-}
-#endif
-
-/* Apply fixup FIXP to SIZE-byte field BUF given that VAL is its
-   assembly-time value.  If we're generating a reloc for FIXP,
-   see whether the addend should be stored in-place or whether
-   it should be in an ELF r_addend field.  */
-
-static void
-apply_full_field_fix (fixS *fixP, char *buf, bfd_vma val, int size)
-{
-  reloc_howto_type *howto;
-
-  if (fixP->fx_addsy != NULL || fixP->fx_pcrel)
-    {
-      howto = bfd_reloc_type_lookup (stdoutput, fixP->fx_r_type);
-      if (howto && !howto->partial_inplace)
-	{
-	  fixP->fx_addnumber = val;
-	  return;
-	}
-    }
-  md_number_to_chars (buf, val, size);
-}
 
 /* Apply a fixup to the object file.  */
 
 void
-md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
+md_apply_fix3 (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 {
   char *buf = fixP->fx_where + fixP->fx_frag->fr_literal;
   int lowbyte = target_big_endian ? 1 : 0;
@@ -3961,16 +3799,12 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
   long max, min;
   int shift;
 
+#ifdef BFD_ASSEMBLER
   /* A difference between two symbols, the second of which is in the
      current section, is transformed in a PC-relative relocation to
      the other symbol.  We have to adjust the relocation type here.  */
   if (fixP->fx_pcrel)
     {
-#ifndef HAVE_SH64
-      /* Safeguard; this must not occur for non-sh64 configurations.  */
-      gas_assert (fixP->fx_r_type != BFD_RELOC_64);
-#endif
-
       switch (fixP->fx_r_type)
 	{
 	default:
@@ -4011,9 +3845,24 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       && fixP->fx_addsy != NULL
       && S_IS_WEAK (fixP->fx_addsy))
     val -= S_GET_VALUE  (fixP->fx_addsy);
+#endif
 
+#ifdef BFD_ASSEMBLER
   if (SWITCH_TABLE (fixP))
     val -= S_GET_VALUE  (fixP->fx_subsy);
+#else
+  if (fixP->fx_r_type == 0)
+    {
+      if (fixP->fx_size == 2)
+	fixP->fx_r_type = BFD_RELOC_16;
+      else if (fixP->fx_size == 4)
+	fixP->fx_r_type = BFD_RELOC_32;
+      else if (fixP->fx_size == 1)
+	fixP->fx_r_type = BFD_RELOC_8;
+      else
+	abort ();
+    }
+#endif
 
   max = min = 0;
   shift = 0;
@@ -4111,23 +3960,6 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       break;
 
     case BFD_RELOC_SH_PCRELIMM8BY4:
-      /* If we are dealing with a known destination ... */
-      if ((fixP->fx_addsy == NULL || S_IS_DEFINED (fixP->fx_addsy))
-	  && (fixP->fx_subsy == NULL || S_IS_DEFINED (fixP->fx_addsy)))
-      {
-	/* Don't silently move the destination due to misalignment.
-	   The absolute address is the fragment base plus the offset into
-	   the fragment plus the pc relative offset to the label.  */
-	if ((fixP->fx_frag->fr_address + fixP->fx_where + val) & 3)
-	  as_bad_where (fixP->fx_file, fixP->fx_line,
-			_("offset to unaligned destination"));
-
-	/* The displacement cannot be zero or backward even if aligned.
-	   Allow -2 because val has already been adjusted somewhere.  */
-	if (val < -2)
-	  as_bad_where (fixP->fx_file, fixP->fx_line, _("negative offset"));
-      }
-
       /* The lower two bits of the PC are cleared before the
          displacement is added in.  We can assume that the destination
          is on a 4 byte boundary.  If this instruction is also on a 4
@@ -4169,23 +4001,17 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       buf[highbyte] |= (val >> 8) & 0xf;
       break;
 
-#ifndef HAVE_SH64
-    case BFD_RELOC_64:
-      apply_full_field_fix (fixP, buf, *valP, 8);
-      break;
-#endif
-
     case BFD_RELOC_32:
     case BFD_RELOC_32_PCREL:
-      apply_full_field_fix (fixP, buf, val, 4);
+      md_number_to_chars (buf, val, 4);
       break;
 
     case BFD_RELOC_16:
-      apply_full_field_fix (fixP, buf, val, 2);
+      md_number_to_chars (buf, val, 2);
       break;
 
     case BFD_RELOC_SH_USES:
-      /* Pass the value into sh_reloc().  */
+      /* Pass the value into sh_coff_reloc_mangle.  */
       fixP->fx_addnumber = val;
       break;
 
@@ -4213,7 +4039,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       val = fixP->fx_offset;
       if (fixP->fx_subsy)
 	val -= S_GET_VALUE (fixP->fx_subsy);
-      apply_full_field_fix (fixP, buf, val, 4);
+      fixP->fx_addnumber = val;
+      md_number_to_chars (buf, val, 4);
       break;
 
     case BFD_RELOC_SH_GOTPC:
@@ -4234,7 +4061,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
          was used to store the correction, but since the expression is
          not pcrel, I felt it would be confusing to do it this way.  */
       * valP -= 1;
-      apply_full_field_fix (fixP, buf, val, 4);
+      md_number_to_chars (buf, val, 4);
       break;
 
     case BFD_RELOC_SH_TLS_GD_32:
@@ -4243,15 +4070,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Fallthrough */
     case BFD_RELOC_32_GOT_PCREL:
-    case BFD_RELOC_SH_GOT20:
     case BFD_RELOC_SH_GOTPLT32:
-    case BFD_RELOC_SH_GOTFUNCDESC:
-    case BFD_RELOC_SH_GOTFUNCDESC20:
-    case BFD_RELOC_SH_GOTOFFFUNCDESC:
-    case BFD_RELOC_SH_GOTOFFFUNCDESC20:
-    case BFD_RELOC_SH_FUNCDESC:
       * valP = 0; /* Fully resolved at runtime.  No addend.  */
-      apply_full_field_fix (fixP, buf, 0, 4);
+      md_number_to_chars (buf, 0, 4);
       break;
 
     case BFD_RELOC_SH_TLS_LDO_32:
@@ -4259,14 +4080,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Fallthrough */
     case BFD_RELOC_32_GOTOFF:
-    case BFD_RELOC_SH_GOTOFF20:
-      apply_full_field_fix (fixP, buf, val, 4);
+      md_number_to_chars (buf, val, 4);
       break;
 #endif
 
     default:
 #ifdef HAVE_SH64
-      shmedia_md_apply_fix (fixP, valP);
+      shmedia_md_apply_fix3 (fixP, valP);
       return;
 #else
       abort ();
@@ -4283,16 +4103,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	val = ((val >> shift)
 	       | ((long) -1 & ~ ((long) -1 >> shift)));
     }
-
-  /* Extend sign for 64-bit host.  */
-  val = ((val & 0xffffffff) ^ 0x80000000) - 0x80000000;
   if (max != 0 && (val < min || val > max))
     as_bad_where (fixP->fx_file, fixP->fx_line, _("offset out of range"));
-  else if (max != 0)
-    /* Stop the generic code from trying to overlow check the value as well.
-       It may not have the correct value anyway, as we do not store val back
-       into *valP.  */
-    fixP->fx_no_overflow = 1;
 
   if (fixP->fx_addsy == NULL && fixP->fx_pcrel == 0)
     fixP->fx_done = 1;
@@ -4391,7 +4203,8 @@ md_number_to_chars (char *ptr, valueT use, int nbytes)
     number_to_chars_bigendian (ptr, use, nbytes);
 }
 
-/* This version is used in obj-coff.c eg. for the sh-hms target.  */
+/* This version is used in obj-coff.c when not using BFD_ASSEMBLER.
+   eg for the sh-hms target.  */
 
 long
 md_pcrel_from (fixS *fixP)
@@ -4416,6 +4229,167 @@ md_pcrel_from_section (fixS *fixP, segT sec)
 
   return md_pcrel_from (fixP);
 }
+
+#ifdef OBJ_COFF
+
+int
+tc_coff_sizemachdep (fragS *frag)
+{
+  return md_relax_table[frag->fr_subtype].rlx_length;
+}
+
+#endif /* OBJ_COFF */
+
+#ifndef BFD_ASSEMBLER
+#ifdef OBJ_COFF
+
+/* Map BFD relocs to SH COFF relocs.  */
+
+struct reloc_map
+{
+  bfd_reloc_code_real_type bfd_reloc;
+  int sh_reloc;
+};
+
+static const struct reloc_map coff_reloc_map[] =
+{
+  { BFD_RELOC_32, R_SH_IMM32 },
+  { BFD_RELOC_16, R_SH_IMM16 },
+  { BFD_RELOC_8, R_SH_IMM8 },
+  { BFD_RELOC_SH_PCDISP8BY2, R_SH_PCDISP8BY2 },
+  { BFD_RELOC_SH_PCDISP12BY2, R_SH_PCDISP },
+  { BFD_RELOC_SH_IMM4, R_SH_IMM4 },
+  { BFD_RELOC_SH_IMM4BY2, R_SH_IMM4BY2 },
+  { BFD_RELOC_SH_IMM4BY4, R_SH_IMM4BY4 },
+  { BFD_RELOC_SH_IMM8, R_SH_IMM8 },
+  { BFD_RELOC_SH_IMM8BY2, R_SH_IMM8BY2 },
+  { BFD_RELOC_SH_IMM8BY4, R_SH_IMM8BY4 },
+  { BFD_RELOC_SH_PCRELIMM8BY2, R_SH_PCRELIMM8BY2 },
+  { BFD_RELOC_SH_PCRELIMM8BY4, R_SH_PCRELIMM8BY4 },
+  { BFD_RELOC_8_PCREL, R_SH_SWITCH8 },
+  { BFD_RELOC_SH_SWITCH16, R_SH_SWITCH16 },
+  { BFD_RELOC_SH_SWITCH32, R_SH_SWITCH32 },
+  { BFD_RELOC_SH_USES, R_SH_USES },
+  { BFD_RELOC_SH_COUNT, R_SH_COUNT },
+  { BFD_RELOC_SH_ALIGN, R_SH_ALIGN },
+  { BFD_RELOC_SH_CODE, R_SH_CODE },
+  { BFD_RELOC_SH_DATA, R_SH_DATA },
+  { BFD_RELOC_SH_LABEL, R_SH_LABEL },
+  { BFD_RELOC_UNUSED, 0 }
+};
+
+/* Adjust a reloc for the SH.  This is similar to the generic code,
+   but does some minor tweaking.  */
+
+void
+sh_coff_reloc_mangle (segment_info_type *seg, fixS *fix,
+		      struct internal_reloc *intr, unsigned int paddr)
+{
+  symbolS *symbol_ptr = fix->fx_addsy;
+  symbolS *dot;
+
+  intr->r_vaddr = paddr + fix->fx_frag->fr_address + fix->fx_where;
+
+  if (! SWITCH_TABLE (fix))
+    {
+      const struct reloc_map *rm;
+
+      for (rm = coff_reloc_map; rm->bfd_reloc != BFD_RELOC_UNUSED; rm++)
+	if (rm->bfd_reloc == (bfd_reloc_code_real_type) fix->fx_r_type)
+	  break;
+      if (rm->bfd_reloc == BFD_RELOC_UNUSED)
+	as_bad_where (fix->fx_file, fix->fx_line,
+		      _("Can not represent %s relocation in this object file format"),
+		      bfd_get_reloc_code_name (fix->fx_r_type));
+      intr->r_type = rm->sh_reloc;
+      intr->r_offset = 0;
+    }
+  else
+    {
+      know (sh_relax);
+
+      if (fix->fx_r_type == BFD_RELOC_16)
+	intr->r_type = R_SH_SWITCH16;
+      else if (fix->fx_r_type == BFD_RELOC_8)
+	intr->r_type = R_SH_SWITCH8;
+      else if (fix->fx_r_type == BFD_RELOC_32)
+	intr->r_type = R_SH_SWITCH32;
+      else
+	abort ();
+
+      /* For a switch reloc, we set r_offset to the difference between
+         the reloc address and the subtrahend.  When the linker is
+         doing relaxing, it can use the determine the starting and
+         ending points of the switch difference expression.  */
+      intr->r_offset = intr->r_vaddr - S_GET_VALUE (fix->fx_subsy);
+    }
+
+  /* PC relative relocs are always against the current section.  */
+  if (symbol_ptr == NULL)
+    {
+      switch (fix->fx_r_type)
+	{
+	case BFD_RELOC_SH_PCRELIMM8BY2:
+	case BFD_RELOC_SH_PCRELIMM8BY4:
+	case BFD_RELOC_SH_PCDISP8BY2:
+	case BFD_RELOC_SH_PCDISP12BY2:
+	case BFD_RELOC_SH_USES:
+	  symbol_ptr = seg->dot;
+	  break;
+	default:
+	  break;
+	}
+    }
+
+  if (fix->fx_r_type == BFD_RELOC_SH_USES)
+    {
+      /* We can't store the offset in the object file, since this
+	 reloc does not take up any space, so we store it in r_offset.
+	 The fx_addnumber field was set in md_apply_fix3.  */
+      intr->r_offset = fix->fx_addnumber;
+    }
+  else if (fix->fx_r_type == BFD_RELOC_SH_COUNT)
+    {
+      /* We can't store the count in the object file, since this reloc
+         does not take up any space, so we store it in r_offset.  The
+         fx_offset field was set when the fixup was created in
+         sh_coff_frob_file.  */
+      intr->r_offset = fix->fx_offset;
+      /* This reloc is always absolute.  */
+      symbol_ptr = NULL;
+    }
+  else if (fix->fx_r_type == BFD_RELOC_SH_ALIGN)
+    {
+      /* Store the alignment in the r_offset field.  */
+      intr->r_offset = fix->fx_offset;
+      /* This reloc is always absolute.  */
+      symbol_ptr = NULL;
+    }
+  else if (fix->fx_r_type == BFD_RELOC_SH_CODE
+	   || fix->fx_r_type == BFD_RELOC_SH_DATA
+	   || fix->fx_r_type == BFD_RELOC_SH_LABEL)
+    {
+      /* These relocs are always absolute.  */
+      symbol_ptr = NULL;
+    }
+
+  /* Turn the segment of the symbol into an offset.  */
+  if (symbol_ptr != NULL)
+    {
+      dot = segment_info[S_GET_SEGMENT (symbol_ptr)].dot;
+      if (dot != NULL)
+	intr->r_symndx = dot->sy_number;
+      else
+	intr->r_symndx = symbol_ptr->sy_number;
+    }
+  else
+    intr->r_symndx = -1;
+}
+
+#endif /* OBJ_COFF */
+#endif /* ! BFD_ASSEMBLER */
+
+#ifdef BFD_ASSEMBLER
 
 /* Create a reloc.  */
 
@@ -4466,8 +4440,12 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
   else if (shmedia_init_reloc (rel, fixp))
     ;
 #endif
-  else
+  else if (fixp->fx_pcrel)
     rel->addend = fixp->fx_addnumber;
+  else if (r_type == BFD_RELOC_32 || r_type == BFD_RELOC_32_GOTOFF)
+    rel->addend = fixp->fx_addnumber;
+  else
+    rel->addend = 0;
 
   rel->howto = bfd_reloc_type_lookup (stdoutput, r_type);
 
@@ -4478,7 +4456,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 		    bfd_get_reloc_code_name (r_type));
       /* Set howto to a garbage value so that we can keep going.  */
       rel->howto = bfd_reloc_type_lookup (stdoutput, BFD_RELOC_32);
-      gas_assert (rel->howto != NULL);
+      assert (rel->howto != NULL);
     }
 #ifdef OBJ_ELF
   else if (rel->howto->type == R_SH_IND12W)
@@ -4502,10 +4480,7 @@ sh_end_of_match (char *cont, char *what)
 }
 
 int
-sh_parse_name (char const *name,
-	       expressionS *exprP,
-	       enum expr_mode mode,
-	       char *nextcharP)
+sh_parse_name (char const *name, expressionS *exprP, char *nextcharP)
 {
   char *next = input_line_pointer;
   char *next_end;
@@ -4522,15 +4497,15 @@ sh_parse_name (char const *name,
       exprP->X_add_symbol = GOT_symbol;
     no_suffix:
       /* If we have an absolute symbol or a reg, then we know its
-	 value now.  */
+	     value now.  */
       segment = S_GET_SEGMENT (exprP->X_add_symbol);
-      if (mode != expr_defer && segment == absolute_section)
+      if (segment == absolute_section)
 	{
 	  exprP->X_op = O_constant;
 	  exprP->X_add_number = S_GET_VALUE (exprP->X_add_symbol);
 	  exprP->X_add_symbol = NULL;
 	}
-      else if (mode != expr_defer && segment == reg_section)
+      else if (segment == reg_section)
 	{
 	  exprP->X_op = O_register;
 	  exprP->X_add_number = S_GET_VALUE (exprP->X_add_symbol);
@@ -4567,14 +4542,6 @@ sh_parse_name (char const *name,
     reloc_type = BFD_RELOC_SH_TLS_LE_32;
   else if ((next_end = sh_end_of_match (next + 1, "DTPOFF")))
     reloc_type = BFD_RELOC_SH_TLS_LDO_32;
-  else if ((next_end = sh_end_of_match (next + 1, "PCREL")))
-    reloc_type = BFD_RELOC_32_PCREL;
-  else if ((next_end = sh_end_of_match (next + 1, "GOTFUNCDESC")))
-    reloc_type = BFD_RELOC_SH_GOTFUNCDESC;
-  else if ((next_end = sh_end_of_match (next + 1, "GOTOFFFUNCDESC")))
-    reloc_type = BFD_RELOC_SH_GOTOFFFUNCDESC;
-  else if ((next_end = sh_end_of_match (next + 1, "FUNCDESC")))
-    reloc_type = BFD_RELOC_SH_FUNCDESC;
   else
     goto no_suffix;
 
@@ -4597,7 +4564,7 @@ sh_cfi_frame_initial_instructions (void)
 }
 
 int
-sh_regname_to_dw2regnum (char *regname)
+sh_regname_to_dw2regnum (const char *regname)
 {
   unsigned int regnum = -1;
   unsigned int i;
@@ -4639,3 +4606,4 @@ sh_regname_to_dw2regnum (char *regname)
   return regnum;
 }
 #endif /* OBJ_ELF */
+#endif /* BFD_ASSEMBLER */

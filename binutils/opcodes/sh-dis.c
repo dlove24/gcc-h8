@@ -1,27 +1,23 @@
 /* Disassemble SH instructions.
-   Copyright 1993, 1994, 1995, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2012  Free Software Foundation, Inc.
+   Copyright 1993, 1994, 1995, 1997, 1998, 2000, 2001, 2002, 2003, 2004
+   Free Software Foundation, Inc.
 
-   This file is part of the GNU opcodes library.
-
-   This library is free software; you can redistribute it and/or modify
+   This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
 
-   It is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this file; see the file COPYING.  If not, write to the
-   Free Software Foundation, 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
 #include <stdio.h>
-
+#include "sysdep.h"
 #define STATIC_TABLE
 #define DEFINE_TABLE
 
@@ -32,12 +28,18 @@
 #define INCLUDE_SHMEDIA
 #endif
 
+static void print_movxy
+  PARAMS ((const sh_opcode_info *, int, int, fprintf_ftype, void *));
+static void print_insn_ddt PARAMS ((int, struct disassemble_info *));
+static void print_dsp_reg PARAMS ((int, fprintf_ftype, void *));
+static void print_insn_ppi PARAMS ((int, struct disassemble_info *));
+
 static void
-print_movxy (const sh_opcode_info *op,
-	     int rn,
-	     int rm,
-	     fprintf_ftype fprintf_fn,
-	     void *stream)
+print_movxy (op, rn, rm, fprintf_fn, stream)
+     const sh_opcode_info *op;
+     int rn, rm;
+     fprintf_ftype fprintf_fn;
+     void *stream;
 {
   int n;
 
@@ -111,7 +113,9 @@ print_movxy (const sh_opcode_info *op,
    Return nonzero if a field b of a parallel processing insns follows.  */
 
 static void
-print_insn_ddt (int insn, struct disassemble_info *info)
+print_insn_ddt (insn, info)
+     int insn;
+     struct disassemble_info *info;
 {
   fprintf_ftype fprintf_fn = info->fprintf_func;
   void *stream = info->stream;
@@ -198,7 +202,10 @@ print_insn_ddt (int insn, struct disassemble_info *info)
 }
 
 static void
-print_dsp_reg (int rm, fprintf_ftype fprintf_fn, void *stream)
+print_dsp_reg (rm, fprintf_fn, stream)
+     int rm;
+     fprintf_ftype fprintf_fn;
+     void *stream;
 {
   switch (rm)
     {
@@ -239,7 +246,9 @@ print_dsp_reg (int rm, fprintf_ftype fprintf_fn, void *stream)
 }
 
 static void
-print_insn_ppi (int field_b, struct disassemble_info *info)
+print_insn_ppi (field_b, info)
+     int field_b;
+     struct disassemble_info *info;
 {
   static char *sx_tab[] = { "x0", "x1", "a0", "a1" };
   static char *sy_tab[] = { "y0", "y1", "m0", "m1" };
@@ -266,20 +275,23 @@ print_insn_ppi (int field_b, struct disassemble_info *info)
       static char *sg_tab[] = { "m0", "m1", "a0", "a1" };
 
       if (field_b & 0x2000)
-	fprintf_fn (stream, "p%s %s,%s,%s\t",
-		    (field_b & 0x1000) ? "add" : "sub",
-		    sx_tab[(field_b >> 6) & 3],
-		    sy_tab[(field_b >> 4) & 3],
-		    du_tab[(field_b >> 0) & 3]);
-
+	{
+	  fprintf_fn (stream, "p%s %s,%s,%s\t",
+		      (field_b & 0x1000) ? "add" : "sub",
+		      sx_tab[(field_b >> 6) & 3],
+		      sy_tab[(field_b >> 4) & 3],
+		      du_tab[(field_b >> 0) & 3]);
+	}
       else if ((field_b & 0xf0) == 0x10
 	       && info->mach != bfd_mach_sh_dsp
 	       && info->mach != bfd_mach_sh3_dsp)
-	fprintf_fn (stream, "pclr %s \t", du_tab[(field_b >> 0) & 3]);
-
+	{
+	  fprintf_fn (stream, "pclr %s \t", du_tab[(field_b >> 0) & 3]);
+	}
       else if ((field_b & 0xf3) != 0)
-	fprintf_fn (stream, ".word 0x%x\t", field_b);
-
+	{
+	  fprintf_fn (stream, ".word 0x%x\t", field_b);
+	}
       fprintf_fn (stream, "pmuls%c%s,%s,%s",
 		  field_b & 0x2000 ? ' ' : '\t',
 		  se_tab[(field_b >> 10) & 3],
@@ -356,10 +368,10 @@ print_insn_ppi (int field_b, struct disassemble_info *info)
 		  print_dsp_reg (field_b & 0xf, fprintf_fn, stream);
 		  break;
 		case DSP_REG_X:
-		  fprintf_fn (stream, "%s", sx_tab[(field_b >> 6) & 3]);
+		  fprintf_fn (stream, sx_tab[(field_b >> 6) & 3]);
 		  break;
 		case DSP_REG_Y:
-		  fprintf_fn (stream, "%s", sy_tab[(field_b >> 4) & 3]);
+		  fprintf_fn (stream, sy_tab[(field_b >> 4) & 3]);
 		  break;
 		case A_MACH:
 		  fprintf_fn (stream, "mach");
@@ -380,9 +392,10 @@ print_insn_ppi (int field_b, struct disassemble_info *info)
 
 /* FIXME mvs: movx insns print as ".word 0x%03x", insn & 0xfff
    (ie. the upper nibble is missing).  */
-
 int
-print_insn_sh (bfd_vma memaddr, struct disassemble_info *info)
+print_insn_sh (memaddr, info)
+     bfd_vma memaddr;
+     struct disassemble_info *info;
 {
   fprintf_ftype fprintf_fn = info->fprintf_func;
   void *stream = info->stream;
@@ -635,7 +648,7 @@ print_insn_sh (bfd_vma memaddr, struct disassemble_info *info)
 	    case REG_N_D:
 	      if ((nibs[n] & 1) != 0)
 		goto fail;
-	      /* Fall through.  */
+	      /* fall through */
 	    case REG_N:
 	      rn = nibs[n];
 	      break;
@@ -927,11 +940,11 @@ print_insn_sh (bfd_vma memaddr, struct disassemble_info *info)
 		}
 	      if ((*info->symbol_at_address_func) (val, info))
 		{
-		  fprintf_fn (stream, "\t! ");
+		  fprintf_fn (stream, "\t! 0x");
 		  (*info->print_address_func) (val, info);
 		}
 	      else
-		fprintf_fn (stream, "\t! %x", val);
+		fprintf_fn (stream, "\t! 0x%x", val);
 	    }
 	}
 

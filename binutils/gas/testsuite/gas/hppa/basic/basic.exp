@@ -1,9 +1,9 @@
-# Copyright (C) 1993, 1996, 1997, 1999, 2002, 2005, 2007
+# Copyright (C) 1993, 1996, 1997, 1999, 2002
 # Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 # 
 # This program is distributed in the hope that it will be useful,
@@ -13,7 +13,7 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
 
 # Please email any bugs, comments, and/or additions to this file to:
 # dejagnu@gnu.org
@@ -674,8 +674,6 @@ proc do_add2 {} {
 	    -re "^ +\[0-9\]+ 0134 08A4BF26\[^\n\]*\n"	{ set x [expr $x+1] }
 	    -re "^ +\[0-9\]+ 0138 08A4DF26\[^\n\]*\n"	{ set x [expr $x+1] }
 	    -re "^ +\[0-9\]+ 013c 08A4FF26\[^\n\]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0140 08210601\[^\n\]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0144 08210721\[^\n\]*\n"	{ set x [expr $x+1] }
 	    -re "\[^\n\]*\n"				{ }
 	    timeout				{ perror "timeout\n"; break }
 	    eof					{ break }
@@ -687,7 +685,7 @@ proc do_add2 {} {
     gas_finish
 
     # Did we find what we were looking for?  If not, flunk it.
-    if [expr $x==82] then { pass $testname } else { fail $testname }
+    if [expr $x==80] then { pass $testname } else { fail $testname }
 }
 
 proc do_sh1add {} {
@@ -1583,8 +1581,6 @@ proc do_sub2 {} {
 	    -re "^ +\[0-9\]+ 0174 08A4BCE6\[^\n\]*\n"	{ set x [expr $x+1] }
 	    -re "^ +\[0-9\]+ 0178 08A4DCE6\[^\n\]*\n"	{ set x [expr $x+1] }
 	    -re "^ +\[0-9\]+ 017c 08A4FCE6\[^\n\]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0180 08210401\[^\n\]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0184 08210521\[^\n\]*\n"	{ set x [expr $x+1] }
 	    -re "\[^\n\]*\n"				{ }
 	    timeout				{ perror "timeout\n"; break }
 	    eof					{ break }
@@ -1596,7 +1592,7 @@ proc do_sub2 {} {
     gas_finish
 
     # Did we find what we were looking for?  If not, flunk it.
-    if [expr $x==98] then { pass $testname } else { fail $testname }
+    if [expr $x==96] then { pass $testname } else { fail $testname }
 }
 
 proc do_ds {} {
@@ -2885,10 +2881,12 @@ proc do_system {} {
 	    -re "^ +\[0-9\]+ 0048 04A41346\[^\n]*\n"	{ set x [expr $x+1] }
 	    -re "^ +\[0-9\]+ 004c 04A41366\[^\n]*\n"	{ set x [expr $x+1] }
 	    -re "^ +\[0-9\]+ 0050 04A41306\[^\n]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0054 04A41040\[^\n]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0058 04A42040\[^\n]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 005c 04A41000\[^\n]*\n"	{ set x [expr $x+1] }
-	    -re "^ +\[0-9\]+ 0060 04A42000\[^\n]*\n"	{ set x [expr $x+1] }
+	    -re "^ +\[0-9\]+ 0054 04A41326\[^\n]*\n"	{ set x [expr $x+1] }
+	    -re "^ +\[0-9\]+ 0058 04A41306\[^\n]*\n"	{ set x [expr $x+1] }
+	    -re "^ +\[0-9\]+ 005c 04A41040\[^\n]*\n"	{ set x [expr $x+1] }
+	    -re "^ +\[0-9\]+ 0060 04A42040\[^\n]*\n"	{ set x [expr $x+1] }
+	    -re "^ +\[0-9\]+ 0064 04A41000\[^\n]*\n"	{ set x [expr $x+1] }
+	    -re "^ +\[0-9\]+ 0068 04A42000\[^\n]*\n"	{ set x [expr $x+1] }
 	    -re "\[^\n\]*\n"				{ }
 	    timeout				{ perror "timeout\n"; break }
 	    eof					{ break }
@@ -2900,7 +2898,7 @@ proc do_system {} {
     gas_finish
 
     # Did we find what we were looking for?  If not, flunk it.
-    if [expr $x==25] then { pass $testname } else { fail $testname }
+    if [expr $x==27] then { pass $testname } else { fail $testname }
 }
 
 proc do_system2 {} {

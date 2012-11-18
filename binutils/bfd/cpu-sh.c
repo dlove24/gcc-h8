@@ -1,13 +1,13 @@
 /* BFD library support routines for the Renesas / SuperH SH architecture.
-   Copyright 1993, 1994, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007 Free Software Foundation, Inc.
+   Copyright 1993, 1994, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005
+   Free Software Foundation, Inc.
    Hacked by Steve Chamberlain of Cygnus Support.
 
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,11 +17,10 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
 #include "bfd.h"
+#include "sysdep.h"
 #include "libbfd.h"
 #include "../opcodes/sh-opc.h"
 
@@ -61,7 +60,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2_NEXT
   },
   {
@@ -76,7 +74,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2E_NEXT
   },
   {
@@ -91,7 +88,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH_DSP_NEXT
   },
   {
@@ -106,7 +102,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH3_NEXT
   },
   {
@@ -121,7 +116,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH3_NOMMU_NEXT
   },
   {
@@ -136,7 +130,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH3_DSP_NEXT
   },
   {
@@ -151,7 +144,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH3E_NEXT
   },
   {
@@ -166,7 +158,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH4_NEXT
   },
   {
@@ -181,7 +172,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH4A_NEXT
   },
   {
@@ -196,7 +186,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH4AL_DSP_NEXT
   },
   {
@@ -211,7 +200,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH4_NOFPU_NEXT
   },
   {
@@ -226,7 +214,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH4_NOMMU_NOFPU_NEXT
   },
   {
@@ -241,7 +228,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH4A_NOFPU_NEXT
   },
   {
@@ -256,7 +242,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2A_NEXT
   },
   {
@@ -271,7 +256,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2A_NOFPU_NEXT
   },
   {
@@ -286,7 +270,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2A_NOFPU_OR_SH4_NOMMU_NOFPU_NEXT
   },
   {
@@ -301,7 +284,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2A_NOFPU_OR_SH3_NOMMU_NEXT
   },
   {
@@ -316,7 +298,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2A_OR_SH4_NEXT
   },
   {
@@ -331,7 +312,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH2A_OR_SH3E_NEXT
   },
   {
@@ -346,7 +326,6 @@ static const bfd_arch_info_type arch_info_struct[] =
     FALSE,			/* Not the default.  */
     bfd_default_compatible,
     bfd_default_scan,
-    bfd_arch_default_fill,
     SH64_NEXT
   },
 };
@@ -364,7 +343,6 @@ const bfd_arch_info_type bfd_sh_arch =
   TRUE,				/* The default machine.  */
   bfd_default_compatible,
   bfd_default_scan,
-  bfd_arch_default_fill,
   SH_NEXT
 };
 

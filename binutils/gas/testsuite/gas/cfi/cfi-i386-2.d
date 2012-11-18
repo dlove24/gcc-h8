@@ -1,6 +1,6 @@
 #readelf: -wf
 #name: CFI on i386, 2
-Contents of the .eh_frame section:
+The section .eh_frame contains:
 
 00000000 00000014 00000000 CIE
   Version:               1

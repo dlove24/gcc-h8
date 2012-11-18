@@ -1,13 +1,12 @@
 /* version.c -- binutils version information
-   Copyright 1991, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
+   Copyright 1991, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,15 +16,15 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
-#include "sysdep.h"
+#include <stdio.h>
 #include "bfd.h"
+#include "bfdver.h"
 #include "bucomm.h"
 
-/* Print the version number and copyright information, and exit.
-   This implements the --version option for the various programs.  */
+/* Print the version number and copyright information, and exit.  This
+   implements the --version option for the various programs.  */
 
 void
 print_version (const char *name)
@@ -33,10 +32,9 @@ print_version (const char *name)
   /* This output is intended to follow the GNU standards document.  */
   /* xgettext:c-format */
   printf ("GNU %s %s\n", name, BFD_VERSION_STRING);
-  printf (_("Copyright 2012 Free Software Foundation, Inc.\n"));
+  printf (_("Copyright 2005 Free Software Foundation, Inc.\n"));
   printf (_("\
 This program is free software; you may redistribute it under the terms of\n\
-the GNU General Public License version 3 or (at your option) any later version.\n\
-This program has absolutely no warranty.\n"));
+the GNU General Public License.  This program has absolutely no warranty.\n"));
   exit (0);
 }

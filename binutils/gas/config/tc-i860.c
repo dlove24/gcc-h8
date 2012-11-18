@@ -1,6 +1,6 @@
 /* tc-i860.c -- Assembler for the Intel i860 architecture.
-   Copyright 1989, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001, 2002,
-   2003, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright 1989, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001, 2002, 2003
+   Free Software Foundation, Inc.
 
    Brought back from the dead and completely reworked
    by Jason Eckhardt <jle@cygnus.com>.
@@ -9,7 +9,7 @@
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -19,8 +19,10 @@
 
    You should have received a copy of the GNU General Public License along
    with GAS; see the file COPYING.  If not, write to the Free Software
-   Foundation, 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
+   Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
+#include <stdio.h>
+#include <string.h>
 #include "as.h"
 #include "safe-ctype.h"
 #include "subsegs.h"
@@ -221,7 +223,7 @@ md_begin (void)
   while (i860_opcodes[i].name != NULL)
     {
       const char *name = i860_opcodes[i].name;
-      retval = hash_insert (op_hash, name, (void *) &i860_opcodes[i]);
+      retval = hash_insert (op_hash, name, (PTR)&i860_opcodes[i]);
       if (retval != NULL)
 	{
 	  fprintf (stderr, _("internal error: can't hash `%s': %s\n"),
@@ -261,7 +263,7 @@ md_assemble (char *str)
   int i;
   struct i860_it pseudo[3];
 
-  gas_assert (str);
+  assert (str);
   fc = 0;
 
   /* Assemble the instruction.  */
@@ -408,7 +410,6 @@ md_assemble (char *str)
 	as_warn (_("An instruction was expanded (%s)"), str);
     }
 
-  dwarf2_emit_insn (0);
   i = 0;
   do
     {
@@ -1011,10 +1012,62 @@ i860_get_expression (char *str)
   return 0;
 }
 
+/* Turn a string in input_line_pointer into a floating point constant of
+   type TYPE, and store the appropriate bytes in *LITP.  The number of
+   LITTLENUMS emitted is stored in *SIZEP.  An error message is returned,
+   or NULL on OK.  */
+
+/* Equal to MAX_PRECISION in atof-ieee.c.  */
+#define MAX_LITTLENUMS 6
+
 char *
 md_atof (int type, char *litP, int *sizeP)
 {
-  return ieee_md_atof (type, litP, sizeP, TRUE);
+  int prec;
+  LITTLENUM_TYPE words[MAX_LITTLENUMS];
+  LITTLENUM_TYPE *wordP;
+  char *t;
+
+  switch (type)
+    {
+    case 'f':
+    case 'F':
+    case 's':
+    case 'S':
+      prec = 2;
+      break;
+
+    case 'd':
+    case 'D':
+    case 'r':
+    case 'R':
+      prec = 4;
+      break;
+
+    case 'x':
+    case 'X':
+      prec = 6;
+      break;
+
+    case 'p':
+    case 'P':
+      prec = 6;
+      break;
+
+    default:
+      *sizeP = 0;
+      return _("Bad call to MD_ATOF()");
+    }
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+  *sizeP = prec * sizeof (LITTLENUM_TYPE);
+  for (wordP = words; prec--;)
+    {
+      md_number_to_chars (litP, (long) (*wordP++), sizeof (LITTLENUM_TYPE));
+      litP += sizeof (LITTLENUM_TYPE);
+    }
+  return 0;
 }
 
 /* Write out in current endian mode.  */
@@ -1032,7 +1085,7 @@ int
 md_estimate_size_before_relax (register fragS *fragP ATTRIBUTE_UNUSED,
 			       segT segtype ATTRIBUTE_UNUSED)
 {
-  as_fatal (_("relaxation not supported\n"));
+  as_fatal (_("i860_estimate_size_before_relax\n"));
 }
 
 #ifdef DEBUG_I860
@@ -1285,7 +1338,7 @@ obtain_reloc_for_imm16 (fixS *fix, long *val)
    we will have to generate a reloc entry.  */
 
 void
-md_apply_fix (fixS *fix, valueT *valP, segT seg ATTRIBUTE_UNUSED)
+md_apply_fix3 (fixS *fix, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 {
   char *buf;
   long val = *valP;
@@ -1490,3 +1543,4 @@ i860_check_label (symbolS *labelsym)
       input_line_pointer++;
     }
 }
+

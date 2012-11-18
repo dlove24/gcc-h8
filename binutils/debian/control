@@ -1,0 +1,18 @@
+Source: binutils-h8300-hms
+Section: devel
+Priority: standard
+Maintainer: Michael Tautschnig <mt@debian.org>
+Standards-Version: 3.8.0
+Build-Depends: autoconf (>= 2.13), bison, flex, gettext, texinfo, binutils (>= 2.9.5.0.12), dpatch, file, debhelper (>= 4.0.0), autotools-dev
+
+Package: binutils-h8300-hms
+Architecture: any
+Depends: binutils, ${shlibs:Depends}
+Suggests: binutils-doc
+Priority: extra
+Description: The GNU binary utilities, for h8300-hitachi-coff target
+ This package provides GNU assembler, linker and binary utilities
+ for h8300-hitachi-coff target, for use in a cross-compilation environment.
+ .
+ You don't need this package unless you plan to cross-compile programs
+ for h8300-hitachi-coff.

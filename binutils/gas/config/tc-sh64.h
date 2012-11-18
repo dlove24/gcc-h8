@@ -1,12 +1,11 @@
 /* This file is tc-sh64.h
-   Copyright 2000, 2001, 2002, 2003, 2005, 2007, 2008
-   Free Software Foundation, Inc.
+   Copyright 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,8 +15,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330,
+   Boston, MA 02111-1307, USA.  */
 
 #define TC_SH64
 #include "config/tc-sh.h"
@@ -80,6 +79,7 @@ extern int sh64_target_mach (void);
 #undef TC_FORCE_RELOCATION_LOCAL
 #define TC_FORCE_RELOCATION_LOCAL(FIX)			\
   (!(FIX)->fx_pcrel					\
+   || (FIX)->fx_plt					\
    || (FIX)->fx_r_type == BFD_RELOC_32_PLT_PCREL	\
    || (FIX)->fx_r_type == BFD_RELOC_SH_PLT_LOW16	\
    || (FIX)->fx_r_type == BFD_RELOC_SH_PLT_MEDLOW16	\
@@ -115,21 +115,19 @@ extern int sh64_target_mach (void);
 
 /* Don't complain when we leave fx_subsy around.  */
 #undef TC_VALIDATE_FIX_SUB
-#define TC_VALIDATE_FIX_SUB(FIX, SEG)			\
-  ((md_register_arithmetic || (SEG) != reg_section)	\
-   && ((FIX)->fx_r_type == BFD_RELOC_32_PLT_PCREL	\
-       || (sh_relax && SWITCH_TABLE (FIX))		\
-       || *symbol_get_tc ((FIX)->fx_addsy) != NULL))
+#define TC_VALIDATE_FIX_SUB(FIX)			\
+  ((FIX)->fx_r_type == BFD_RELOC_32_PLT_PCREL		\
+   || (sh_relax && SWITCH_TABLE (FIX))			\
+   || *symbol_get_tc ((FIX)->fx_addsy) != NULL)
 
 /* Note the kludge: we want to put back C, and we also want to consume the
    expression, since we have handled it ourselves.  FIXME: What we really
    need is a new GAS infrastructure feature: md_qualifier.  */
 #undef md_parse_name
-#define md_parse_name(NAME, EXP, MODE, CP) \
- sh64_consume_datalabel (NAME, EXP, MODE, CP, operand)
-extern int sh64_consume_datalabel (const char *, expressionS *,
-				   enum expr_mode, char *,
-				   segT (*) (expressionS *, enum expr_mode));
+#define md_parse_name(NAME, EXP, CP) \
+ sh64_consume_datalabel (NAME, EXP, CP, operand)
+extern int sh64_consume_datalabel (const char *, expressionS *, char *,
+				   segT (*) (expressionS *));
 
 /* Saying "$" is the same as saying ".".  */
 #define DOLLAR_DOT
@@ -146,7 +144,7 @@ extern void sh64_frob_label (symbolS *);
 
 #undef  tc_frob_label
 #define tc_frob_label(sym) \
-  do { sh_frob_label (sym); sh64_frob_label (sym); } while (0)
+  do { sh_frob_label (); sh64_frob_label (sym); } while (0)
 
 #define tc_symbol_new_hook(s) sh64_frob_label (s)
 
@@ -223,6 +221,3 @@ void shmedia_md_end (void);
    we have to say we only have minimum byte-size insns.  */
 #undef  DWARF2_LINE_MIN_INSN_LENGTH
 #define DWARF2_LINE_MIN_INSN_LENGTH 1
-
-#define TC_FAKE_LABEL(NAME) sh64_fake_label(NAME)
-extern int sh64_fake_label (const char *);

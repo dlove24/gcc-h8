@@ -3,7 +3,7 @@
 here:
 	nop
 .Lfe3:
-	.size	here,.Lfe3-here
+	.size	here,.Lfe3-dsofn
 
 	.type	pfn,@function
 pfn:

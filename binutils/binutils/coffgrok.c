@@ -1,50 +1,48 @@
 /* coffgrok.c
-   Copyright 1994, 1995, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2009  Free Software Foundation, Inc.
+   Copyright 1994, 1995, 1997, 1998, 2000, 2001, 2002, 2003, 2004
+   Free Software Foundation, Inc.
 
-   This file is part of GNU Binutils.
+This file is part of GNU Binutils.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
-
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 
 /* Written by Steve Chamberlain (sac@cygnus.com)
 
    This module reads a coff file and builds a really simple type tree
    which can be read by other programs.  The first application is a
-   coff->sysroff converter.  It can be tested with coffdump.c.  */
+   coff->sysroff converter.  It can be tested with coffdump.c.
 
-#include "sysdep.h"
+*/
+
 #include "bfd.h"
 #include "libiberty.h"
+#include "bucomm.h"
 
 #include "coff/internal.h"
 #include "../bfd/libcoff.h"
-#include "bucomm.h"
 #include "coffgrok.h"
-
-static int lofile = 1;
+int lofile = 1;
 static struct coff_scope *top_scope;
 static struct coff_scope *file_scope;
 static struct coff_ofile *ofile;
 
-static struct coff_symbol *last_function_symbol;
-static struct coff_type *last_function_type;
-static struct coff_type *last_struct;
-static struct coff_type *last_enum;
-static struct coff_sfile *cur_sfile;
+struct coff_symbol *last_function_symbol;
+struct coff_type *last_function_type;
+struct coff_type *last_struct;
+struct coff_type *last_enum;
+struct coff_sfile *cur_sfile;
 
 static struct coff_symbol **tindex;
 
@@ -96,11 +94,10 @@ empty_symbol (void)
 
 /*int l;*/
 static void
-push_scope (int slink)
+push_scope (int link)
 {
   struct coff_scope *n = empty_scope ();
-
-  if (slink)
+  if (link)
     {
       if (top_scope)
 	{

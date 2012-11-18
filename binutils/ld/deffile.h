@@ -1,24 +1,23 @@
 /* deffile.h - header for .DEF file parser
-   Copyright 1998, 1999, 2000, 2002, 2003, 2005, 2006, 2007, 2009
-   Free Software Foundation, Inc.
+   Copyright 1998, 1999, 2000, 2002, 2003 Free Software Foundation, Inc.
    Written by DJ Delorie dj@cygnus.com
 
-   This file is part of the GNU Binutils.
+   This file is part of GLD, the Gnu Linker.
 
-   This program is free software; you can redistribute it and/or modify
+   GLD is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
-   The program is distributed in the hope that it will be useful,
+   GLD is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
    along with GLD; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #ifndef DEFFILE_H
 #define DEFFILE_H
@@ -35,10 +34,9 @@ typedef struct def_file_section {
 typedef struct def_file_export {
   char *name;			/* always set */
   char *internal_name;		/* always set, may == name */
-  char *its_name;		/* optional export table name refered to. */
   int ordinal;			/* -1 if not specified */
   int hint;
-  char flag_private, flag_constant, flag_noname, flag_data, flag_forward;
+  char flag_private, flag_constant, flag_noname, flag_data;
 } def_file_export;
 
 typedef struct def_file_module {
@@ -51,16 +49,9 @@ typedef struct def_file_import {
   char *internal_name;		/* always set */
   def_file_module *module;	/* always set */
   char *name;			/* may be NULL; either this or ordinal will be set */
-  char *its_name;		/* optional import table name refered to. */
   int ordinal;			/* may be -1 */
   int data;			/* = 1 if data */
 } def_file_import;
-
-typedef struct def_file_aligncomm {
-  struct def_file_aligncomm *next;	/* Chain pointer.  */
-  char *symbol_name;		/* Name of common symbol.  */
-  unsigned int alignment;	/* log-2 alignment.        */
-} def_file_aligncomm;
 
 typedef struct def_file {
   /* From the NAME or LIBRARY command.  */
@@ -92,10 +83,6 @@ typedef struct def_file {
 
   /* From the VERSION command, -1 if not specified.  */
   int version_major, version_minor;
-
-  /* Only expected from .drectve sections, not .DEF files.  */
-  def_file_aligncomm *aligncomms;
-
 } def_file;
 
 extern def_file *def_file_empty (void);
@@ -104,11 +91,9 @@ extern def_file *def_file_empty (void);
 extern def_file *def_file_parse (const char *, def_file *);
 extern void def_file_free (def_file *);
 extern def_file_export *def_file_add_export (def_file *, const char *,
-					     const char *, int,
-					     const char *, int *);
+					     const char *, int);
 extern def_file_import *def_file_add_import (def_file *, const char *,
-					     const char *, int, const char *,
-					     const char *, int *);
+					     const char *, int, const char *);
 extern void def_file_add_directive (def_file *, const char *, int);
 extern def_file_module *def_get_module (def_file *, const char *);
 #ifdef DEF_FILE_PRINT

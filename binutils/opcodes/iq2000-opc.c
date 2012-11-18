@@ -2,23 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2010 Free Software Foundation, Inc.
+Copyright 1996-2005 Free Software Foundation, Inc.
 
 This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 
-   This file is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
 
-   It is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-   License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with this program; if not, write to the Free Software Foundation, Inc.,
-   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 */
 
@@ -33,14 +33,18 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 /* The hash functions are recorded here to help keep assembler code out of
    the disassembler and vice versa.  */
 
-static int asm_hash_insn_p        (const CGEN_INSN *);
-static unsigned int asm_hash_insn (const char *);
-static int dis_hash_insn_p        (const CGEN_INSN *);
-static unsigned int dis_hash_insn (const char *, CGEN_INSN_INT);
+static int asm_hash_insn_p PARAMS ((const CGEN_INSN *));
+static unsigned int asm_hash_insn PARAMS ((const char *));
+static int dis_hash_insn_p PARAMS ((const CGEN_INSN *));
+static unsigned int dis_hash_insn PARAMS ((const char *, CGEN_INSN_INT));
 
 /* Instruction formats.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define F(f) & iq2000_cgen_ifld_table[IQ2000_##f]
+#else
+#define F(f) & iq2000_cgen_ifld_table[IQ2000_/**/f]
+#endif
 static const CGEN_IFMT ifmt_empty ATTRIBUTE_UNUSED = {
   0, 0, 0x0, { { 0 } }
 };
@@ -223,8 +227,16 @@ static const CGEN_IFMT ifmt_ctc ATTRIBUTE_UNUSED = {
 
 #undef F
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define A(a) (1 << CGEN_INSN_##a)
+#else
+#define A(a) (1 << CGEN_INSN_/**/a)
+#endif
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define OPERAND(op) IQ2000_OPERAND_##op
+#else
+#define OPERAND(op) IQ2000_OPERAND_/**/op
+#endif
 #define MNEM CGEN_SYNTAX_MNEMONIC /* syntax value for mnemonic */
 #define OP(field) CGEN_SYNTAX_MAKE_FIELD (OPERAND (field))
 
@@ -1895,7 +1907,11 @@ static const CGEN_OPCODE iq2000_cgen_insn_opcode_table[MAX_INSNS] =
 
 /* Formats for ALIAS macro-insns.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define F(f) & iq2000_cgen_ifld_table[IQ2000_##f]
+#else
+#define F(f) & iq2000_cgen_ifld_table[IQ2000_/**/f]
+#endif
 static const CGEN_IFMT ifmt_nop ATTRIBUTE_UNUSED = {
   32, 32, 0xffffffff, { { F (F_OPCODE) }, { F (F_RS) }, { F (F_RT) }, { F (F_RD) }, { F (F_SHAMT) }, { F (F_FUNC) }, { 0 } }
 };
@@ -2276,8 +2292,16 @@ static const CGEN_IFMT ifmt_m_wbiu ATTRIBUTE_UNUSED = {
 
 /* Each non-simple macro entry points to an array of expansion possibilities.  */
 
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define A(a) (1 << CGEN_INSN_##a)
+#else
+#define A(a) (1 << CGEN_INSN_/**/a)
+#endif
+#if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #define OPERAND(op) IQ2000_OPERAND_##op
+#else
+#define OPERAND(op) IQ2000_OPERAND_/**/op
+#endif
 #define MNEM CGEN_SYNTAX_MNEMONIC /* syntax value for mnemonic */
 #define OP(field) CGEN_SYNTAX_MAKE_FIELD (OPERAND (field))
 
@@ -2288,472 +2312,472 @@ static const CGEN_IBASE iq2000_cgen_macro_insn_table[] =
 /* nop */
   {
     -1, "nop", "nop", 32,
-    { 0|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* li $rs,$imm */
   {
     -1, "li", "li", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* move $rd,$rt */
   {
     -1, "move", "move", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* lb $rt,$lo16 */
   {
     -1, "lb-base-0", "lb", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* lbu $rt,$lo16 */
   {
     -1, "lbu-base-0", "lbu", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* lh $rt,$lo16 */
   {
     -1, "lh-base-0", "lh", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* lw $rt,$lo16 */
   {
     -1, "lw-base-0", "lw", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* add $rt,$rs,$lo16 */
   {
     -1, "m-add", "add", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* addu $rt,$rs,$lo16 */
   {
     -1, "m-addu", "addu", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* and $rt,$rs,$lo16 */
   {
     -1, "m-and", "and", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* j $rs */
   {
     -1, "m-j", "j", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* or $rt,$rs,$lo16 */
   {
     -1, "m-or", "or", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sll $rd,$rt,$rs */
   {
     -1, "m-sll", "sll", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* slt $rt,$rs,$imm */
   {
     -1, "m-slt", "slt", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sltu $rt,$rs,$imm */
   {
     -1, "m-sltu", "sltu", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sra $rd,$rt,$rs */
   {
     -1, "m-sra", "sra", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* srl $rd,$rt,$rs */
   {
     -1, "m-srl", "srl", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* not $rd,$rt */
   {
     -1, "not", "not", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* subi $rt,$rs,$mlo16 */
   {
     -1, "subi", "subi", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sub $rt,$rs,$mlo16 */
   {
     -1, "m-sub", "sub", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* subu $rt,$rs,$mlo16 */
   {
     -1, "m-subu", "subu", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sb $rt,$lo16 */
   {
     -1, "sb-base-0", "sb", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sh $rt,$lo16 */
   {
     -1, "sh-base-0", "sh", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* sw $rt,$lo16 */
   {
     -1, "sw-base-0", "sw", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* xor $rt,$rs,$lo16 */
   {
     -1, "m-xor", "xor", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_BASE) } }
   },
 /* ldw $rt,$lo16 */
   {
     -1, "ldw-base-0", "ldw", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(LOAD_DELAY)|A(EVEN_REG_NUM)|A(ALIAS), { { { (1<<MACH_IQ2000), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(USES_RT)|A(LOAD_DELAY)|A(EVEN_REG_NUM)|A(ALIAS), { (1<<MACH_IQ2000) } }
   },
 /* sdw $rt,$lo16 */
   {
     -1, "sdw-base-0", "sdw", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(EVEN_REG_NUM)|A(ALIAS), { { { (1<<MACH_IQ2000), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(EVEN_REG_NUM)|A(ALIAS), { (1<<MACH_IQ2000) } }
   },
 /* avail */
   {
     -1, "m-avail", "avail", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cam36 $rd,$rt,${cam-z} */
   {
     -1, "m-cam36", "cam36", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cam72 $rd,$rt,${cam-z} */
   {
     -1, "m-cam72", "cam72", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cam144 $rd,$rt,${cam-z} */
   {
     -1, "m-cam144", "cam144", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cam288 $rd,$rt,${cam-z} */
   {
     -1, "m-cam288", "cam288", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32read $rd,$rt */
   {
     -1, "m-cm32read", "cm32read", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64read $rd,$rt */
   {
     -1, "m-cm64read", "cm64read", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32mlog $rs,$rt */
   {
     -1, "m-cm32mlog", "cm32mlog", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32and $rs,$rt */
   {
     -1, "m-cm32and", "cm32and", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32andn $rs,$rt */
   {
     -1, "m-cm32andn", "cm32andn", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32or $rs,$rt */
   {
     -1, "m-cm32or", "cm32or", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32ra $rs,$rt */
   {
     -1, "m-cm32ra", "cm32ra", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32rd $rt */
   {
     -1, "m-cm32rd", "cm32rd", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32ri $rt */
   {
     -1, "m-cm32ri", "cm32ri", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32rs $rs,$rt */
   {
     -1, "m-cm32rs", "cm32rs", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32sa $rs,$rt */
   {
     -1, "m-cm32sa", "cm32sa", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32sd $rt */
   {
     -1, "m-cm32sd", "cm32sd", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32si $rt */
   {
     -1, "m-cm32si", "cm32si", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32ss $rs,$rt */
   {
     -1, "m-cm32ss", "cm32ss", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm32xor $rs,$rt */
   {
     -1, "m-cm32xor", "cm32xor", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64clr $rt */
   {
     -1, "m-cm64clr", "cm64clr", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64ra $rs,$rt */
   {
     -1, "m-cm64ra", "cm64ra", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64rd $rt */
   {
     -1, "m-cm64rd", "cm64rd", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64ri $rt */
   {
     -1, "m-cm64ri", "cm64ri", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64ria2 $rs,$rt */
   {
     -1, "m-cm64ria2", "cm64ria2", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64rs $rs,$rt */
   {
     -1, "m-cm64rs", "cm64rs", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64sa $rs,$rt */
   {
     -1, "m-cm64sa", "cm64sa", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64sd $rt */
   {
     -1, "m-cm64sd", "cm64sd", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64si $rt */
   {
     -1, "m-cm64si", "cm64si", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64sia2 $rs,$rt */
   {
     -1, "m-cm64sia2", "cm64sia2", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm64ss $rs,$rt */
   {
     -1, "m-cm64ss", "cm64ss", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm128ria2 $rs,$rt */
   {
     -1, "m-cm128ria2", "cm128ria2", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm128ria3 $rs,$rt,${cm-3z} */
   {
     -1, "m-cm128ria3", "cm128ria3", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm128ria4 $rs,$rt,${cm-4z} */
   {
     -1, "m-cm128ria4", "cm128ria4", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm128sia2 $rs,$rt */
   {
     -1, "m-cm128sia2", "cm128sia2", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm128sia3 $rs,$rt,${cm-3z} */
   {
     -1, "m-cm128sia3", "cm128sia3", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cm128sia4 $rs,$rt,${cm-4z} */
   {
     -1, "m-cm128sia4", "cm128sia4", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* cmphdr */
   {
     -1, "m-cmphdr", "cmphdr", 32,
-    { 0|A(NO_DIS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* dbd $rd,$rt */
   {
     -1, "m-dbd", "dbd", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* dbd $rt */
   {
     -1, "m2-dbd", "dbd", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* dpwt $rs */
   {
     -1, "m-dpwt", "dpwt", 32,
-    { 0|A(NO_DIS)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* free $rs */
   {
     -1, "m-free", "free", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* lock $rt */
   {
     -1, "m-lock", "lock", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrla $rs,$rt */
   {
     -1, "m-pkrla", "pkrla", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrlac $rs,$rt */
   {
     -1, "m-pkrlac", "pkrlac", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrlah $rs,$rt */
   {
     -1, "m-pkrlah", "pkrlah", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrlau $rs,$rt */
   {
     -1, "m-pkrlau", "pkrlau", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrli $rs,$rt,$bytecount */
   {
     -1, "m-pkrli", "pkrli", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrlic $rs,$rt,$bytecount */
   {
     -1, "m-pkrlic", "pkrlic", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrlih $rs,$rt,$bytecount */
   {
     -1, "m-pkrlih", "pkrlih", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* pkrliu $rs,$rt,$bytecount */
   {
     -1, "m-pkrliu", "pkrliu", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* rba $rs,$rt */
   {
     -1, "m-rba", "rba", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* rbal $rs,$rt */
   {
     -1, "m-rbal", "rbal", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* rbar $rs,$rt */
   {
     -1, "m-rbar", "rbar", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* rbi $rs,$rt,$bytecount */
   {
     -1, "m-rbi", "rbi", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* rbil $rs,$rt,$bytecount */
   {
     -1, "m-rbil", "rbil", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* rbir $rs,$rt,$bytecount */
   {
     -1, "m-rbir", "rbir", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* swwr $rs,$rt */
   {
     -1, "m-swwr", "swwr", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* swwru $rs,$rt */
   {
     -1, "m-swwru", "swwru", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* tstod $rs */
   {
     -1, "m-tstod", "tstod", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* unlk $rt */
   {
     -1, "m-unlk", "unlk", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* wba $rs,$rt */
   {
     -1, "m-wba", "wba", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* wbac $rs,$rt */
   {
     -1, "m-wbac", "wbac", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* wbau $rs,$rt */
   {
     -1, "m-wbau", "wbau", 32,
-    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RD)|A(USES_RT)|A(USES_RS)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* wbi $rs,$rt,$bytecount */
   {
     -1, "m-wbi", "wbi", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* wbic $rs,$rt,$bytecount */
   {
     -1, "m-wbic", "wbic", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 /* wbiu $rs,$rt,$bytecount */
   {
     -1, "m-wbiu", "wbiu", 32,
-    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { { { (1<<MACH_IQ10), 0 } } } }
+    { 0|A(NO_DIS)|A(USES_RT)|A(USES_RS)|A(USES_RD)|A(ALIAS), { (1<<MACH_IQ10) } }
   },
 };
 
@@ -3401,10 +3425,14 @@ dis_hash_insn (buf, value)
   return CGEN_DIS_HASH (buf, value);
 }
 
+static void set_fields_bitsize PARAMS ((CGEN_FIELDS *, int));
+
 /* Set the recorded length of the insn in the CGEN_FIELDS struct.  */
 
 static void
-set_fields_bitsize (CGEN_FIELDS *fields, int size)
+set_fields_bitsize (fields, size)
+     CGEN_FIELDS *fields;
+     int size;
 {
   CGEN_FIELDS_BITSIZE (fields) = size;
 }
@@ -3413,19 +3441,16 @@ set_fields_bitsize (CGEN_FIELDS *fields, int size)
    This plugs the opcode entries and macro instructions into the cpu table.  */
 
 void
-iq2000_cgen_init_opcode_table (CGEN_CPU_DESC cd)
+iq2000_cgen_init_opcode_table (cd)
+     CGEN_CPU_DESC cd;
 {
   int i;
   int num_macros = (sizeof (iq2000_cgen_macro_insn_table) /
 		    sizeof (iq2000_cgen_macro_insn_table[0]));
   const CGEN_IBASE *ib = & iq2000_cgen_macro_insn_table[0];
   const CGEN_OPCODE *oc = & iq2000_cgen_macro_insn_opcode_table[0];
-  CGEN_INSN *insns = xmalloc (num_macros * sizeof (CGEN_INSN));
-
-  /* This test has been added to avoid a warning generated
-     if memset is called with a third argument of value zero.  */
-  if (num_macros >= 1)
-    memset (insns, 0, num_macros * sizeof (CGEN_INSN));
+  CGEN_INSN *insns = (CGEN_INSN *) xmalloc (num_macros * sizeof (CGEN_INSN));
+  memset (insns, 0, num_macros * sizeof (CGEN_INSN));
   for (i = 0; i < num_macros; ++i)
     {
       insns[i].base = &ib[i];

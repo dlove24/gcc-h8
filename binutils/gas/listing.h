@@ -1,12 +1,12 @@
 /* This file is listing.h
    Copyright 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1995, 1997, 1998,
-   2003, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2003 Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,8 +16,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #ifndef __listing_h__
 #define __listing_h__
@@ -27,14 +27,13 @@
 #define LISTING_NOFORM     4
 #define LISTING_HLL        8
 #define LISTING_NODEBUG   16
-#define LISTING_NOCOND    32
-#define LISTING_MACEXP    64
-#define LISTING_GENERAL  128
+#define LISTING_NOCOND	  32
+#define LISTING_MACEXP	  64
 
 #define LISTING_DEFAULT    (LISTING_LISTING | LISTING_HLL | LISTING_SYMBOLS)
 
 #ifndef NO_LISTING
-#define LISTING_NEWLINE() { if (listing) listing_newline (NULL); }
+#define LISTING_NEWLINE() { if (listing) listing_newline(NULL); }
 #else
 #define LISTING_NEWLINE() {;}
 #endif
@@ -45,10 +44,11 @@
 void listing_eject (int);
 void listing_error (const char *message);
 void listing_file (const char *name);
+void listing_flags (int);
 void listing_list (int on);
 void listing_newline (char *ps);
 void listing_prev_line (void);
-void listing_print (char *, char **);
+void listing_print (char *name);
 void listing_psize (int);
 void listing_nopage (int);
 void listing_source_file (const char *);

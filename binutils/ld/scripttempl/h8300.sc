@@ -11,7 +11,7 @@ TORS=".tors :
 cat <<EOF
 OUTPUT_FORMAT("${OUTPUT_FORMAT}")
 OUTPUT_ARCH(${ARCH})
-${RELOCATING+ENTRY ("_start")}
+ENTRY("_start")
 
 MEMORY
 {

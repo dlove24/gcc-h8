@@ -1,28 +1,27 @@
 /* ldmisc.h -
-   Copyright 1991, 1992, 1993, 1994, 1996, 1997, 2001, 2003, 2004, 2005, 2007
+   Copyright 1991, 1992, 1993, 1994, 1996, 1997, 2001, 2003, 2004
    Free Software Foundation, Inc.
 
-   This file is part of the GNU Binutils.
+   This file is part of GLD, the Gnu Linker.
 
-   This program is free software; you can redistribute it and/or modify
+   GLD is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   the Free Software Foundation; either version 2, or (at your option)
+   any later version.
 
-   This program is distributed in the hope that it will be useful,
+   GLD is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
-   MA 02110-1301, USA.  */
+   along with GLD; see the file COPYING.  If not, write to the Free
+   Software Foundation, 59 Temple Place - Suite 330, Boston,
+   MA 02111-1307, USA.  */
 
 #ifndef LDMISC_H
 #define LDMISC_H
 
-extern void vfinfo (FILE *fp, const char *fmt, va_list arg, bfd_boolean is_warning);
 extern void einfo (const char *, ...);
 extern void minfo (const char *, ...);
 extern void info_msg (const char *, ...);
@@ -41,5 +40,6 @@ do { info_assert(__FILE__,__LINE__); } while (0)
 
 extern void print_space (void);
 extern void print_nl (void);
+extern char *demangle (const char *);
 
 #endif

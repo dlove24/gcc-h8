@@ -11,13 +11,10 @@ typedef struct
 {
   int *   var;
   void (* func_ptr)(void);
-  int *   var_with_offset;
 }
 TEST;
 
-TEST xyz = { & var, print_var, & var };
-
-const TEST const_xyz = { & var, print_var, & var };
+TEST xyz = { &var, print_var };
 
 int
 main (void)
@@ -53,8 +50,6 @@ main (void)
   xyz.func_ptr ();
 
   printf ("We see var2[0] = %d\n\n", var2[0]);
-
-  printf ("We see const xyz %x %x\n", const_xyz.var, const_xyz.var_with_offset);
 
   return 0;
 }

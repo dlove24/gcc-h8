@@ -1,12 +1,11 @@
 /* tc-xstormy16.c -- Assembler for the Sanyo XSTORMY16.
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010
-   Free Software Foundation.
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation.
 
    This file is part of GAS, the GNU Assembler.
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -16,9 +15,10 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to
-   the Free Software Foundation, 51 Franklin Street - Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   the Free Software Foundation, 59 Temple Place - Suite 330,
+   Boston, MA 02111-1307, USA.  */
 
+#include <stdio.h>
 #include "as.h"
 #include "subsegs.h"
 #include "symcat.h"
@@ -66,14 +66,16 @@ struct option md_longopts[] =
 size_t md_longopts_size = sizeof (md_longopts);
 
 int
-md_parse_option (int    c ATTRIBUTE_UNUSED,
-		 char * arg ATTRIBUTE_UNUSED)
+md_parse_option (c, arg)
+     int    c ATTRIBUTE_UNUSED;
+     char * arg ATTRIBUTE_UNUSED;
 {
   return 0;
 }
 
 void
-md_show_usage (FILE * stream)
+md_show_usage (stream)
+  FILE * stream;
 {
   fprintf (stream, _(" XSTORMY16 specific command line options:\n"));
 }
@@ -87,7 +89,7 @@ const pseudo_typeS md_pseudo_table[] =
 
 
 void
-md_begin (void)
+md_begin ()
 {
   /* Initialize the `cgen' interface.  */
 
@@ -105,7 +107,8 @@ md_begin (void)
 static bfd_boolean skipping_fptr = FALSE;
 
 void
-md_assemble (char * str)
+md_assemble (str)
+     char * str;
 {
   xstormy16_insn insn;
   char *    errmsg;
@@ -122,7 +125,7 @@ md_assemble (char * str)
 
   if (!insn.insn)
     {
-      as_bad ("%s", errmsg);
+      as_bad (errmsg);
       return;
     }
 
@@ -132,7 +135,8 @@ md_assemble (char * str)
 }
 
 void
-md_operand (expressionS * e)
+md_operand (e)
+     expressionS * e;
 {
   if (*input_line_pointer != '@')
     return;
@@ -143,7 +147,7 @@ md_operand (expressionS * e)
       SKIP_WHITESPACE ();
       if (*input_line_pointer != '(')
 	{
-	  as_bad (_("Expected '('"));
+	  as_bad ("Expected '('");
 	  goto err;
 	}
       input_line_pointer++;
@@ -152,14 +156,14 @@ md_operand (expressionS * e)
 
       if (*input_line_pointer != ')')
 	{
-	  as_bad (_("Missing ')'"));
+	  as_bad ("Missing ')'");
 	  goto err;
 	}
       input_line_pointer++;
       SKIP_WHITESPACE ();
 
       if (e->X_op != O_symbol)
-	as_bad (_("Not a symbolic expression"));
+	as_bad ("Not a symbolic expression");
       else if (* input_line_pointer == '-')
 	/* We are computing the difference of two function pointers
 	   like this:
@@ -191,12 +195,14 @@ md_operand (expressionS * e)
    Create BFD_RELOC_XSTORMY16_FPTR16 relocations.  */
 
 void
-xstormy16_cons_fix_new (fragS *f,
-			int where,
-			int nbytes,
-			expressionS *exp)
+xstormy16_cons_fix_new (f, where, nbytes, exp)
+     fragS *f;
+     int where;
+     int nbytes;
+     expressionS *exp;
 {
   bfd_reloc_code_real_type code;
+  fixS *fix;
 
   if (exp->X_op == O_fptr_symbol)
     {
@@ -215,14 +221,12 @@ xstormy16_cons_fix_new (fragS *f,
  	  exp->X_op = O_symbol;
  	  code = BFD_RELOC_32;
  	  break;
-
  	case 2:
  	  exp->X_op = O_symbol;
  	  code = BFD_RELOC_XSTORMY16_FPTR16;
  	  break;
-
  	default:
-	  as_bad (_("unsupported fptr fixup size %d"), nbytes);
+	  as_bad ("unsupported fptr fixup size %d", nbytes);
 	  return;
 	}
     }
@@ -234,24 +238,25 @@ xstormy16_cons_fix_new (fragS *f,
     code = BFD_RELOC_32;
   else
     {
-      as_bad (_("unsupported fixup size %d"), nbytes);
+      as_bad ("unsupported fixup size %d", nbytes);
       return;
     }
 
-  fix_new_exp (f, where, nbytes, exp, 0, code);
+  fix = fix_new_exp (f, where, nbytes, exp, 0, code);
 }
 
 /* Called while parsing an instruction to create a fixup.
    Create BFD_RELOC_XSTORMY16_FPTR16 relocations.  */
 
 fixS *
-xstormy16_cgen_record_fixup_exp (fragS *              frag,
-				 int                  where,
-				 const CGEN_INSN *    insn,
-				 int                  length,
-				 const CGEN_OPERAND * operand,
-				 int                  opinfo,
-				 expressionS *        exp)
+xstormy16_cgen_record_fixup_exp (frag, where, insn, length, operand, opinfo, exp)
+     fragS *              frag;
+     int                  where;
+     const CGEN_INSN *    insn;
+     int                  length;
+     const CGEN_OPERAND * operand;
+     int                  opinfo;
+     expressionS *        exp;
 {
   fixS *fixP;
   operatorT op = exp->X_op;
@@ -265,7 +270,7 @@ xstormy16_cgen_record_fixup_exp (fragS *              frag,
   if (op == O_fptr_symbol)
     {
       if (operand->type != XSTORMY16_OPERAND_IMM16)
-	as_bad (_("unsupported fptr fixup"));
+	as_bad ("unsupported fptr fixup");
       else
 	{
 	  fixP->fx_r_type = BFD_RELOC_XSTORMY16_FPTR16;
@@ -277,15 +282,17 @@ xstormy16_cgen_record_fixup_exp (fragS *              frag,
 }
 
 valueT
-md_section_align (segT segment, valueT size)
+md_section_align (segment, size)
+     segT   segment;
+     valueT size;
 {
   int align = bfd_get_section_alignment (stdoutput, segment);
-
   return ((size + (1 << align) - 1) & (-1 << align));
 }
 
 symbolS *
-md_undefined_symbol (char * name ATTRIBUTE_UNUSED)
+md_undefined_symbol (name)
+  char * name ATTRIBUTE_UNUSED;
 {
   return 0;
 }
@@ -302,8 +309,9 @@ md_undefined_symbol (char * name ATTRIBUTE_UNUSED)
    0 value.  */
 
 int
-md_estimate_size_before_relax (fragS * fragP ATTRIBUTE_UNUSED,
-			       segT    segment ATTRIBUTE_UNUSED)
+md_estimate_size_before_relax (fragP, segment)
+     fragS * fragP ATTRIBUTE_UNUSED;
+     segT    segment ATTRIBUTE_UNUSED;
 {
   /* No assembler relaxation is defined (or necessary) for this port.  */
   abort ();
@@ -317,9 +325,10 @@ md_estimate_size_before_relax (fragS * fragP ATTRIBUTE_UNUSED,
    fragP->fr_subtype is the subtype of what the address relaxed to.  */
 
 void
-md_convert_frag (bfd *   abfd ATTRIBUTE_UNUSED,
-		 segT    sec ATTRIBUTE_UNUSED,
-		 fragS * fragP ATTRIBUTE_UNUSED)
+md_convert_frag (abfd, sec, fragP)
+  bfd *   abfd ATTRIBUTE_UNUSED;
+  segT    sec ATTRIBUTE_UNUSED;
+  fragS * fragP ATTRIBUTE_UNUSED;
 {
   /* No assembler relaxation is defined (or necessary) for this port.  */
   abort ();
@@ -331,7 +340,9 @@ md_convert_frag (bfd *   abfd ATTRIBUTE_UNUSED,
    given a PC relative reloc.  */
 
 long
-md_pcrel_from_section (fixS * fixP, segT sec)
+md_pcrel_from_section (fixP, sec)
+     fixS * fixP;
+     segT   sec;
 {
   if ((fixP->fx_addsy != (symbolS *) NULL
        && (! S_IS_DEFINED (fixP->fx_addsy)
@@ -351,9 +362,10 @@ md_pcrel_from_section (fixS * fixP, segT sec)
    *FIXP may be modified if desired.  */
 
 bfd_reloc_code_real_type
-md_cgen_lookup_reloc (const CGEN_INSN *    insn ATTRIBUTE_UNUSED,
-		      const CGEN_OPERAND * operand,
-		      fixS *               fixP)
+md_cgen_lookup_reloc (insn, operand, fixP)
+     const CGEN_INSN *    insn ATTRIBUTE_UNUSED;
+     const CGEN_OPERAND * operand;
+     fixS *               fixP;
 {
   switch (operand->type)
     {
@@ -407,7 +419,8 @@ md_cgen_lookup_reloc (const CGEN_INSN *    insn ATTRIBUTE_UNUSED,
    relaxing.  */
 
 int
-xstormy16_force_relocation (fixS * fix)
+xstormy16_force_relocation (fix)
+     fixS * fix;
 {
   if (fix->fx_r_type == BFD_RELOC_XSTORMY16_FPTR16)
     return 1;
@@ -419,26 +432,28 @@ xstormy16_force_relocation (fixS * fix)
    a relocation against section+offset.  */
 
 bfd_boolean
-xstormy16_fix_adjustable (fixS * fixP)
+xstormy16_fix_adjustable (fixP)
+   fixS * fixP;
 {
   /* We need the symbol name for the VTABLE entries.  */
   if (fixP->fx_r_type == BFD_RELOC_VTABLE_INHERIT
       || fixP->fx_r_type == BFD_RELOC_VTABLE_ENTRY)
-    return FALSE;
+    return 0;
 
   if (fixP->fx_r_type == BFD_RELOC_XSTORMY16_FPTR16)
-    return FALSE;
+    return 0;
 
-  return TRUE;
+  return 1;
 }
 
-/* This is a copy of gas_cgen_md_apply_fix, with some enhancements to
+/* This is a copy of gas_cgen_md_apply_fix3, with some enhancements to
    do various things that would not be valid for all ports.  */
 
 void
-xstormy16_md_apply_fix (fixS *   fixP,
-			 valueT * valueP,
-			 segT     seg ATTRIBUTE_UNUSED)
+xstormy16_md_apply_fix3 (fixP, valueP, seg)
+     fixS *   fixP;
+     valueT * valueP;
+     segT     seg ATTRIBUTE_UNUSED;
 {
   char *where = fixP->fx_frag->fr_literal + fixP->fx_where;
   valueT value = *valueP;
@@ -455,7 +470,8 @@ xstormy16_md_apply_fix (fixS *   fixP,
      it must deal with turning a BFD_RELOC_{8,16,32,64} into a
      BFD_RELOC_*_PCREL for the case of
 
-	.word something-.  */
+	.word something-.
+  */
   if (fixP->fx_pcrel)
     switch (fixP->fx_r_type)
       {
@@ -530,7 +546,9 @@ xstormy16_md_apply_fix (fixS *   fixP,
 
       reloc_type = md_cgen_lookup_reloc (insn, operand, fixP);
       if (reloc_type != BFD_RELOC_NONE)
-	fixP->fx_r_type = reloc_type;
+	{
+	  fixP->fx_r_type = reloc_type;
+	}
       else
 	{
 	  as_bad_where (fixP->fx_file, fixP->fx_line,
@@ -590,13 +608,65 @@ xstormy16_md_apply_fix (fixS *   fixP,
 /* Write a value out to the object file, using the appropriate endianness.  */
 
 void
-md_number_to_chars (char * buf, valueT val, int n)
+md_number_to_chars (buf, val, n)
+     char * buf;
+     valueT val;
+     int    n;
 {
   number_to_chars_littleendian (buf, val, n);
 }
 
+/* Turn a string in input_line_pointer into a floating point constant of type
+   type, and store the appropriate bytes in *litP.  The number of LITTLENUMS
+   emitted is stored in *sizeP .  An error message is returned, or NULL on OK.
+*/
+
+/* Equal to MAX_PRECISION in atof-ieee.c */
+#define MAX_LITTLENUMS 6
+
 char *
-md_atof (int type, char * litP, int * sizeP)
+md_atof (type, litP, sizeP)
+     char   type;
+     char * litP;
+     int *  sizeP;
 {
-  return ieee_md_atof (type, litP, sizeP, FALSE);
+  int              prec;
+  LITTLENUM_TYPE   words [MAX_LITTLENUMS];
+  LITTLENUM_TYPE   *wordP;
+  char *           t;
+
+  switch (type)
+    {
+    case 'f':
+    case 'F':
+      prec = 2;
+      break;
+
+    case 'd':
+    case 'D':
+      prec = 4;
+      break;
+
+   /* FIXME: Some targets allow other format chars for bigger sizes here.  */
+
+    default:
+      * sizeP = 0;
+      return _("Bad call to md_atof()");
+    }
+
+  t = atof_ieee (input_line_pointer, type, words);
+  if (t)
+    input_line_pointer = t;
+  * sizeP = prec * sizeof (LITTLENUM_TYPE);
+
+  *sizeP = prec * sizeof (LITTLENUM_TYPE);
+  /* This loops outputs the LITTLENUMs in REVERSE order; in accord with
+     the littleendianness of the processor.  */
+  for (wordP = words + prec - 1; prec--;)
+    {
+      md_number_to_chars (litP, (valueT) (*wordP--), sizeof (LITTLENUM_TYPE));
+      litP += sizeof (LITTLENUM_TYPE);
+    }
+
+  return 0;
 }

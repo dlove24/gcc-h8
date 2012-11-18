@@ -1,4 +1,4 @@
-@c Copyright (C) 1991, 1992, 1993, 1994, 1995, 2003, 2008, 2011
+@c Copyright (C) 1991, 1992, 1993, 1994, 1995, 2003
 @c Free Software Foundation, Inc.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
@@ -20,16 +20,10 @@
 @node H8/300 Options
 @section Options
 
-@cindex H8/300 options
-@cindex options, H8/300
-The Renesas H8/300 version of @code{@value{AS}} has one
-machine-dependent option:
-
-@table @code
-@item -h-tick-hex
-Support H'00 style hex constants in addition to 0x00 style.
-
-@end table
+@cindex H8/300 options (none)
+@cindex options, H8/300 (none)
+@code{@value{AS}} has no additional command-line options for the
+Renesas (formerly Hitachi) H8/300 family.
 
 @node H8/300 Syntax
 @section Syntax

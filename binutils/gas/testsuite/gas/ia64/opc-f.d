@@ -1,4 +1,4 @@
-# as: -xnone -mtune=itanium1
+# as: -xnone
 # objdump: -d --disassemble-zeroes
 # name: ia64 opc-f
 

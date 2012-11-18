@@ -1,13 +1,12 @@
 /* debug.h -- Describe generic debugging information.
-   Copyright 1995, 1996, 2002, 2003, 2005, 2007, 2009
-   Free Software Foundation, Inc.
+   Copyright 1995, 1996, 2002, 2003 Free Software Foundation, Inc.
    Written by Ian Lance Taylor <ian@cygnus.com>.
 
    This file is part of GNU Binutils.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -17,8 +16,8 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #ifndef DEBUG_H
 #define DEBUG_H
@@ -133,32 +132,32 @@ enum debug_visibility
 
 /* A type.  */
 
-typedef struct debug_type_s *debug_type;
+typedef struct debug_type *debug_type;
 
 #define DEBUG_TYPE_NULL ((debug_type) NULL)
 
 /* A field in a struct or union.  */
 
-typedef struct debug_field_s *debug_field;
+typedef struct debug_field *debug_field;
 
 #define DEBUG_FIELD_NULL ((debug_field) NULL)
 
 /* A base class for an object.  */
 
-typedef struct debug_baseclass_s *debug_baseclass;
+typedef struct debug_baseclass *debug_baseclass;
 
 #define DEBUG_BASECLASS_NULL ((debug_baseclass) NULL)
 
 /* A method of an object.  */
 
-typedef struct debug_method_s *debug_method;
+typedef struct debug_method *debug_method;
 
 #define DEBUG_METHOD_NULL ((debug_method) NULL)
 
 /* The arguments to a method function of an object.  These indicate
    which method to run.  */
 
-typedef struct debug_method_variant_s *debug_method_variant;
+typedef struct debug_method_variant *debug_method_variant;
 
 #define DEBUG_METHOD_VARIANT_NULL ((debug_method_variant) NULL)
 

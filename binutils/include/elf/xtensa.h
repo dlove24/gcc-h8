@@ -1,12 +1,12 @@
 /* Xtensa ELF support for BFD.
-   Copyright 2003, 2004, 2007, 2008, 2010 Free Software Foundation, Inc.
+   Copyright 2003, 2004 Free Software Foundation, Inc.
    Contributed by Bob Wilson (bwilson@tensilica.com) at Tensilica.
 
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -16,7 +16,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301,
+   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
    USA.  */
 
 /* This file holds definitions specific to the Xtensa ELF ABI.  */
@@ -40,7 +40,6 @@ START_RELOC_NUMBERS (elf_xtensa_reloc_type)
      RELOC_NUMBER (R_XTENSA_OP2, 10) 
      RELOC_NUMBER (R_XTENSA_ASM_EXPAND, 11)
      RELOC_NUMBER (R_XTENSA_ASM_SIMPLIFY, 12)
-     RELOC_NUMBER (R_XTENSA_32_PCREL, 14)
      RELOC_NUMBER (R_XTENSA_GNU_VTINHERIT, 15)
      RELOC_NUMBER (R_XTENSA_GNU_VTENTRY, 16)
      RELOC_NUMBER (R_XTENSA_DIFF8, 17)
@@ -76,13 +75,6 @@ START_RELOC_NUMBERS (elf_xtensa_reloc_type)
      RELOC_NUMBER (R_XTENSA_SLOT12_ALT, 47)
      RELOC_NUMBER (R_XTENSA_SLOT13_ALT, 48)
      RELOC_NUMBER (R_XTENSA_SLOT14_ALT, 49)
-     RELOC_NUMBER (R_XTENSA_TLSDESC_FN, 50)
-     RELOC_NUMBER (R_XTENSA_TLSDESC_ARG, 51)
-     RELOC_NUMBER (R_XTENSA_TLS_DTPOFF, 52)
-     RELOC_NUMBER (R_XTENSA_TLS_TPOFF, 53)
-     RELOC_NUMBER (R_XTENSA_TLS_FUNC, 54)
-     RELOC_NUMBER (R_XTENSA_TLS_ARG, 55)
-     RELOC_NUMBER (R_XTENSA_TLS_CALL, 56)
 END_RELOC_NUMBERS (R_XTENSA_max)
 
 /* Processor-specific flags for the ELF header e_flags field.  */
@@ -148,9 +140,7 @@ typedef struct property_table_entry_t
 /* Instruction-only properties about code. */
 #define XTENSA_PROP_INSN_NO_DENSITY	0x00000040
 #define XTENSA_PROP_INSN_NO_REORDER	0x00000080
-/* Historically, NO_TRANSFORM was a property of instructions, 
-   but it should apply to literals under certain circumstances.  */
-#define XTENSA_PROP_NO_TRANSFORM	0x00000100
+#define XTENSA_PROP_INSN_NO_TRANSFORM	0x00000100
 
 /*  Branch target alignment information.  This transmits information
     to the linker optimization about the priority of aligning a

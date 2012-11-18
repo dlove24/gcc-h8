@@ -1,4 +1,4 @@
-# as: -xexplicit -mtune=itanium1
+# as: -xexplicit
 # objdump: -d
 # name ia64 dv-safe
 

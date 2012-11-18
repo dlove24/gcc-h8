@@ -13,24 +13,15 @@ fi
 # use grouped sections instead).
 if test "${RELOCATING}"; then
   R_TEXT='*(SORT(.text$*))'
-  if test "x$LD_FLAG" = "xauto_import" ; then
-    R_DATA='*(SORT(.data$*))
-            *(.rdata)
-	    *(SORT(.rdata$*))'
-    R_RDATA=''
-  else
-    R_DATA='*(SORT(.data$*))'
-    R_RDATA='*(.rdata)
-             *(SORT(.rdata$*))'
-  fi
-  R_IDATA234='
+  R_DATA='*(SORT(.data$*))'
+  R_RDATA='*(SORT(.rdata$*))'
+  R_IDATA='
     SORT(*)(.idata$2)
     SORT(*)(.idata$3)
     /* These zeroes mark the end of the import list.  */
     LONG (0); LONG (0); LONG (0); LONG (0); LONG (0);
-    SORT(*)(.idata$4)'
-  R_IDATA5='SORT(*)(.idata$5)'
-  R_IDATA67='
+    SORT(*)(.idata$4)
+    SORT(*)(.idata$5)
     SORT(*)(.idata$6)
     SORT(*)(.idata$7)'
   R_CRT_XC='*(SORT(.CRT$XC*))  /* C initialization */'
@@ -46,10 +37,8 @@ if test "${RELOCATING}"; then
 else
   R_TEXT=
   R_DATA=
-  R_RDATA='*(.rdata)'
-  R_IDATA234=
-  R_IDATA5=
-  R_IDATA67=
+  R_RDATA=
+  R_IDATA=
   R_CRT=
   R_RSRC=
 fi
@@ -60,6 +49,8 @@ ${RELOCATING-OUTPUT_FORMAT(${RELOCATEABLE_OUTPUT_FORMAT})}
 ${OUTPUT_ARCH+OUTPUT_ARCH(${OUTPUT_ARCH})}
 
 ${LIB_SEARCH_DIRS}
+
+ENTRY(${ENTRY})
 
 SECTIONS
 {
@@ -72,8 +63,6 @@ SECTIONS
     ${RELOCATING+ *(.init)}
     *(.text)
     ${R_TEXT}
-    ${RELOCATING+ *(.text.*)}
-    ${RELOCATING+ *(.gnu.linkonce.t.*)}
     *(.glue_7t)
     *(.glue_7)
     ${CONSTRUCTING+ ___CTOR_LIST__ = .; __CTOR_LIST__ = . ; 
@@ -84,14 +73,14 @@ SECTIONS
     /* ??? Why is .gcc_exc here?  */
     ${RELOCATING+ *(.gcc_exc)}
     ${RELOCATING+PROVIDE (etext = .);}
-    ${RELOCATING+ *(.gcc_except_table)}
+    *(.gcc_except_table)
   }
 
   /* The Cygwin32 library uses a section to avoid copying certain data
      on fork.  This used to be named ".data$nocopy".  The linker used
      to include this between __data_start__ and __data_end__, but that
      breaks building the cygwin32 dll.  Instead, we name the section
-     ".data_cygwin_nocopy" and explicitly include it after __data_end__. */
+     ".data_cygwin_nocopy" and explictly include it after __data_end__. */
 
   .data ${RELOCATING+BLOCK(__section_alignment__)} : 
   {
@@ -106,20 +95,14 @@ SECTIONS
 
   .rdata ${RELOCATING+BLOCK(__section_alignment__)} :
   {
+    *(.rdata)
     ${R_RDATA}
-    ${RELOCATING+__rt_psrelocs_start = .;}
+    *(.eh_frame)
+    ${RELOCATING+___RUNTIME_PSEUDO_RELOC_LIST__ = .;}
+    ${RELOCATING+__RUNTIME_PSEUDO_RELOC_LIST__ = .;}
     *(.rdata_runtime_pseudo_reloc)
-    ${RELOCATING+__rt_psrelocs_end = .;}
-  }
-  ${RELOCATING+__rt_psrelocs_size = __rt_psrelocs_end - __rt_psrelocs_start;}
-  ${RELOCATING+___RUNTIME_PSEUDO_RELOC_LIST_END__ = .;}
-  ${RELOCATING+__RUNTIME_PSEUDO_RELOC_LIST_END__ = .;}
-  ${RELOCATING+___RUNTIME_PSEUDO_RELOC_LIST__ = . - __rt_psrelocs_size;}
-  ${RELOCATING+__RUNTIME_PSEUDO_RELOC_LIST__ = . - __rt_psrelocs_size;}
-
-  .eh_frame ${RELOCATING+BLOCK(__section_alignment__)} :
-  {
-    *(.eh_frame*)
+    ${RELOCATING+___RUNTIME_PSEUDO_RELOC_LIST_END__ = .;}
+    ${RELOCATING+__RUNTIME_PSEUDO_RELOC_LIST_END__ = .;}
   }
 
   .pdata ${RELOCATING+BLOCK(__section_alignment__)} :
@@ -146,19 +129,13 @@ SECTIONS
     *(.debug\$T)
     *(.debug\$F)
     *(.drectve)
-    ${RELOCATING+ *(.note.GNU-stack)}
-    ${RELOCATING+ *(.gnu.lto_*)}
   }
 
   .idata ${RELOCATING+BLOCK(__section_alignment__)} :
   {
     /* This cannot currently be handled with grouped sections.
 	See pe.em:sort_sections.  */
-    ${R_IDATA234}
-    ${RELOCATING+__IAT_start__ = .;}
-    ${R_IDATA5}
-    ${RELOCATING+__IAT_end__ = .;}
-    ${R_IDATA67}
+    ${R_IDATA}
   }
   .CRT ${RELOCATING+BLOCK(__section_alignment__)} :
   { 					
@@ -231,15 +208,10 @@ SECTIONS
     *(.debug_pubnames)
   }
 
-  .debug_pubtypes ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
-  {
-    *(.debug_pubtypes)
-  }
-
   /* DWARF 2.  */
   .debug_info ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
-    *(.debug_info${RELOCATING+ .gnu.linkonce.wi.*})
+    *(.debug_info) *(.gnu.linkonce.wi.*)
   }
 
   .debug_abbrev ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
@@ -254,7 +226,7 @@ SECTIONS
 
   .debug_frame ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
-    *(.debug_frame*)
+    *(.debug_frame)
   }
 
   .debug_str ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
@@ -293,21 +265,10 @@ SECTIONS
     *(.debug_varnames)
   }
 
-  .debug_macro ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
-  {
-    *(.debug_macro)
-  }
-
   /* DWARF 3.  */
   .debug_ranges ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
     *(.debug_ranges)
-  }
-
-  /* DWARF 4.  */
-  .debug_types ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
-  {
-    *(.debug_types${RELOCATING+ .gnu.linkonce.wt.*})
   }
 }
 EOF

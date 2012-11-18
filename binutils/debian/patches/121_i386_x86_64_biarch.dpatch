@@ -1,0 +1,39 @@
+#!/bin/sh -e
+## 121_i386_x86_64_biarch.dpatch
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Description: Identify this version of binutils as being from Debian.
+## DP: Author: Jeff Bailey <jbailey@ubuntu.com>
+## DP: Upstream status: N/A
+## DP: Date: ??
+
+if [ $# -ne 1 ]; then
+    echo >&2 "`basename $0`: script expects -patch|-unpatch as argument"
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch}"
+
+case "$1" in
+       -patch) patch $patch_opts -p1 < $0;;
+       -unpatch) patch $patch_opts -p1 -R < $0;;
+        *)
+                echo >&2 "`basename $0`: script expects -patch|-unpatch as argument"
+                exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+--- binutils/ld/emulparams/elf_x86_64.sh	2005-08-06 01:21:24.709639856 +0000
++++ binutils/ld/emulparams/elf_x86_64.sh	2005-08-06 01:22:30.127694800 +0000
+@@ -24,7 +24,7 @@
+ # Linux modify the default library search path to first include
+ # a 64-bit specific directory.
+ case "$target" in
+-  x86_64*-linux*)
++  x86_64*-linux* | i[3-7]86*-linux*)
+     case "$EMULATION_NAME" in
+       *64*) LIBPATH_SUFFIX=64 ;;
+     esac

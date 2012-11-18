@@ -1,6 +1,6 @@
 /* ECOFF debugging support.
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
+   2003, 2004, 2005
    Free Software Foundation, Inc.
    Contributed by Cygnus Support.
    This file was put together by Ian Lance Taylor <ian@cygnus.com>.  A
@@ -11,7 +11,7 @@
 
    GAS is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
+   the Free Software Foundation; either version 2, or (at your option)
    any later version.
 
    GAS is distributed in the hope that it will be useful,
@@ -21,8 +21,8 @@
 
    You should have received a copy of the GNU General Public License
    along with GAS; see the file COPYING.  If not, write to the Free
-   Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA
-   02110-1301, USA.  */
+   Software Foundation, 59 Temple Place - Suite 330, Boston, MA
+   02111-1307, USA.  */
 
 #include "as.h"
 
@@ -37,7 +37,7 @@
 #include "coff/internal.h"
 #include "coff/symconst.h"
 #include "aout/stab_gnu.h"
-#include "filenames.h"
+
 #include "safe-ctype.h"
 
 /* Why isn't this in coff/sym.h?  */
@@ -1506,16 +1506,6 @@ ecoff_symbol_new_hook (symbolS *symbolP)
   obj->ecoff_symbol = NULL;
   obj->ecoff_extern_size = 0;
 }
-
-void
-ecoff_symbol_clone_hook (symbolS *newsymP, symbolS *orgsymP)
-{
-  OBJ_SYMFIELD_TYPE *n, *o;
-
-  n = symbol_get_obj (newsymP);
-  o = symbol_get_obj (orgsymP);
-  memcpy (n, o, sizeof *n);
-}
 
 /* Add a page to a varray object.  */
 
@@ -1755,7 +1745,7 @@ add_ecoff_symbol (const char *str,	/* symbol name */
 	      ty = add_aux_sym_tir (&last_func_type_info,
 				    hash_no,
 				    &cur_file_ptr->thash_head[0]);
-	      (void) ty;
+
 /* This seems to be unnecessary.  I'm not even sure what it is
  * intended to do.  It's from mips-tfile.
  *	      if (last_func_sym_value != (symbolS *) NULL)
@@ -2257,7 +2247,7 @@ add_file (const char *file_name, int indx ATTRIBUTE_UNUSED, int fake)
        fil_ptr = fil_ptr->next_file)
     {
       if (first_ch == fil_ptr->name[0]
-	  && filename_cmp (file_name, fil_ptr->name) == 0
+	  && strcmp (file_name, fil_ptr->name) == 0
 	  && fil_ptr->fdr.fMerge)
 	{
 	  cur_file_ptr = fil_ptr;
@@ -2325,7 +2315,7 @@ add_file (const char *file_name, int indx ATTRIBUTE_UNUSED, int fake)
 void
 ecoff_new_file (const char *name, int appfile ATTRIBUTE_UNUSED)
 {
-  if (cur_file_ptr != NULL && filename_cmp (cur_file_ptr->name, name) == 0)
+  if (cur_file_ptr != NULL && strcmp (cur_file_ptr->name, name) == 0)
     return;
   add_file (name, 0, 0);
 
@@ -2788,7 +2778,7 @@ ecoff_directive_val (int ignore ATTRIBUTE_UNUSED)
   expression (&exp);
   if (exp.X_op != O_constant && exp.X_op != O_symbol)
     {
-      as_bad (_(".val expression is too complex"));
+      as_bad (_(".val expression is too copmlex"));
       demand_empty_rest_of_line ();
       return;
     }
@@ -3333,7 +3323,7 @@ mark_stabs (int ignore ATTRIBUTE_UNUSED)
     {
       /* Add a dummy @stabs dymbol.  */
       stabs_seen = 1;
-      (void) add_ecoff_symbol (stabs_symbol, st_Nil, sc_Info,
+      (void) add_ecoff_symbol (stabs_symbol, stNil, scInfo,
 			       (symbolS *) NULL,
 			       (bfd_vma) 0, (symint_t) -1,
 			       ECOFF_MARK_STAB (0));
@@ -3589,12 +3579,12 @@ ecoff_frob_symbol (symbolS *sym)
          but with the name .scommon.  */
       if (scom_section.name == NULL)
 	{
-	  scom_section = *bfd_com_section_ptr;
+	  scom_section = bfd_com_section;
 	  scom_section.name = ".scommon";
 	  scom_section.output_section = &scom_section;
 	  scom_section.symbol = &scom_symbol;
 	  scom_section.symbol_ptr_ptr = &scom_section.symbol;
-	  scom_symbol = *bfd_com_section_ptr->symbol;
+	  scom_symbol = *bfd_com_section.symbol;
 	  scom_symbol.name = ".scommon";
 	  scom_symbol.section = &scom_section;
 	}
@@ -3626,7 +3616,7 @@ ecoff_add_bytes (char **buf,
   if (need < PAGE_SIZE)
     need = PAGE_SIZE;
   want = (*bufend - *buf) + need;
-  *buf = (char *) xrealloc (*buf, want);
+  *buf = xrealloc (*buf, want);
   *bufend = *buf + want;
   return *buf + at;
 }
@@ -3900,7 +3890,7 @@ ecoff_build_symbols (const struct ecoff_debug_swap *backend,
 		     unsigned long offset)
 {
   const bfd_size_type external_sym_size = backend->external_sym_size;
-  void (* const swap_sym_out) (bfd *, const SYMR *, void *)
+  void (* const swap_sym_out) (bfd *, const SYMR *, PTR)
     = backend->swap_sym_out;
   char *sym_out;
   long isym;
@@ -4076,7 +4066,7 @@ ecoff_build_symbols (const struct ecoff_debug_swap *backend,
 			    sc = sc_Bss;
 			  else if (strcmp (segname, ".sbss") == 0)
 			    sc = sc_SBss;
-			  else if (seg == bfd_abs_section_ptr)
+			  else if (seg == &bfd_abs_section)
 			    sc = sc_Abs;
 			  else
 			    {
@@ -4139,7 +4129,7 @@ ecoff_build_symbols (const struct ecoff_debug_swap *backend,
 			sym_ptr->ecoff_sym.asym.iss =
 			  begin_ptr->ecoff_sym.asym.iss;
 
-		      begin_type = (st_t) begin_ptr->ecoff_sym.asym.st;
+		      begin_type = begin_ptr->ecoff_sym.asym.st;
 		      if (begin_type == st_File
 			  || begin_type == st_Block)
 			{
@@ -4265,7 +4255,7 @@ ecoff_build_procs (const struct ecoff_debug_swap *backend,
 		   unsigned long offset)
 {
   const bfd_size_type external_pdr_size = backend->external_pdr_size;
-  void (* const swap_pdr_out) (bfd *, const PDR *, void *)
+  void (* const swap_pdr_out) (bfd *, const PDR *, PTR)
     = backend->swap_pdr_out;
   char *pdr_out;
   long iproc;
@@ -4550,7 +4540,7 @@ ecoff_build_fdr (const struct ecoff_debug_swap *backend,
 		 unsigned long offset)
 {
   const bfd_size_type external_fdr_size = backend->external_fdr_size;
-  void (* const swap_fdr_out) (bfd *, const FDR *, void *)
+  void (* const swap_fdr_out) (bfd *, const FDR *, PTR)
     = backend->swap_fdr_out;
   long ifile;
   char *fdr_out;
@@ -4707,7 +4697,7 @@ ecoff_build_debug (HDRR *hdr,
 
   /* Build the symbolic information.  */
   offset = 0;
-  buf = (char *) xmalloc (PAGE_SIZE);
+  buf = xmalloc (PAGE_SIZE);
   bufend = buf + PAGE_SIZE;
 
   /* Build the line number information.  */
@@ -4886,7 +4876,7 @@ free_scope (scope_t *ptr)
   ptr->free = alloc_counts[(int) alloc_type_scope].free_list.f_scope;
   alloc_counts[(int) alloc_type_scope].free_list.f_scope = ptr;
 #else
-  free ((void *) ptr);
+  free ((PTR) ptr);
 #endif
 }
 
@@ -5200,7 +5190,7 @@ ecoff_generate_asm_lineno (void)
   as_where (&filename, &lineno);
 
   if (current_stabs_filename == (char *) NULL
-      || filename_cmp (current_stabs_filename, filename))
+      || strcmp (current_stabs_filename, filename))
     add_file (filename, 0, 1);
 
   list = allocate_lineno_list ();

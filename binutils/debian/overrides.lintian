@@ -1,0 +1,46 @@
+# Directory usr/h8300-hitachi-coff is considered as non standard by lintian, however it
+# is a standard dir for cross-compilers
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/ar
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/as
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/ld
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/nm
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/objdump
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/ranlib
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/bin/strip
+binutils-h8300-hms: non-standard-dir-in-usr usr/h8300-hitachi-coff/
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sn.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sxn.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300h.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300.xu
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sx.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sn.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sxn.xu
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300s.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300s.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300hn.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sn.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300h.xu
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300hn.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300s.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300s.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300h.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sxn.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sx.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300h.xbn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sx.xu
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sxn.xr
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sn.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sn.xu
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300hn.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300s.xu
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sxn.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300h.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300hn.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sx.xn
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300sx.x
+binutils-h8300-hms: file-in-unusual-dir usr/h8300-hitachi-coff/lib/ldscripts/h8300hn.xu
+
