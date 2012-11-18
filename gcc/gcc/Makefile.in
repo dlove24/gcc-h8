@@ -297,29 +297,11 @@ GCC_CFLAGS=$(INTERNAL_CFLAGS) $(X_CFLAGS) $(T_CFLAGS) $(LOOSE_WARN) -Wold-style-
 # Programs which produce files for the target machine
 # ---------------------------------------------------
 
-AR_FOR_TARGET = ` \
-  if [ -f $(objdir)/../binutils/ar ] ; then \
-    echo $(objdir)/../binutils/ar ; \
-  else \
-    if [ "$(host)" = "$(target)" ] ; then \
-      echo ar; \
-    else \
-       t='$(program_transform_name)'; echo ar | sed -e $$t ; \
-    fi; \
-  fi`
+AR_FOR_TARGET = ${srcdir}/../../build/binutils/binutils/ar
 AR_FLAGS_FOR_TARGET =
 AR_CREATE_FOR_TARGET = $(AR_FOR_TARGET) $(AR_FLAGS_FOR_TARGET) rc
 AR_EXTRACT_FOR_TARGET = $(AR_FOR_TARGET) $(AR_FLAGS_FOR_TARGET) x
-RANLIB_FOR_TARGET = ` \
-  if [ -f $(objdir)/../binutils/ranlib ] ; then \
-    echo $(objdir)/../binutils/ranlib ; \
-  else \
-    if [ "$(host)" = "$(target)" ] ; then \
-      echo $(RANLIB); \
-    else \
-       t='$(program_transform_name)'; echo ranlib | sed -e $$t ; \
-    fi; \
-  fi`
+RANLIB_FOR_TARGET = ${srcdir}/../../build/binutils/binutils/ranlib
 NM_FOR_TARGET = ` \
   if [ -f ./nm ] ; then \
     echo ./nm ; \
