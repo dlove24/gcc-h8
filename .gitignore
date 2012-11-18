@@ -1,0 +1,5 @@
+# Don't add anything in the build directory
+build/*
+
+# Ignore temporary editor files
+*.swp
