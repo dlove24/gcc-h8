@@ -12,6 +12,8 @@ CFLAGS="-O2"
 ###
 ###############################################################################
 
+BASE_DIR=`pwd`
+
 ##
 ## Build the binutils first
 ##
@@ -19,8 +21,23 @@ CFLAGS="-O2"
 mkdir -p build/binutils
 cd build/binutils
 
-../../binutils/configure --target="h8300-hms" --prefix=$PREFIX
-make CFLAGS=$CFLAGS
+$BASE_DIR/binutils/configure --target="h8300-hms" --prefix=$PREFIX
+make CFLAGS=$CFLAGS all
 
 # Ask to install the tools
 sudo make install
+
+##
+## Build the GCC C and C++ compilers
+##
+
+cd $BASE_DIR
+mkdir -p build/gcc
+cd build/gcc
+
+$BASE_DIR/gcc/configure --target="h8300-hms" --prefix=$PREFIX --enable-languages="c" --with-newlib --with-headers=$BASE_DIR/newlib/newlib/libc/include
+make CFLAGS=$CFLAGS LANGUAGES="c"
+
+# Ask to install the compiler
+sudo make install
+
